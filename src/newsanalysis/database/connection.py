@@ -37,14 +37,26 @@ class DatabaseConnection:
             SQLite connection object
         """
         if self._connection is None:
+            # Don't use PARSE_DECLTYPES - it's deprecated in Python 3.13
+            # and doesn't handle timezone-aware timestamps properly
+            # Set timeout to 30 seconds to handle concurrent writes
+            # Use isolation_level=None for autocommit mode to prevent locking issues on Windows
             self._connection = sqlite3.connect(
                 str(self.db_path),
-                detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES,
+                timeout=30.0,
+                isolation_level=None  # Autocommit mode
             )
+
             # Enable foreign keys
             self._connection.execute("PRAGMA foreign_keys = ON")
-            # Enable WAL mode for better concurrency
-            self._connection.execute("PRAGMA journal_mode = WAL")
+            # Use TRUNCATE journal mode instead of WAL for Windows compatibility
+            self._connection.execute("PRAGMA journal_mode = TRUNCATE")
+            # Use FULL synchronous mode for data integrity
+            self._connection.execute("PRAGMA synchronous = FULL")
+            # Set busy timeout at SQLite level as well
+            self._connection.execute("PRAGMA busy_timeout = 30000")
+            # Disable memory-mapped I/O which can cause corruption on Windows
+            self._connection.execute("PRAGMA mmap_size = 0")
             # Return rows as dictionaries
             self._connection.row_factory = sqlite3.Row
 

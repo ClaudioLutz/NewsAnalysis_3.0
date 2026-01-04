@@ -92,9 +92,9 @@ class EntityData(BaseModel):
 class ArticleSummary(BaseModel):
     """AI-generated article summary."""
 
-    summary_title: str = Field(..., max_length=150)
-    summary: str = Field(..., min_length=100, max_length=1000)
-    key_points: List[str] = Field(..., min_length=2, max_length=8)
+    summary_title: str = Field(..., max_length=200)
+    summary: str = Field(...)  # Removed length constraints
+    key_points: List[str] = Field(...)  # Removed length constraints
     entities: EntityData
 
     summarized_at: datetime = Field(default_factory=datetime.now)

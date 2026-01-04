@@ -17,24 +17,28 @@ from newsanalysis.utils.logging import get_logger
 logger = get_logger(__name__)
 
 
+class EntityList(BaseModel):
+    """Entity extraction results."""
+    companies: List[str] = Field(default_factory=list, description="Company names")
+    people: List[str] = Field(default_factory=list, description="Person names")
+    locations: List[str] = Field(default_factory=list, description="Locations")
+    topics: List[str] = Field(default_factory=list, description="Topics and themes")
+
+
 class SummaryResponse(BaseModel):
     """Structured response from OpenAI for summarization."""
 
-    title: str = Field(..., max_length=150, description="Normalized article title")
+    title: str = Field(..., description="Normalized article title")
     summary: str = Field(
         ...,
-        min_length=100,
-        max_length=1000,
         description="Article summary (150-200 words)",
     )
     key_points: List[str] = Field(
         ...,
-        min_length=2,
-        max_length=8,
-        description="Key bullet points",
+        description="Key bullet points (2-8 items)",
     )
-    entities: Dict[str, List[str]] = Field(
-        ...,
+    entities: EntityList = Field(
+        default_factory=EntityList,
         description="Extracted entities (companies, people, locations, topics)",
     )
 

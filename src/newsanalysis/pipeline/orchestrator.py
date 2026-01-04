@@ -244,8 +244,8 @@ class PipelineOrchestrator:
         """
         logger.info("stage_filtering_starting")
 
-        # Get articles that need filtering
-        articles = self.repository.get_pending_articles("collected", limit=self.pipeline_config.limit)
+        # Get articles that need filtering (no limit - process all collected articles)
+        articles = self.repository.get_pending_articles("collected", limit=None)
 
         if not articles:
             logger.info("no_articles_to_filter")
@@ -289,8 +289,8 @@ class PipelineOrchestrator:
         """
         logger.info("stage_scraping_starting")
 
-        # Get articles that need scraping (matched articles from filtering)
-        articles = self.repository.get_articles_for_scraping(limit=self.pipeline_config.limit)
+        # Get articles that need scraping (matched articles from filtering - no limit)
+        articles = self.repository.get_articles_for_scraping(limit=None)
 
         if not articles:
             logger.info("no_articles_to_scrape")
@@ -352,8 +352,8 @@ class PipelineOrchestrator:
         """
         logger.info("stage_summarization_starting")
 
-        # Get articles that need summarization (scraped articles)
-        articles = self.repository.get_articles_for_summarization(limit=self.pipeline_config.limit)
+        # Get articles that need summarization (scraped articles - no limit)
+        articles = self.repository.get_articles_for_summarization(limit=None)
 
         if not articles:
             logger.info("no_articles_to_summarize")

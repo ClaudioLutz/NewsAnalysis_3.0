@@ -153,7 +153,7 @@ class AIFilter:
         # Check cache first if available
         if self.cache_service:
             cached_result = self.cache_service.get_cached_classification(
-                article.title, article.url
+                article.title, str(article.url)
             )
             if cached_result:
                 logger.debug(
@@ -166,7 +166,7 @@ class AIFilter:
         # Build user prompt with article metadata
         user_prompt = self.user_prompt_template.format(
             title=article.title,
-            url=article.url,
+            url=str(article.url),
             source=article.source,
         )
 
@@ -210,7 +210,7 @@ class AIFilter:
 
         # Cache the result if cache service is available
         if self.cache_service:
-            self.cache_service.cache_classification(article.title, article.url, result)
+            self.cache_service.cache_classification(article.title, str(article.url), result)
 
         return result
 

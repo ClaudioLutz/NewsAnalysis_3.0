@@ -1,25 +1,25 @@
 feeds:
   # Tier 1: Government Sources (7-day retention)
-  - name: "FINMA"
+  - name: "FINMA News"
     type: "rss"
-    url: "https://www.finma.ch/en/news/rss/"
+    url: "https://www.finma.ch/en/rss/news/"
     priority: 1
     max_age_hours: 168  # 7 days
     rate_limit_seconds: 5.0
     enabled: true
 
-  - name: "SNB"
+  - name: "FINMA Sanctions"
     type: "rss"
-    url: "https://www.snb.ch/en/rss/news.rss"
+    url: "https://www.finma.ch/en/rss/sanktionen/"
     priority: 1
     max_age_hours: 168
     rate_limit_seconds: 5.0
     enabled: true
 
   # Tier 2: Financial Sources (3-day retention)
-  - name: "Handelszeitung"
+  - name: "Finews"
     type: "rss"
-    url: "https://www.handelszeitung.ch/rss.xml"
+    url: "https://www.finews.ch/rss"
     priority: 2
     max_age_hours: 72
     rate_limit_seconds: 3.0
@@ -27,14 +27,47 @@ feeds:
 
   - name: "Cash"
     type: "rss"
-    url: "https://www.cash.ch/rss/news"
+    url: "https://www.cash.ch/rss"
+    priority: 2
+    max_age_hours: 72
+    rate_limit_seconds: 3.0
+    enabled: true
+
+  - name: "Finanzen.ch News"
+    type: "rss"
+    url: "https://www.finanzen.ch/rss/news"
+    priority: 2
+    max_age_hours: 72
+    rate_limit_seconds: 3.0
+    enabled: true
+
+  - name: "Finanzen.ch Analysis"
+    type: "rss"
+    url: "https://www.finanzen.ch/rss/analysen"
+    priority: 2
+    max_age_hours: 72
+    rate_limit_seconds: 3.0
+    enabled: true
+
+  - name: "StartupTicker"
+    type: "rss"
+    url: "https://www.startupticker.ch/feed/"
+    priority: 2
+    max_age_hours: 72
+    rate_limit_seconds: 3.0
+    enabled: true
+
+  - name: "FinTech News Switzerland"
+    type: "rss"
+    url: "https://fintechnews.ch/feed/"
     priority: 2
     max_age_hours: 72
     rate_limit_seconds: 3.0
     enabled: true
 
   # Tier 3: General News (1-day retention)
-  - name: "NZZ"
+  # NZZ - Multiple feeds for comprehensive coverage
+  - name: "NZZ Recent"
     type: "rss"
     url: "https://www.nzz.ch/recent.rss"
     priority: 3
@@ -42,7 +75,82 @@ feeds:
     rate_limit_seconds: 2.0
     enabled: true
 
-  - name: "SRF News"
+  - name: "NZZ Business"
+    type: "rss"
+    url: "https://www.nzz.ch/wirtschaft.rss"
+    priority: 3
+    max_age_hours: 24
+    rate_limit_seconds: 2.0
+    enabled: true
+
+  - name: "NZZ Switzerland"
+    type: "rss"
+    url: "https://www.nzz.ch/schweiz.rss"
+    priority: 3
+    max_age_hours: 24
+    rate_limit_seconds: 2.0
+    enabled: true
+
+  # Tages-Anzeiger - Tamedia partner feeds
+  - name: "Tages-Anzeiger Front"
+    type: "rss"
+    url: "https://partner-feeds.publishing.tamedia.ch/rss/tagesanzeiger/front"
+    priority: 3
+    max_age_hours: 24
+    rate_limit_seconds: 2.0
+    enabled: true
+
+  - name: "Tages-Anzeiger Switzerland"
+    type: "rss"
+    url: "https://partner-feeds.publishing.tamedia.ch/rss/tagesanzeiger/schweiz"
+    priority: 3
+    max_age_hours: 24
+    rate_limit_seconds: 2.0
+    enabled: true
+
+  - name: "Tages-Anzeiger Ticker"
+    type: "rss"
+    url: "https://partner-feeds.publishing.tamedia.ch/rss/tagesanzeiger/ticker"
+    priority: 3
+    max_age_hours: 24
+    rate_limit_seconds: 2.0
+    enabled: true
+
+  # Der Bund - Tamedia partner feeds
+  - name: "Der Bund Main"
+    type: "rss"
+    url: "https://partner-feeds.publishing.tamedia.ch/rss/derbund/"
+    priority: 3
+    max_age_hours: 24
+    rate_limit_seconds: 2.0
+    enabled: true
+
+  - name: "Der Bund Switzerland"
+    type: "rss"
+    url: "https://partner-feeds.publishing.tamedia.ch/rss/derbund/schweiz"
+    priority: 3
+    max_age_hours: 24
+    rate_limit_seconds: 2.0
+    enabled: true
+
+  - name: "Der Bund Business"
+    type: "rss"
+    url: "https://partner-feeds.publishing.tamedia.ch/rss/derbund/wirtschaft"
+    priority: 3
+    max_age_hours: 24
+    rate_limit_seconds: 2.0
+    enabled: true
+
+  - name: "Der Bund Ticker"
+    type: "rss"
+    url: "https://partner-feeds.publishing.tamedia.ch/rss/derbund/ticker"
+    priority: 3
+    max_age_hours: 24
+    rate_limit_seconds: 2.0
+    enabled: true
+
+  # SRF - Multiple feeds
+  - name: "SRF Latest"
     type: "rss"
     url: "https://www.srf.ch/news/bnf/rss/1646"
     priority: 3
@@ -50,9 +158,43 @@ feeds:
     rate_limit_seconds: 2.0
     enabled: true
 
-  - name: "20 Minuten"
-    type: "sitemap"
-    url: "https://www.20min.ch/sitemap-news.xml"
+  - name: "SRF Switzerland"
+    type: "rss"
+    url: "https://www.srf.ch/news/bnf/rss/1890"
+    priority: 3
+    max_age_hours: 24
+    rate_limit_seconds: 2.0
+    enabled: true
+
+  - name: "SRF Business"
+    type: "rss"
+    url: "https://www.srf.ch/news/bnf/rss/1926"
+    priority: 3
+    max_age_hours: 24
+    rate_limit_seconds: 2.0
+    enabled: true
+
+  # Swissinfo
+  - name: "Swissinfo"
+    type: "rss"
+    url: "https://cdn.prod.swi-services.ch/rss/de/rssxml/latest-news/rss"
+    priority: 3
+    max_age_hours: 24
+    rate_limit_seconds: 2.0
+    enabled: true
+
+  # French-language sources (Romandie)
+  - name: "Tribune de Genève"
+    type: "rss"
+    url: "https://partner-feeds.publishing.tamedia.ch/rss/tdg/front"
+    priority: 3
+    max_age_hours: 24
+    rate_limit_seconds: 2.0
+    enabled: true
+
+  - name: "24 heures"
+    type: "rss"
+    url: "https://partner-feeds.publishing.tamedia.ch/rss/24heures/front"
     priority: 3
     max_age_hours: 24
     rate_limit_seconds: 2.0

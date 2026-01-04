@@ -85,10 +85,10 @@ class JSONFormatter:
             "summary": article.summary,
             "key_points": article.key_points or [],
             "entities": {
-                "companies": article.entities.get("companies", []) if article.entities else [],
-                "people": article.entities.get("people", []) if article.entities else [],
-                "locations": article.entities.get("locations", []) if article.entities else [],
-                "topics": article.entities.get("topics", []) if article.entities else [],
+                "companies": article.entities.companies if article.entities else [],
+                "people": article.entities.people if article.entities else [],
+                "locations": article.entities.locations if article.entities else [],
+                "topics": article.entities.topics if article.entities else [],
             }
             if article.entities
             else {"companies": [], "people": [], "locations": [], "topics": []},

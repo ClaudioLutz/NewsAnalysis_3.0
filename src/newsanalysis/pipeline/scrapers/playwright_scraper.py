@@ -1,6 +1,5 @@
 """Playwright-based content extractor for JavaScript-heavy sites."""
 
-import logging
 from datetime import datetime
 from typing import Optional
 
@@ -10,8 +9,9 @@ from playwright.async_api import async_playwright, Browser, TimeoutError as Play
 from newsanalysis.core.article import ScrapedContent
 from newsanalysis.core.enums import ExtractionMethod
 from newsanalysis.pipeline.scrapers.base import BaseScraper
+from newsanalysis.utils.logging import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class PlaywrightExtractor(BaseScraper):

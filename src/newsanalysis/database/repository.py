@@ -18,6 +18,24 @@ from newsanalysis.utils.logging import get_logger
 logger = get_logger(__name__)
 
 
+def _parse_datetime(value: Optional[str]) -> Optional[datetime]:
+    """Parse datetime string from SQLite.
+
+    Args:
+        value: ISO format datetime string or None
+
+    Returns:
+        datetime object or None
+    """
+    if not value:
+        return None
+    try:
+        # Handle ISO format with or without timezone
+        return datetime.fromisoformat(value.replace('Z', '+00:00'))
+    except (ValueError, AttributeError):
+        return None
+
+
 class ArticleRepository:
     """Repository for article database operations."""
 
@@ -476,30 +494,30 @@ class ArticleRepository:
             url_hash=row["url_hash"],
             title=row["title"],
             source=row["source"],
-            published_at=row["published_at"],
-            collected_at=row["collected_at"],
+            published_at=_parse_datetime(row["published_at"]),
+            collected_at=_parse_datetime(row["collected_at"]),
             feed_priority=row["feed_priority"],
             is_match=row["is_match"],
             confidence=row["confidence"],
             topic=row["topic"],
             classification_reason=row["classification_reason"],
-            filtered_at=row["filtered_at"],
+            filtered_at=_parse_datetime(row["filtered_at"]),
             content=row["content"],
             author=row["author"],
             content_length=row["content_length"],
             extraction_method=row["extraction_method"],
             extraction_quality=row["extraction_quality"],
-            scraped_at=row["scraped_at"],
+            scraped_at=_parse_datetime(row["scraped_at"]),
             summary_title=row["summary_title"],
             summary=row["summary"],
             key_points=key_points,
             entities=entities,
-            summarized_at=row["summarized_at"],
+            summarized_at=_parse_datetime(row["summarized_at"]),
             pipeline_stage=row["pipeline_stage"],
             processing_status=row["processing_status"],
             error_message=row["error_message"],
             error_count=row["error_count"],
             run_id=row["run_id"],
-            created_at=row["created_at"],
-            updated_at=row["updated_at"],
+            created_at=_parse_datetime(row["created_at"]),
+            updated_at=_parse_datetime(row["updated_at"]),
         )

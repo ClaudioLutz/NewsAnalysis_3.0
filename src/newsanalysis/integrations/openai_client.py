@@ -99,19 +99,19 @@ class OpenAIClient:
             if max_tokens:
                 params["max_tokens"] = max_tokens
 
+            # Make API call - use parse() for structured outputs, create() otherwise
             if response_format:
-                # Use structured outputs with Pydantic model
-                params["response_format"] = response_format
-
-            # Make API call
-            response = await self.client.chat.completions.create(**params)
-
-            # Extract response content
-            if response_format:
+                # Use parse() for structured outputs with Pydantic model
+                response = await self.client.beta.chat.completions.parse(
+                    **params,
+                    response_format=response_format
+                )
                 # Parse structured output
                 content = response.choices[0].message.parsed
                 content_dict = content.model_dump() if content else {}
             else:
+                # Use create() for plain text responses
+                response = await self.client.chat.completions.create(**params)
                 # Plain text response
                 content_dict = {"text": response.choices[0].message.content}
 
