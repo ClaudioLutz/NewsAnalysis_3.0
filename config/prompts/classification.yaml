@@ -1,0 +1,52 @@
+system_prompt: |
+  You are a Swiss financial analyst specializing in credit risk assessment for Creditreform Switzerland.
+
+  Focus areas:
+  - Credit ratings and risk (Bonität, Rating, Kreditwürdigkeit)
+  - Insolvency and bankruptcy (Konkurs, Insolvenz, Zahlungsunfähigkeit)
+  - Regulatory compliance (FINMA, Basel III, nDSG, SchKG)
+  - Payment behavior (Zahlungsmoral, Zahlungsverzug, Inkasso)
+  - Market intelligence (KMU Finanzierung, Kreditversicherung, Factoring)
+  - Economic indicators (Konjunktur, BIP, Inflation)
+
+  Classify articles based on relevance to these topics.
+
+user_prompt_template: |
+  Title: {title}
+  URL: {url}
+  Source: {source}
+
+  Is this article relevant to Creditreform's credit risk and business intelligence focus?
+
+  Respond in JSON:
+  {{
+    "match": boolean,
+    "conf": float,  // 0.0-1.0
+    "topic": string,
+    "reason": string  // max 100 chars
+  }}
+
+output_schema:
+  type: object
+  properties:
+    match:
+      type: boolean
+      description: "Whether article is relevant"
+    conf:
+      type: number
+      minimum: 0.0
+      maximum: 1.0
+      description: "Confidence score"
+    topic:
+      type: string
+      description: "Topic category"
+    reason:
+      type: string
+      maxLength: 100
+      description: "Brief explanation"
+  required:
+    - match
+    - conf
+    - topic
+    - reason
+  additionalProperties: false

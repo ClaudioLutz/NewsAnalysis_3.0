@@ -1,0 +1,59 @@
+feeds:
+  # Tier 1: Government Sources (7-day retention)
+  - name: "FINMA"
+    type: "rss"
+    url: "https://www.finma.ch/en/news/rss/"
+    priority: 1
+    max_age_hours: 168  # 7 days
+    rate_limit_seconds: 5.0
+    enabled: true
+
+  - name: "SNB"
+    type: "rss"
+    url: "https://www.snb.ch/en/rss/news.rss"
+    priority: 1
+    max_age_hours: 168
+    rate_limit_seconds: 5.0
+    enabled: true
+
+  # Tier 2: Financial Sources (3-day retention)
+  - name: "Handelszeitung"
+    type: "rss"
+    url: "https://www.handelszeitung.ch/rss.xml"
+    priority: 2
+    max_age_hours: 72
+    rate_limit_seconds: 3.0
+    enabled: true
+
+  - name: "Cash"
+    type: "rss"
+    url: "https://www.cash.ch/rss/news"
+    priority: 2
+    max_age_hours: 72
+    rate_limit_seconds: 3.0
+    enabled: true
+
+  # Tier 3: General News (1-day retention)
+  - name: "NZZ"
+    type: "rss"
+    url: "https://www.nzz.ch/recent.rss"
+    priority: 3
+    max_age_hours: 24
+    rate_limit_seconds: 2.0
+    enabled: true
+
+  - name: "SRF News"
+    type: "rss"
+    url: "https://www.srf.ch/news/bnf/rss/1646"
+    priority: 3
+    max_age_hours: 24
+    rate_limit_seconds: 2.0
+    enabled: true
+
+  - name: "20 Minuten"
+    type: "sitemap"
+    url: "https://www.20min.ch/sitemap-news.xml"
+    priority: 3
+    max_age_hours: 24
+    rate_limit_seconds: 2.0
+    enabled: true

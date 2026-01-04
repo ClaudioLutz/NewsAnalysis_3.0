@@ -1,0 +1,63 @@
+system_prompt: |
+  You are a senior analyst at Creditreform Switzerland creating daily intelligence briefings.
+
+  Analyze multiple articles to identify:
+  - Overarching themes and patterns
+  - Credit risk signals across markets
+  - Regulatory changes and implications
+  - Market insights for credit decision-making
+
+  Provide strategic perspective for credit analysts and risk managers.
+
+user_prompt_template: |
+  Daily Articles Summary:
+  {articles_summary}
+
+  Generate a meta-analysis in JSON format identifying:
+  - Key themes (1-5 main themes across all articles)
+  - Credit risk signals (up to 5 emerging risk signals)
+  - Regulatory updates (up to 5 compliance/regulatory items)
+  - Market insights (up to 5 actionable business intelligence points)
+
+  Response format:
+  {{
+    "key_themes": ["theme 1", "theme 2", ...],  // 1-5 items
+    "credit_risk_signals": ["signal 1", ...],   // 0-5 items
+    "regulatory_updates": ["update 1", ...],     // 0-5 items
+    "market_insights": ["insight 1", ...]        // 0-5 items
+  }}
+
+output_schema:
+  type: object
+  properties:
+    key_themes:
+      type: array
+      items:
+        type: string
+      minItems: 1
+      maxItems: 5
+      description: "Main themes across articles"
+    credit_risk_signals:
+      type: array
+      items:
+        type: string
+      maxItems: 5
+      description: "Emerging credit risk signals"
+    regulatory_updates:
+      type: array
+      items:
+        type: string
+      maxItems: 5
+      description: "Regulatory and compliance updates"
+    market_insights:
+      type: array
+      items:
+        type: string
+      maxItems: 5
+      description: "Actionable market intelligence"
+  required:
+    - key_themes
+    - credit_risk_signals
+    - regulatory_updates
+    - market_insights
+  additionalProperties: false

@@ -1,0 +1,93 @@
+# Bonitäts-Tagesanalyse
+## {{ date_str }}
+
+**Creditreform Intelligence Briefing**
+**Version**: {{ version }}
+**Artikel analysiert**: {{ article_count }}
+**Erstellt**: {{ generated_at_str }}
+
+---
+
+## Zusammenfassung
+
+### Hauptthemen
+{% for theme in meta_analysis.key_themes %}
+{{ loop.index }}. {{ theme }}
+{% endfor %}
+
+{% if meta_analysis.credit_risk_signals %}
+### Kreditrisiko-Signale
+{% for signal in meta_analysis.credit_risk_signals %}
+- {{ signal }}
+{% endfor %}
+{% endif %}
+
+{% if meta_analysis.regulatory_updates %}
+### Regulatorische Entwicklungen
+{% for update in meta_analysis.regulatory_updates %}
+- {{ update }}
+{% endfor %}
+{% endif %}
+
+{% if meta_analysis.market_insights %}
+### Markteinblicke
+{% for insight in meta_analysis.market_insights %}
+- {{ insight }}
+{% endfor %}
+{% endif %}
+
+---
+
+## Detaillierte Artikel-Analyse
+
+{% for topic, articles in articles_by_topic.items() %}
+### {{ topic }}
+
+{% for article in articles %}
+#### {{ article.summary_title or article.title }}
+
+**Quelle**: {{ article.source }}
+**Datum**: {{ article.published_at.strftime('%d.%m.%Y') if article.published_at else 'N/A' }}
+**Relevanz**: {{ (article.confidence * 100)|round|int if article.confidence else 'N/A' }}%
+**Link**: {{ article.url }}
+
+{{ article.summary }}
+
+{% if article.key_points %}
+**Wichtigste Punkte:**
+{% for point in article.key_points %}
+- {{ point }}
+{% endfor %}
+{% endif %}
+
+{% if article.entities %}
+{% set companies = article.entities.companies if article.entities.companies is defined else article.entities.get('companies', []) %}
+{% set people = article.entities.people if article.entities.people is defined else article.entities.get('people', []) %}
+{% set locations = article.entities.locations if article.entities.locations is defined else article.entities.get('locations', []) %}
+
+{% if companies %}
+**Unternehmen**: {{ companies|join(', ') }}
+{% endif %}
+{% if people %}
+**Personen**: {{ people|join(', ') }}
+{% endif %}
+{% if locations %}
+**Orte**: {{ locations|join(', ') }}
+{% endif %}
+{% endif %}
+
+---
+
+{% endfor %}
+{% endfor %}
+
+## Risikobewertung
+
+Diese Analyse basiert auf öffentlich verfügbaren Nachrichtenquellen und KI-gestützter Verarbeitung. Die Informationen dienen als Entscheidungsgrundlage für Kreditanalysten und Risikomanager bei Creditreform.
+
+**Hinweis**: Alle Angaben ohne Gewähr. Für detaillierte Bonitätsprüfungen konsultieren Sie bitte die vollständigen Creditreform-Berichte.
+
+---
+
+*Erstellt mit NewsAnalysis 3.0 | Creditreform Switzerland*
+*Automatisierte Nachrichtenanalyse für Kreditrisiko-Intelligence*

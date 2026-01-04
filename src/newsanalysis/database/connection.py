@@ -1,0 +1,130 @@
+"""Database connection management."""
+
+import sqlite3
+from pathlib import Path
+from typing import Optional
+
+import structlog
+
+logger = structlog.get_logger(__name__)
+
+
+class DatabaseConnection:
+    """SQLite database connection manager."""
+
+    def __init__(self, db_path: Path) -> None:
+        """Initialize database connection.
+
+        Args:
+            db_path: Path to SQLite database file
+        """
+        self.db_path = db_path
+        self._connection: Optional[sqlite3.Connection] = None
+
+    def connect(self) -> sqlite3.Connection:
+        """Get or create database connection.
+
+        Returns:
+            SQLite connection object
+        """
+        if self._connection is None:
+            self._connection = sqlite3.connect(
+                str(self.db_path),
+                detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES,
+            )
+            # Enable foreign keys
+            self._connection.execute("PRAGMA foreign_keys = ON")
+            # Enable WAL mode for better concurrency
+            self._connection.execute("PRAGMA journal_mode = WAL")
+            # Return rows as dictionaries
+            self._connection.row_factory = sqlite3.Row
+
+            logger.info("database_connected", path=str(self.db_path))
+
+        return self._connection
+
+    def close(self) -> None:
+        """Close database connection."""
+        if self._connection:
+            self._connection.close()
+            self._connection = None
+            logger.info("database_closed")
+
+    def execute(self, query: str, params: tuple = ()) -> sqlite3.Cursor:
+        """Execute a database query.
+
+        Args:
+            query: SQL query string
+            params: Query parameters
+
+        Returns:
+            Cursor object
+        """
+        conn = self.connect()
+        return conn.execute(query, params)
+
+    def executemany(self, query: str, params: list) -> sqlite3.Cursor:
+        """Execute a query with multiple parameter sets.
+
+        Args:
+            query: SQL query string
+            params: List of parameter tuples
+
+        Returns:
+            Cursor object
+        """
+        conn = self.connect()
+        return conn.executemany(query, params)
+
+    def commit(self) -> None:
+        """Commit current transaction."""
+        if self._connection:
+            self._connection.commit()
+
+    def rollback(self) -> None:
+        """Rollback current transaction."""
+        if self._connection:
+            self._connection.rollback()
+
+    def __enter__(self) -> "DatabaseConnection":
+        """Context manager entry."""
+        self.connect()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:  # type: ignore
+        """Context manager exit."""
+        if exc_type is not None:
+            self.rollback()
+        else:
+            self.commit()
+        self.close()
+
+
+def init_database(db_path: Path) -> DatabaseConnection:
+    """Initialize database with schema.
+
+    Args:
+        db_path: Path to SQLite database file
+
+    Returns:
+        DatabaseConnection object
+    """
+    # Ensure parent directory exists
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Create database connection
+    db = DatabaseConnection(db_path)
+
+    # Read schema file
+    schema_path = Path(__file__).parent / "schema.sql"
+    with open(schema_path, "r", encoding="utf-8") as f:
+        schema_sql = f.read()
+
+    # Execute schema
+    conn = db.connect()
+    conn.executescript(schema_sql)
+    conn.commit()
+
+    logger.info("database_initialized", path=str(db_path))
+
+    return db

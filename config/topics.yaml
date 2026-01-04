@@ -1,0 +1,55 @@
+creditreform_insights:
+  enabled: true
+  confidence_threshold: 0.71
+  max_articles_per_run: 35
+  max_article_age_days: 0  # Same day only
+
+  focus_areas:
+    credit_risk:
+      - Bonität
+      - Rating
+      - Score
+      - Kreditwürdigkeit
+      - Bonitätsprüfung
+      - Kreditrisiko
+
+    insolvency_bankruptcy:
+      - Konkurs
+      - Insolvenz
+      - Zahlungsunfähigkeit
+      - SchKG
+      - Sanierung
+      - Liquidation
+      - Nachlassstundung
+
+    regulatory_compliance:
+      - FINMA
+      - Basel III
+      - nDSG
+      - Datenschutz
+      - Compliance
+      - Geldwäschereigesetz
+      - GwG
+
+    payment_behavior:
+      - Zahlungsmoral
+      - Zahlungsverzug
+      - Inkasso
+      - Forderungsmanagement
+      - Debitorenmanagement
+      - Mahnwesen
+
+    market_intelligence:
+      - KMU Finanzierung
+      - Kreditversicherung
+      - Factoring
+      - Leasing
+      - Unternehmensfinanzierung
+      - Trade Finance
+
+    economic_indicators:
+      - Konjunktur
+      - BIP
+      - Inflation
+      - Arbeitslosigkeit
+      - Exportzahlen
