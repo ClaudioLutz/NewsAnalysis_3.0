@@ -4,7 +4,16 @@ from datetime import datetime
 from typing import Optional
 
 import trafilatura
-from playwright.async_api import async_playwright, Browser, TimeoutError as PlaywrightTimeout
+
+# Playwright is optional - import gracefully
+try:
+    from playwright.async_api import async_playwright, Browser, TimeoutError as PlaywrightTimeout
+    PLAYWRIGHT_AVAILABLE = True
+except ImportError:
+    PLAYWRIGHT_AVAILABLE = False
+    async_playwright = None
+    Browser = None
+    PlaywrightTimeout = Exception
 
 from newsanalysis.core.article import ScrapedContent
 from newsanalysis.core.enums import ExtractionMethod
@@ -33,6 +42,9 @@ class PlaywrightExtractor(BaseScraper):
             headless: Run browser in headless mode
             wait_for_network_idle: Wait for network to be idle before extracting
         """
+        if not PLAYWRIGHT_AVAILABLE:
+            logger.warning("playwright_not_available", message="Playwright is not installed. This scraper will not function.")
+
         super().__init__(timeout=timeout, user_agent=user_agent)
         self.headless = headless
         self.wait_for_network_idle = wait_for_network_idle
@@ -53,6 +65,10 @@ class PlaywrightExtractor(BaseScraper):
         Returns:
             ScrapedContent if successful, None if failed
         """
+        if not PLAYWRIGHT_AVAILABLE:
+            logger.error("playwright_not_available", url=url, message="Cannot extract - Playwright is not installed")
+            return None
+
         try:
             logger.info("extracting_content_playwright", url=url)
 

@@ -104,6 +104,37 @@ def _get_api_cost_stats(conn: sqlite3.Connection, start_date: datetime, end_date
     """Get API cost statistics from database."""
     cursor = conn.cursor()
 
+    # NEW: Costs by provider (extracted from model field prefix)
+    cursor.execute(
+        """
+        SELECT
+            CASE
+                WHEN model LIKE 'deepseek:%' THEN 'DeepSeek'
+                WHEN model LIKE 'gemini:%' THEN 'Gemini'
+                ELSE 'OpenAI'
+            END as provider,
+            COUNT(*) as calls,
+            SUM(input_tokens) as input_tokens,
+            SUM(output_tokens) as output_tokens,
+            SUM(cost) as total_cost
+        FROM api_calls
+        WHERE created_at BETWEEN ? AND ?
+        GROUP BY provider
+        ORDER BY total_cost DESC
+        """,
+        (start_date.isoformat(), end_date.isoformat()),
+    )
+
+    by_provider = []
+    for row in cursor.fetchall():
+        by_provider.append({
+            "provider": row[0],
+            "calls": row[1],
+            "input_tokens": row[2],
+            "output_tokens": row[3],
+            "cost": row[4],
+        })
+
     # Total costs by module
     cursor.execute(
         """
@@ -166,6 +197,7 @@ def _get_api_cost_stats(conn: sqlite3.Connection, start_date: datetime, end_date
         "total_cost": total_cost,
         "total_calls": total_calls,
         "total_tokens": total_tokens,
+        "by_provider": by_provider,  # NEW
         "by_module": by_module,
         "by_date": by_date,
     }
@@ -248,6 +280,26 @@ def _display_api_costs(stats: dict, daily_limit: float, detailed: bool):
             color = "green"
 
         click.echo(f"Budget Utilization: {click.style(f'{utilization:.1f}%', fg=color)} (${stats['total_cost']:.4f} / ${budget:.2f})")
+        click.echo()
+
+    # NEW: Cost by provider
+    if stats.get("by_provider"):
+        click.echo(click.style("Cost by Provider:", fg="yellow"))
+        click.echo()
+        click.echo(f"{'Provider':<20} {'Calls':>10} {'Tokens':>12} {'Cost':>10} {'%':>8}")
+        click.echo("-" * 70)
+
+        for provider_stats in stats["by_provider"]:
+            pct = (provider_stats["cost"] / stats["total_cost"] * 100) if stats["total_cost"] > 0 else 0
+            total_tokens = provider_stats["input_tokens"] + provider_stats["output_tokens"]
+            click.echo(
+                f"{provider_stats['provider']:<20} "
+                f"{provider_stats['calls']:>10,} "
+                f"{total_tokens:>12,} "
+                f"${provider_stats['cost']:>9.4f} "
+                f"{pct:>7.1f}%"
+            )
+
         click.echo()
 
     # Cost by module

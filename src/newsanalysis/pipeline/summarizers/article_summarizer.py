@@ -1,4 +1,4 @@
-"""Article summarizer with OpenAI integration and entity extraction."""
+"""Article summarizer with LLM integration and entity extraction."""
 
 import asyncio
 import json
@@ -9,7 +9,7 @@ from typing import Dict, List, Optional
 from pydantic import BaseModel, Field
 
 from newsanalysis.core.article import ArticleSummary, EntityData
-from newsanalysis.integrations.openai_client import OpenAIClient
+from newsanalysis.integrations.provider_factory import LLMClient
 from newsanalysis.services.cache_service import CacheService
 from newsanalysis.services.config_loader import load_yaml
 from newsanalysis.utils.logging import get_logger
@@ -44,13 +44,13 @@ class SummaryResponse(BaseModel):
 
 
 class ArticleSummarizer:
-    """Summarize articles using OpenAI with entity extraction."""
+    """Summarize articles using LLM providers with entity extraction."""
 
     def __init__(
         self,
-        openai_client: OpenAIClient,
+        llm_client: LLMClient,
         prompt_config_path: str = "config/prompts/summarization.yaml",
-        model: str = "gpt-4o-mini",
+        model: Optional[str] = None,
         temperature: float = 0.0,
         cache_service: Optional[CacheService] = None,
     ):
@@ -58,13 +58,13 @@ class ArticleSummarizer:
         Initialize article summarizer.
 
         Args:
-            openai_client: OpenAI client instance
+            llm_client: LLM client instance (Gemini, OpenAI, etc.)
             prompt_config_path: Path to summarization prompt config
-            model: OpenAI model to use
+            model: Model to use (optional, client has default)
             temperature: Sampling temperature
             cache_service: Optional cache service for caching summaries
         """
-        self.openai_client = openai_client
+        self.llm_client = llm_client
         self.model = model
         self.temperature = temperature
         self.cache_service = cache_service
@@ -139,8 +139,8 @@ class ArticleSummarizer:
                 {"role": "user", "content": user_prompt},
             ]
 
-            # Call OpenAI API with structured output
-            response = await self.openai_client.create_completion(
+            # Call LLM API with structured output
+            response = await self.llm_client.create_completion(
                 messages=messages,
                 module="summarizer",
                 request_type="summarization",

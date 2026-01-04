@@ -63,8 +63,8 @@ dmypy.json
 logs/
 
 # Output
-out/
-!out/.gitkeep
+# out/
+# !out/.gitkeep
 
 # Temporary files
 *.tmp

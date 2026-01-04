@@ -7,7 +7,7 @@ from newsanalysis.core.article import Article
 from newsanalysis.core.digest import DailyDigest, MetaAnalysis
 from newsanalysis.database.digest_repository import DigestRepository
 from newsanalysis.database.repository import ArticleRepository
-from newsanalysis.integrations.openai_client import OpenAIClient
+from newsanalysis.integrations.provider_factory import LLMClient
 from newsanalysis.services.config_loader import ConfigLoader
 from newsanalysis.utils.exceptions import PipelineError
 from newsanalysis.utils.logging import get_logger
@@ -20,7 +20,7 @@ class DigestGenerator:
 
     def __init__(
         self,
-        openai_client: OpenAIClient,
+        llm_client: LLMClient,
         article_repo: ArticleRepository,
         digest_repo: DigestRepository,
         config_loader: ConfigLoader,
@@ -28,12 +28,12 @@ class DigestGenerator:
         """Initialize digest generator.
 
         Args:
-            openai_client: OpenAI client for API calls.
+            llm_client: LLM client for API calls (Gemini, OpenAI, etc.).
             article_repo: Article repository.
             digest_repo: Digest repository.
             config_loader: Configuration loader for prompts.
         """
-        self.openai_client = openai_client
+        self.openai_client = llm_client  # Keep variable name for compatibility
         self.article_repo = article_repo
         self.digest_repo = digest_repo
         self.config_loader = config_loader
@@ -187,23 +187,27 @@ class DigestGenerator:
 
             # Call OpenAI for meta-analysis
             response = await self.openai_client.create_completion(
-                model="gpt-4o-mini",
-                system_prompt=system_prompt,
-                user_prompt=user_prompt,
-                response_model=MetaAnalysis,
-                temperature=0.2,  # Slightly creative for analysis
-                run_id=run_id,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
                 module="digest_generator",
                 request_type="meta_analysis",
+                model="gpt-4o-mini",
+                response_format=MetaAnalysis,
+                temperature=0.2,  # Slightly creative for analysis
             )
+
+            # Extract MetaAnalysis from response
+            meta_analysis = MetaAnalysis(**response["content"])
 
             logger.info(
                 "meta_analysis_generated",
-                themes=len(response.key_themes),
-                signals=len(response.credit_risk_signals),
+                themes=len(meta_analysis.key_themes),
+                signals=len(meta_analysis.credit_risk_signals),
             )
 
-            return response
+            return meta_analysis
 
         except Exception as e:
             logger.error("meta_analysis_failed", error=str(e))

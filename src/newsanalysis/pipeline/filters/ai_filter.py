@@ -1,4 +1,4 @@
-"""AI-powered article filter using OpenAI."""
+"""AI-powered article filter using LLM providers."""
 
 import asyncio
 from datetime import datetime
@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 
 from newsanalysis.core.article import Article, ClassificationResult
 from newsanalysis.core.config import Config
-from newsanalysis.integrations.openai_client import OpenAIClient
+from newsanalysis.integrations.provider_factory import LLMClient
 from newsanalysis.services.cache_service import CacheService
 from newsanalysis.services.config_loader import load_prompt_config
 from newsanalysis.utils.exceptions import AIServiceError
@@ -34,18 +34,18 @@ class AIFilter:
 
     def __init__(
         self,
-        openai_client: OpenAIClient,
+        llm_client: LLMClient,
         config: Config,
         cache_service: Optional[CacheService] = None,
     ):
         """Initialize AI filter.
 
         Args:
-            openai_client: OpenAI client instance.
+            llm_client: LLM client instance (DeepSeek, OpenAI, etc.).
             config: Application configuration.
             cache_service: Optional cache service for caching classification results.
         """
-        self.client = openai_client
+        self.client = llm_client
         self.config = config
         self.cache_service = cache_service
 
@@ -176,12 +176,12 @@ class AIFilter:
             {"role": "user", "content": user_prompt},
         ]
 
-        # Call OpenAI API with structured output
+        # Call LLM API with structured output
+        # Don't specify model - let the client use its default (e.g., deepseek-chat for DeepSeek)
         response = await self.client.create_completion(
             messages=messages,
             module="filter",
             request_type="classification",
-            model=self.config.model_mini,  # Use mini model for classification
             response_format=ClassificationResponse,
             temperature=0.0,  # Deterministic
         )

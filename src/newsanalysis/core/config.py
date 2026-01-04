@@ -52,11 +52,25 @@ class PromptConfig(BaseModel):
 class Config(BaseSettings):
     """Main application configuration from environment variables."""
 
-    # OpenAI API
+    # OpenAI API (Primary & Fallback)
     openai_api_key: str = Field(..., min_length=1)
     model_nano: str = "gpt-4o-mini"
     model_mini: str = "gpt-4o-mini"
     model_sonnet: str = "gpt-4o"
+
+    # DeepSeek API (For Classification)
+    deepseek_api_key: Optional[str] = Field(default=None)
+    deepseek_base_url: str = "https://api.deepseek.com"
+    deepseek_model: str = "deepseek-chat"
+
+    # Google Gemini API (For Summarization & Digest)
+    google_api_key: Optional[str] = Field(default=None)
+    gemini_model: str = "gemini-2.0-flash"
+
+    # LLM Provider Selection
+    classification_provider: Literal["deepseek", "openai"] = "deepseek"
+    summarization_provider: Literal["gemini", "openai"] = "gemini"
+    digest_provider: Literal["gemini", "openai"] = "gemini"
 
     # Database
     db_path: Path = Path("./news.db")
