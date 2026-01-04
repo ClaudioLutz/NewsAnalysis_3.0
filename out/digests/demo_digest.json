@@ -1,0 +1,95 @@
+{
+  "digest_metadata": {
+    "date": "2026-01-04",
+    "version": 1,
+    "generated_at": "2026-01-04T16:58:15.255596",
+    "article_count": 2,
+    "cluster_count": null,
+    "run_id": "demo_run"
+  },
+  "meta_analysis": {
+    "key_themes": [
+      "Analysis unavailable"
+    ],
+    "credit_risk_signals": [],
+    "regulatory_updates": [],
+    "market_insights": []
+  },
+  "articles": [
+    {
+      "id": 1,
+      "url": "https://www.nzz.ch/test/signa-investigation",
+      "title": "Swiss Prosecutor Investigates Signa",
+      "source": "NZZ Business",
+      "published_at": "2026-01-04T00:00:00",
+      "topic": "credit-risk",
+      "confidence": 0.85,
+      "summary": "The Swiss Federal Prosecutor's Office has intervened in the Signa bankruptcy case, focusing on financial stability and credit risk implications. The investigation examines business practices that led to the company's insolvency, with potential ramifications for the Swiss financial sector.",
+      "key_points": [
+        "Federal investigation into Signa bankruptcy",
+        "Focus on financial stability issues",
+        "Credit risk assessment for related entities",
+        "Examination of insolvency causes",
+        "Implications for Swiss financial sector"
+      ],
+      "entities": {
+        "companies": [
+          "Signa"
+        ],
+        "people": [],
+        "locations": [
+          "Switzerland"
+        ],
+        "topics": [
+          "bankruptcy",
+          "investigation",
+          "credit risk"
+        ]
+      },
+      "metadata": {
+        "feed_priority": 1,
+        "extraction_method": null,
+        "extraction_quality": null,
+        "content_length": null,
+        "author": null
+      }
+    },
+    {
+      "id": 2,
+      "url": "https://www.nzz.ch/test/venezuela-oil",
+      "title": "Venezuela Oil Industry Requires Billions for Reconstruction",
+      "source": "NZZ Recent",
+      "published_at": "2026-01-04T00:00:00",
+      "topic": "credit-risk",
+      "confidence": 0.85,
+      "summary": "Venezuela, once a leading oil producer, faces massive reconstruction costs estimated in billions. The deterioration of the oil sector has contributed to economic instability and inflation, creating significant credit risk concerns for international investors and trading partners.",
+      "key_points": [
+        "Billions needed for oil sector reconstruction",
+        "Economic instability from oil decline",
+        "Inflation impact on economy",
+        "Credit risk for international partners",
+        "Historical oil production decline"
+      ],
+      "entities": {
+        "companies": [],
+        "people": [],
+        "locations": [
+          "Venezuela"
+        ],
+        "topics": [
+          "oil production",
+          "economic crisis",
+          "inflation",
+          "credit risk"
+        ]
+      },
+      "metadata": {
+        "feed_priority": 1,
+        "extraction_method": null,
+        "extraction_quality": null,
+        "content_length": null,
+        "author": null
+      }
+    }
+  ]
+}
