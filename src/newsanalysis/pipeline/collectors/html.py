@@ -14,7 +14,7 @@ from newsanalysis.core.config import FeedConfig
 from newsanalysis.pipeline.collectors.base import BaseCollector
 from newsanalysis.utils.exceptions import CollectorError
 from newsanalysis.utils.logging import get_logger
-from newsanalysis.utils.text import hash_url, normalize_url
+from newsanalysis.utils.text_utils import hash_url, normalize_url
 
 logger = get_logger(__name__)
 

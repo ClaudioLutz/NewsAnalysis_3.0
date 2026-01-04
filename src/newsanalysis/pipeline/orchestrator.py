@@ -308,7 +308,7 @@ class PipelineOrchestrator:
 
                 # Fall back to Playwright if Trafilatura fails
                 if not scraped_content:
-                    logger.info(f"Trafilatura failed for {article.url}, trying Playwright...")
+                    logger.info("trafilatura_failed_trying_playwright", url=str(article.url))
                     scraped_content = await self.playwright_scraper.extract(str(article.url))
 
                 if scraped_content:

@@ -143,10 +143,10 @@ def health(verbose: bool) -> None:
             # Get recent runs (last 7 days)
             cursor = db.conn.execute(
                 """
-                SELECT run_id, status, created_at, collected_count, filtered_count
+                SELECT run_id, status, started_at, collected_count, filtered_count
                 FROM pipeline_runs
-                WHERE created_at > datetime('now', '-7 days')
-                ORDER BY created_at DESC
+                WHERE started_at > datetime('now', '-7 days')
+                ORDER BY started_at DESC
                 LIMIT 5
                 """
             )
@@ -156,9 +156,9 @@ def health(verbose: bool) -> None:
                 click.echo(f"  ✓ Found {len(recent_runs)} recent run(s) (last 7 days)")
                 if verbose:
                     for run in recent_runs:
-                        run_id, status, created_at, collected, filtered = run
+                        run_id, status, started_at, collected, filtered = run
                         click.echo(
-                            f"    - {created_at}: {status} "
+                            f"    - {started_at}: {status} "
                             f"(collected: {collected}, filtered: {filtered})"
                         )
                 health_status["recent_runs"] = True
@@ -211,8 +211,8 @@ def health(verbose: bool) -> None:
                 click.echo("  Cache Performance:")
                 cursor = db.conn.execute(
                     """
-                    SELECT cache_type, total_requests, total_hits,
-                           ROUND(CAST(total_hits AS FLOAT) / total_requests * 100, 1) as hit_rate
+                    SELECT cache_type, requests, hits,
+                           ROUND(CAST(hits AS FLOAT) / requests * 100, 1) as hit_rate
                     FROM cache_stats
                     WHERE date = date('now')
                     """

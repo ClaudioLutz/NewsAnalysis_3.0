@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, UTC
 
 import pytest
 
-from newsanalysis.utils.date import (
+from newsanalysis.utils.date_utils import (
     is_within_hours,
     now_utc,
     parse_date,

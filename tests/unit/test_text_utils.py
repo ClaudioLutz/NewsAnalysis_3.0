@@ -3,7 +3,7 @@
 
 import pytest
 
-from newsanalysis.utils.text import (
+from newsanalysis.utils.text_utils import (
     clean_whitespace,
     hash_url,
     normalize_url,

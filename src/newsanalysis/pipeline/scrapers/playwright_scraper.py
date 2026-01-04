@@ -54,12 +54,12 @@ class PlaywrightExtractor(BaseScraper):
             ScrapedContent if successful, None if failed
         """
         try:
-            logger.info(f"Extracting content from {url} using Playwright")
+            logger.info("extracting_content_playwright", url=url)
 
             # Fetch rendered HTML
             html = await self._fetch_rendered_html(url)
             if not html:
-                logger.warning(f"Failed to fetch rendered HTML from {url}")
+                logger.warning("fetch_rendered_html_failed", url=url)
                 return None
 
             # Use Trafilatura to extract text from rendered HTML
@@ -73,14 +73,12 @@ class PlaywrightExtractor(BaseScraper):
             )
 
             if not content:
-                logger.warning(f"No content extracted from {url}")
+                logger.warning("no_content_extracted", url=url)
                 return None
 
             # Validate minimum content length
             if len(content) < 100:
-                logger.warning(
-                    f"Content too short ({len(content)} chars) from {url}"
-                )
+                logger.warning("content_too_short", url=url, length=len(content))
                 return None
 
             # Extract metadata
@@ -179,10 +177,10 @@ class PlaywrightExtractor(BaseScraper):
                     await browser.close()
 
         except PlaywrightTimeout:
-            logger.warning(f"Timeout rendering {url} with Playwright")
+            logger.warning("playwright_timeout", url=url)
             return None
         except Exception as e:
-            logger.error(f"Error rendering {url} with Playwright: {e}")
+            logger.error("playwright_render_error", url=url, error=str(e))
             return None
 
     async def close(self):

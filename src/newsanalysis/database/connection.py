@@ -21,6 +21,15 @@ class DatabaseConnection:
         self.db_path = db_path
         self._connection: Optional[sqlite3.Connection] = None
 
+    @property
+    def conn(self) -> sqlite3.Connection:
+        """Get database connection.
+
+        Returns:
+            SQLite connection object
+        """
+        return self.connect()
+
     def connect(self) -> sqlite3.Connection:
         """Get or create database connection.
 

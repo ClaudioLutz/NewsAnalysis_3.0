@@ -58,12 +58,12 @@ class TrafilaturaExtractor(BaseScraper):
             ScrapedContent if successful, None if failed
         """
         try:
-            logger.info(f"Extracting content from {url} using Trafilatura")
+            logger.info("extracting_content_trafilatura", url=url)
 
             # Fetch HTML
             html = await self._fetch_html(url)
             if not html:
-                logger.warning(f"Failed to fetch HTML from {url}")
+                logger.warning("fetch_html_failed", url=url)
                 return None
 
             # Extract content using Trafilatura
@@ -78,14 +78,12 @@ class TrafilaturaExtractor(BaseScraper):
             )
 
             if not content:
-                logger.warning(f"No content extracted from {url}")
+                logger.warning("no_content_extracted", url=url)
                 return None
 
             # Validate minimum content length
             if len(content) < 100:
-                logger.warning(
-                    f"Content too short ({len(content)} chars) from {url}"
-                )
+                logger.warning("content_too_short", url=url, length=len(content))
                 return None
 
             # Extract metadata
@@ -121,7 +119,7 @@ class TrafilaturaExtractor(BaseScraper):
             )
 
         except Exception as e:
-            logger.error(f"Error extracting content from {url}: {e}", exc_info=True)
+            logger.error("extraction_error", url=url, error=str(e), exc_info=True)
             return None
 
     async def _fetch_html(self, url: str) -> Optional[str]:
@@ -146,19 +144,17 @@ class TrafilaturaExtractor(BaseScraper):
                 # Check content type
                 content_type = response.headers.get("content-type", "").lower()
                 if "text/html" not in content_type:
-                    logger.warning(
-                        f"Non-HTML content type: {content_type} for {url}"
-                    )
+                    logger.warning("non_html_content", url=url, content_type=content_type)
                     return None
 
                 return response.text
 
         except httpx.TimeoutException:
-            logger.warning(f"Timeout fetching {url}")
+            logger.warning("fetch_timeout", url=url)
             return None
         except httpx.HTTPStatusError as e:
-            logger.warning(f"HTTP error {e.response.status_code} for {url}")
+            logger.warning("http_error", url=url, status_code=e.response.status_code)
             return None
         except Exception as e:
-            logger.error(f"Error fetching {url}: {e}")
+            logger.error("fetch_error", url=url, error=str(e))
             return None

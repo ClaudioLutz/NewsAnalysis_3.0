@@ -9,6 +9,45 @@ from newsanalysis.core.config import FeedConfig, PromptConfig, TopicConfig
 from newsanalysis.utils.exceptions import ConfigurationError
 
 
+class ConfigLoader:
+    """Configuration loader for loading YAML configuration files."""
+
+    def __init__(self, config_dir: Path = Path("config")):
+        """Initialize config loader.
+
+        Args:
+            config_dir: Configuration directory path
+        """
+        self.config_dir = config_dir
+
+    def load_prompt_config(self, prompt_name: str) -> PromptConfig:
+        """Load prompt configuration from YAML.
+
+        Args:
+            prompt_name: Name of prompt file (without .yaml extension)
+
+        Returns:
+            PromptConfig object
+        """
+        return load_prompt_config(prompt_name, self.config_dir)
+
+    def load_feeds_config(self) -> List[FeedConfig]:
+        """Load news feeds configuration from YAML.
+
+        Returns:
+            List of FeedConfig objects
+        """
+        return load_feeds_config(self.config_dir)
+
+    def load_topics_config(self) -> Dict[str, TopicConfig]:
+        """Load topics configuration from YAML.
+
+        Returns:
+            Dictionary of topic name to TopicConfig
+        """
+        return load_topics_config(self.config_dir)
+
+
 def load_yaml(file_path: Path) -> Dict[str, Any]:
     """Load YAML file.
 

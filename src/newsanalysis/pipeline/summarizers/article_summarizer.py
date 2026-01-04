@@ -2,8 +2,8 @@
 
 import asyncio
 import json
-import logging
 from datetime import datetime
+from pathlib import Path
 from typing import Dict, List, Optional
 
 from pydantic import BaseModel, Field
@@ -11,9 +11,10 @@ from pydantic import BaseModel, Field
 from newsanalysis.core.article import ArticleSummary, EntityData
 from newsanalysis.integrations.openai_client import OpenAIClient
 from newsanalysis.services.cache_service import CacheService
-from newsanalysis.services.config_loader import load_yaml_config
+from newsanalysis.services.config_loader import load_yaml
+from newsanalysis.utils.logging import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class SummaryResponse(BaseModel):
@@ -65,7 +66,7 @@ class ArticleSummarizer:
         self.cache_service = cache_service
 
         # Load prompt configuration
-        config = load_yaml_config(prompt_config_path)
+        config = load_yaml(Path(prompt_config_path))
         self.system_prompt = config["system_prompt"]
         self.user_prompt_template = config["user_prompt_template"]
 
@@ -96,7 +97,7 @@ class ArticleSummarizer:
             ArticleSummary if successful, None if failed
         """
         try:
-            logger.info(f"Summarizing article: {title[:50]}...")
+            logger.info("summarizing_article", title=title[:50])
 
             # Check cache first if available
             if self.cache_service:
@@ -244,14 +245,16 @@ class ArticleSummarizer:
             # Handle exceptions in results
             for summary in chunk_summaries:
                 if isinstance(summary, Exception):
-                    logger.error(f"Error in batch summarization: {summary}")
+                    logger.error("batch_summarization_error", error=str(summary))
                     summaries.append(None)
                 else:
                     summaries.append(summary)
 
         successful = sum(1 for s in summaries if s is not None)
         logger.info(
-            f"Batch summarization complete: {successful}/{len(articles)} successful"
+            "batch_summarization_complete",
+            successful=successful,
+            total=len(articles)
         )
 
         return summaries

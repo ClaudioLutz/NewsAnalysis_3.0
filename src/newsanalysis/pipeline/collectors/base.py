@@ -39,7 +39,7 @@ class BaseCollector(ABC):
         Returns:
             True if article is within max_age_hours, False otherwise.
         """
-        from newsanalysis.utils.dates import is_within_hours
+        from newsanalysis.utils.date_utils import is_within_hours
 
         if published_at is None:
             # Include articles without publication date

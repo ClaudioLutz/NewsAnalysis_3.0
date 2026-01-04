@@ -10,7 +10,7 @@ import click
 from newsanalysis.core.config import Config
 from newsanalysis.database.connection import DatabaseConnection
 from newsanalysis.services.cache_service import CacheService
-from newsanalysis.utils.dates import now_utc
+from newsanalysis.utils.date_utils import now_utc
 
 
 @click.command(name="cost-report")
@@ -318,7 +318,8 @@ def _display_cache_stats(cache_stats: dict):
         else:
             color = "red"
 
-        click.echo(f"  Hit Rate:       {click.style(f\"{stats['hit_rate']:.1f}%\", fg=color)}")
+        hit_rate_str = f"{stats['hit_rate']:.1f}%"
+        click.echo(f"  Hit Rate:       {click.style(hit_rate_str, fg=color)}")
         click.echo(f"  API Calls Saved: {stats['api_calls_saved']:,}")
         click.echo(f"  Cost Saved:     ${stats['cost_saved']:.4f}")
         click.echo()

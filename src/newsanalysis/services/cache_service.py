@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 from newsanalysis.core.article import ClassificationResult, EntityData
-from newsanalysis.utils.dates import now_utc
+from newsanalysis.utils.date_utils import now_utc
 from newsanalysis.utils.logging import get_logger
 
 logger = get_logger(__name__)

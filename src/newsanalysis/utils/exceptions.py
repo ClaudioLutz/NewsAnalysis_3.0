@@ -17,6 +17,10 @@ class CollectionError(PipelineError):
     """News collection error."""
 
 
+class CollectorError(PipelineError):
+    """Collector error."""
+
+
 class FilterError(PipelineError):
     """Filtering error."""
 
@@ -39,6 +43,10 @@ class DatabaseError(NewsAnalysisError):
 
 class APIError(NewsAnalysisError):
     """External API error."""
+
+
+class AIServiceError(APIError):
+    """AI service error."""
 
 
 class OpenAIAPIError(APIError):
