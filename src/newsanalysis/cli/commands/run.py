@@ -105,11 +105,11 @@ def run(
     if not skip_filtering:
         stages.append("2. AI Filtering")
     if not skip_scraping:
-        stages.append("3. Content Scraping (not yet implemented)")
+        stages.append("3. Content Scraping")
     if not skip_summarization:
-        stages.append("4. Article Summarization (not yet implemented)")
+        stages.append("4. Article Summarization")
     if not skip_digest:
-        stages.append("5. Digest Generation (not yet implemented)")
+        stages.append("5. Digest Generation")
 
     if stages:
         click.echo("\nPipeline stages:")
