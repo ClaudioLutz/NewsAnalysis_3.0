@@ -35,6 +35,9 @@ ENV/
 *~
 .DS_Store
 
+.claude/
+_bmad/
+
 # Testing
 .pytest_cache/
 .coverage

@@ -1,17 +1,18 @@
-# NewsAnalysis 2.0
+# NewsAnalysis 3.0
 
 AI-powered Swiss news analysis for credit risk intelligence at Creditreform Switzerland.
 
 ## Overview
 
-NewsAnalysis 2.0 is a cost-optimized, modular system for automated Swiss business news collection, filtering, and analysis. It transforms high-volume news data into actionable credit risk insights through a 5-stage AI pipeline.
+NewsAnalysis 3.0 is a cost-optimized, modular system for automated Swiss business news collection, filtering, and analysis. It transforms high-volume news data into actionable credit risk insights through a 5-stage AI pipeline with multi-provider LLM support.
 
 ## Key Features
 
-- **Cost-Optimized**: <$50/month for 100 articles/day through smart filtering and batch processing
+- **Cost-Optimized**: ~$2.50/month for 100 articles/day (88% savings via multi-provider strategy)
+- **Multi-Provider LLM**: DeepSeek for classification, Gemini for summarization, OpenAI fallback
 - **Modular Pipeline**: 5 independent modules with clear interfaces
 - **Local-First**: Runs on a single server with SQLite (scales to PostgreSQL)
-- **AI-Powered**: OpenAI GPT models for classification and summarization
+- **German Output**: All summaries and digests generated in Hochdeutsch
 - **Swiss-Focused**: 18+ Swiss news sources (NZZ, SRF, Tamedia, FINMA, etc.)
 - **Production-Ready**: Comprehensive error handling, monitoring, and cost tracking
 
@@ -27,9 +28,12 @@ NewsAnalysis 2.0 is a cost-optimized, modular system for automated Swiss busines
 
 ### Technology Stack
 
-- **Python 3.11+**: Modern type hints and performance
+- **Python 3.11+**: Modern type hints and performance (Python 3.13 compatible)
 - **SQLite**: Local deployment with <100K articles
-- **OpenAI API**: GPT-4o-mini for classification and summarization
+- **Multi-Provider LLM**:
+  - **DeepSeek**: Cost-effective classification (OpenAI-compatible API)
+  - **Google Gemini**: Quality summarization and digest generation
+  - **OpenAI**: Fallback provider for reliability
 - **Trafilatura**: Fast content extraction
 - **Pydantic**: Data validation and type safety
 
@@ -37,8 +41,11 @@ NewsAnalysis 2.0 is a cost-optimized, modular system for automated Swiss busines
 
 ### Prerequisites
 
-- Python 3.11 or higher
-- OpenAI API key
+- Python 3.11 or higher (Python 3.13 supported)
+- API keys (at least one required):
+  - DeepSeek API key (recommended for classification)
+  - Google API key (recommended for summarization)
+  - OpenAI API key (fallback provider)
 
 ### Setup
 
@@ -56,7 +63,7 @@ pip install -e ".[dev]"
 
 # Configure environment
 cp .env.example .env
-# Edit .env with your OpenAI API key
+# Edit .env with your API keys
 
 # Initialize database
 python scripts/init_db.py
@@ -163,7 +170,7 @@ pytest --cov=newsanalysis --cov-report=html
 
 ## Performance Targets
 
-- **Cost**: <$50/month for 100 articles/day
+- **Cost**: ~$2.50/month for 100 articles/day (multi-provider optimized)
 - **Speed**: <5 minutes for daily pipeline execution
 - **Accuracy**: >85% classification accuracy
 - **Quality**: >80% test coverage
@@ -171,10 +178,11 @@ pytest --cov=newsanalysis --cov-report=html
 
 ## Cost Optimization
 
-1. **Title/URL Filtering**: 90% reduction by avoiding content scraping
-2. **Batch Processing**: 50% API cost savings
-3. **Caching**: 15-30% additional savings
-4. **Right-Sized Models**: nano → mini → sonnet as needed
+1. **Multi-Provider Strategy**: DeepSeek + Gemini = 88% savings vs OpenAI-only
+2. **Title/URL Filtering**: 90% reduction by avoiding content scraping
+3. **Batch Processing**: 50% API cost savings
+4. **DeepSeek Cache Discount**: 90% off cached inputs
+5. **Automatic Fallback**: OpenAI fallback ensures reliability without manual intervention
 
 ## Production Deployment
 
@@ -229,12 +237,12 @@ Comprehensive technical documentation in `docs/implementation_plan/`:
 
 ### Progress Tracking
 
-- [Phase 1](PROGRESS%20Phase%201.md) - Foundation ✅
-- [Phase 2](PROGRESS%20Phase%202.md) - Pipeline Core ✅
-- [Phase 3](PROGRESS%20Phase%203.md) - Content Processing ✅
-- [Phase 4](PROGRESS%20Phase%204.md) - Digest Generation ✅
-- [Phase 5](PROGRESS%20Phase%205.md) - Optimization ✅
-- [Phase 6](PROGRESS%20Phase%206.md) - Production Readiness ✅
+- [Phase 1](PROGRESS%20Phase%201.md) - Foundation
+- [Phase 2](PROGRESS%20Phase%202.md) - Pipeline Core
+- [Phase 3](PROGRESS%20Phase%203.md) - Content Processing
+- [Phase 4](PROGRESS%20Phase%204.md) - Digest Generation
+- [Phase 5](PROGRESS%20Phase%205.md) - Optimization
+- [Phase 6](PROGRESS%20Phase%206.md) - Production Readiness
 
 ## Testing
 
@@ -306,5 +314,3 @@ For questions or issues:
 1. Check [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
 2. Review [docs/USER_GUIDE.md](docs/USER_GUIDE.md)
 3. Consult technical documentation in `docs/implementation_plan/`
-#   N e w s A n a l y s i s _ 3 . 0  
- 

@@ -22,7 +22,8 @@ class GermanReportFormatter:
         """
         if template_dir is None:
             # Default to config/templates/ in project root
-            template_dir = Path(__file__).parent.parent.parent.parent / "config" / "templates"
+            # Path: src/newsanalysis/pipeline/formatters/german_formatter.py -> 5 parents to project root
+            template_dir = Path(__file__).parent.parent.parent.parent.parent / "config" / "templates"
 
         self.template_dir = template_dir
 

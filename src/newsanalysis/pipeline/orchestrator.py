@@ -487,19 +487,20 @@ class PipelineOrchestrator:
         """
         try:
             # Ensure output directory exists
-            self.config.output_path.mkdir(parents=True, exist_ok=True)
+            digest_dir = self.config.output_dir / "digests"
+            digest_dir.mkdir(parents=True, exist_ok=True)
 
             # Use run_id timestamp for unique filenames (avoids overwriting)
             # run_id format: YYYYMMDD_HHMMSS_uuid -> extract YYYYMMDD_HHMMSS
             timestamp = "_".join(self.run_id.split("_")[:2])
 
             # Write JSON
-            json_path = self.config.output_path / f"bonitaets_analyse_{digest_date}_{timestamp}.json"
+            json_path = digest_dir / f"bonitaets_analyse_{digest_date}_{timestamp}.json"
             json_path.write_text(json_output, encoding="utf-8")
             logger.info("digest_file_written", file=str(json_path))
 
             # Write German report (primary output)
-            german_path = self.config.output_path / f"bonitaets_analyse_{digest_date}_{timestamp}.md"
+            german_path = digest_dir / f"bonitaets_analyse_{digest_date}_{timestamp}.md"
             german_path.write_text(german_report, encoding="utf-8")
             logger.info("digest_file_written", file=str(german_path))
 
