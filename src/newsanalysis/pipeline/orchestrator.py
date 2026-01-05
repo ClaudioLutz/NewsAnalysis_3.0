@@ -460,7 +460,7 @@ class PipelineOrchestrator:
 
             # Write outputs to files
             await self._write_digest_outputs(
-                digest_date, json_output, markdown_output, german_report
+                digest_date, json_output, german_report
             )
 
             logger.info("stage_digest_generation_complete", digest_id=digest_id)
@@ -476,7 +476,6 @@ class PipelineOrchestrator:
         self,
         digest_date,
         json_output: str,
-        markdown_output: str,
         german_report: str,
     ) -> None:
         """Write digest outputs to files.
@@ -484,25 +483,23 @@ class PipelineOrchestrator:
         Args:
             digest_date: Date of the digest.
             json_output: JSON formatted output.
-            markdown_output: Markdown formatted output.
             german_report: German report output.
         """
         try:
             # Ensure output directory exists
             self.config.output_path.mkdir(parents=True, exist_ok=True)
 
+            # Use run_id timestamp for unique filenames (avoids overwriting)
+            # run_id format: YYYYMMDD_HHMMSS_uuid -> extract YYYYMMDD_HHMMSS
+            timestamp = "_".join(self.run_id.split("_")[:2])
+
             # Write JSON
-            json_path = self.config.output_path / f"digest_{digest_date}.json"
+            json_path = self.config.output_path / f"bonitaets_analyse_{digest_date}_{timestamp}.json"
             json_path.write_text(json_output, encoding="utf-8")
             logger.info("digest_file_written", file=str(json_path))
 
-            # Write Markdown
-            md_path = self.config.output_path / f"digest_{digest_date}.md"
-            md_path.write_text(markdown_output, encoding="utf-8")
-            logger.info("digest_file_written", file=str(md_path))
-
-            # Write German report
-            german_path = self.config.output_path / f"digest_{digest_date}_german.md"
+            # Write German report (primary output)
+            german_path = self.config.output_path / f"bonitaets_analyse_{digest_date}_{timestamp}.md"
             german_path.write_text(german_report, encoding="utf-8")
             logger.info("digest_file_written", file=str(german_path))
 
