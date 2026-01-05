@@ -9,6 +9,22 @@ from newsanalysis.utils.logging import get_logger
 
 logger = get_logger(__name__)
 
+# German month names (locale-independent)
+GERMAN_MONTHS = {
+    1: "Januar",
+    2: "Februar",
+    3: "März",
+    4: "April",
+    5: "Mai",
+    6: "Juni",
+    7: "Juli",
+    8: "August",
+    9: "September",
+    10: "Oktober",
+    11: "November",
+    12: "Dezember",
+}
+
 
 class GermanReportFormatter:
     """Format digest as German rating report (Bonitäts-Tagesanalyse)."""
@@ -85,8 +101,9 @@ class GermanReportFormatter:
 
             articles_by_topic[topic].append(article)
 
-        # Format dates
-        date_str = digest.date.strftime("%d. %B %Y")
+        # Format dates with German month names (locale-independent)
+        month_name = GERMAN_MONTHS[digest.date.month]
+        date_str = f"{digest.date.day:02d}. {month_name} {digest.date.year}"
         generated_at_str = digest.generated_at.strftime("%d.%m.%Y %H:%M:%S")
 
         return {

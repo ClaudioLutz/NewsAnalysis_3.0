@@ -20,6 +20,10 @@ from newsanalysis.utils.logging import get_logger
 
 logger = get_logger(__name__)
 
+# Retry configuration
+MAX_RETRIES = 3
+RETRY_DELAY_BASE = 1.0  # Base delay in seconds (exponential backoff)
+
 # Gemini Pricing (January 2025)
 # https://ai.google.dev/gemini-api/docs/pricing
 GEMINI_PRICING = {
@@ -121,23 +125,45 @@ class GeminiClient:
                 if response_format:
                     config_dict["response_mime_type"] = "application/json"
 
-                # Build contents
+                # Build contents with proper system instruction handling
                 if system_instruction:
-                    contents = [
-                        {"role": "user", "parts": [{"text": f"{system_instruction}\n\n{user_content}"}]}
-                    ]
+                    config_dict["system_instruction"] = system_instruction
+                contents = [{"role": "user", "parts": [{"text": user_content}]}]
+
+                # Retry loop with exponential backoff for transient failures
+                last_error = None
+                for attempt in range(MAX_RETRIES):
+                    try:
+                        response = await asyncio.to_thread(
+                            self.client.models.generate_content,
+                            model=model_name,
+                            contents=contents,
+                            config=config_dict,
+                        )
+                        break
+                    except Exception as e:
+                        last_error = e
+                        error_str = str(e).lower()
+                        # Retry on rate limit or server errors
+                        if "429" in error_str or "rate" in error_str or "quota" in error_str or "500" in error_str or "503" in error_str:
+                            if attempt < MAX_RETRIES - 1:
+                                delay = RETRY_DELAY_BASE * (2 ** attempt)
+                                logger.warning(
+                                    "gemini_retry",
+                                    attempt=attempt + 1,
+                                    delay=delay,
+                                    error=str(e)[:100],
+                                )
+                                await asyncio.sleep(delay)
+                                continue
+                        raise
                 else:
-                    contents = [{"role": "user", "parts": [{"text": user_content}]}]
+                    raise last_error  # type: ignore
 
-                # Generate response
-                response = await asyncio.to_thread(
-                    self.client.models.generate_content,
-                    model=model_name,
-                    contents=contents,
-                    config=config_dict,
-                )
+                # Extract content with empty response check
+                if not response.text:
+                    raise AIServiceError("Empty response from Gemini API")
 
-                # Extract content
                 if response_format:
                     content_dict = json.loads(response.text)
                     # Gemini sometimes wraps response in a list - extract first element
@@ -178,13 +204,38 @@ class GeminiClient:
                         generation_config=generation_config,
                     )
 
-                # Generate response (Gemini's API is synchronous, wrap for async)
-                response = await asyncio.to_thread(
-                    gemini_model.generate_content,
-                    contents,
-                )
+                # Retry loop with exponential backoff for transient failures
+                last_error = None
+                for attempt in range(MAX_RETRIES):
+                    try:
+                        response = await asyncio.to_thread(
+                            gemini_model.generate_content,
+                            contents,
+                        )
+                        break
+                    except Exception as e:
+                        last_error = e
+                        error_str = str(e).lower()
+                        # Retry on rate limit or server errors
+                        if "429" in error_str or "rate" in error_str or "quota" in error_str or "500" in error_str or "503" in error_str:
+                            if attempt < MAX_RETRIES - 1:
+                                delay = RETRY_DELAY_BASE * (2 ** attempt)
+                                logger.warning(
+                                    "gemini_retry",
+                                    attempt=attempt + 1,
+                                    delay=delay,
+                                    error=str(e)[:100],
+                                )
+                                await asyncio.sleep(delay)
+                                continue
+                        raise
+                else:
+                    raise last_error  # type: ignore
 
-                # Extract content
+                # Extract content with empty response check
+                if not response.text:
+                    raise AIServiceError("Empty response from Gemini API")
+
                 if response_format:
                     content_dict = json.loads(response.text)
                     # Gemini sometimes wraps response in a list - extract first element

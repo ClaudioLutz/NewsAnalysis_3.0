@@ -11,7 +11,6 @@ from newsanalysis.database.connection import DatabaseConnection
 from newsanalysis.database.digest_repository import DigestRepository
 from newsanalysis.database.repository import ArticleRepository
 from newsanalysis.integrations.provider_factory import ProviderFactory
-from newsanalysis.integrations.openai_client import OpenAIClient
 from newsanalysis.core.enums import ExtractionMethod
 from newsanalysis.pipeline.collectors import create_collector
 from newsanalysis.pipeline.filters.ai_filter import AIFilter
@@ -106,14 +105,6 @@ class PipelineOrchestrator:
             article_repo=self.repository,
             digest_repo=self.digest_repository,
             config_loader=self.config_loader,
-        )
-
-        # Keep OpenAI client for backward compatibility (optional)
-        self.openai_client = OpenAIClient(
-            api_key=config.openai_api_key,
-            db=db,
-            run_id=self.run_id,
-            default_model=config.model_mini,
         )
 
         # Initialize formatters

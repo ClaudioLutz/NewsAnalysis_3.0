@@ -1,5 +1,7 @@
 """DeepSeek API client - OpenAI-compatible wrapper with cost tracking."""
 
+import asyncio
+import json
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
@@ -9,6 +11,10 @@ from pydantic import BaseModel
 from newsanalysis.database.connection import DatabaseConnection
 from newsanalysis.utils.exceptions import AIServiceError
 from newsanalysis.utils.logging import get_logger
+
+# Retry configuration
+MAX_RETRIES = 3
+RETRY_DELAY_BASE = 1.0  # Base delay in seconds (exponential backoff)
 
 logger = get_logger(__name__)
 
@@ -111,17 +117,39 @@ class DeepSeekClient:
             # Use JSON mode and parse manually
             if response_format:
                 params["response_format"] = {"type": "json_object"}
-                response = await self.client.chat.completions.create(**params)
 
-                # Parse JSON response
-                import json
+            # Retry loop with exponential backoff for transient failures
+            last_error = None
+            for attempt in range(MAX_RETRIES):
+                try:
+                    response = await self.client.chat.completions.create(**params)
+                    break
+                except Exception as e:
+                    last_error = e
+                    error_str = str(e).lower()
+                    # Retry on rate limit (429) or server errors (5xx)
+                    if "429" in error_str or "rate" in error_str or "500" in error_str or "502" in error_str or "503" in error_str:
+                        if attempt < MAX_RETRIES - 1:
+                            delay = RETRY_DELAY_BASE * (2 ** attempt)
+                            logger.warning(
+                                "deepseek_retry",
+                                attempt=attempt + 1,
+                                delay=delay,
+                                error=str(e)[:100],
+                            )
+                            await asyncio.sleep(delay)
+                            continue
+                    raise
+            else:
+                raise last_error  # type: ignore
+
+            if response_format:
                 content_text = response.choices[0].message.content
                 if content_text:
                     content_dict = json.loads(content_text)
                 else:
                     raise AIServiceError("Empty response from DeepSeek API")
             else:
-                response = await self.client.chat.completions.create(**params)
                 content_dict = {"text": response.choices[0].message.content}
 
             usage = response.usage

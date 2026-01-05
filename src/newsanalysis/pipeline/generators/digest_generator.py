@@ -33,7 +33,7 @@ class DigestGenerator:
             digest_repo: Digest repository.
             config_loader: Configuration loader for prompts.
         """
-        self.openai_client = llm_client  # Keep variable name for compatibility
+        self.llm_client = llm_client
         self.article_repo = article_repo
         self.digest_repo = digest_repo
         self.config_loader = config_loader
@@ -185,15 +185,14 @@ class DigestGenerator:
 
             user_prompt = user_template.format(articles_summary=articles_summary)
 
-            # Call OpenAI for meta-analysis
-            response = await self.openai_client.create_completion(
+            # Call LLM for meta-analysis (uses Gemini by default via ProviderFactory)
+            response = await self.llm_client.create_completion(
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt},
                 ],
                 module="digest_generator",
                 request_type="meta_analysis",
-                model="gpt-4o-mini",
                 response_format=MetaAnalysis,
                 temperature=0.2,  # Slightly creative for analysis
             )

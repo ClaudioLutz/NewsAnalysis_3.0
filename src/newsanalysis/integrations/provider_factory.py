@@ -1,4 +1,4 @@
-"""LLM Provider factory with fallback support."""
+"""LLM Provider factory for DeepSeek and Gemini clients."""
 
 from enum import Enum
 from typing import Any, Dict, List, Optional, Protocol
@@ -15,7 +15,6 @@ logger = get_logger(__name__)
 class LLMProvider(str, Enum):
     """Available LLM providers."""
 
-    OPENAI = "openai"
     DEEPSEEK = "deepseek"
     GEMINI = "gemini"
 
@@ -38,7 +37,7 @@ class LLMClient(Protocol):
 
 
 class ProviderFactory:
-    """Factory for creating LLM clients with fallback support."""
+    """Factory for creating LLM clients (DeepSeek + Gemini)."""
 
     def __init__(self, config: Config, db: DatabaseConnection, run_id: str):
         """Initialize factory.
@@ -59,37 +58,37 @@ class ProviderFactory:
         """Get client for classification tasks.
 
         Uses DeepSeek by default (cheapest for high-volume classification).
-        Falls back to OpenAI if DeepSeek unavailable.
+        Falls back to Gemini if DeepSeek unavailable.
 
         Returns:
             LLM client instance.
         """
         provider = LLMProvider(self.config.classification_provider)
-        return self._get_or_create_client(provider, fallback=LLMProvider.OPENAI)
+        return self._get_or_create_client(provider, fallback=LLMProvider.GEMINI)
 
     def get_summarization_client(self) -> LLMClient:
         """Get client for summarization tasks.
 
         Uses Gemini by default (good quality, reasonable cost).
-        Falls back to OpenAI if Gemini unavailable.
+        Falls back to DeepSeek if Gemini unavailable.
 
         Returns:
             LLM client instance.
         """
         provider = LLMProvider(self.config.summarization_provider)
-        return self._get_or_create_client(provider, fallback=LLMProvider.OPENAI)
+        return self._get_or_create_client(provider, fallback=LLMProvider.DEEPSEEK)
 
     def get_digest_client(self) -> LLMClient:
         """Get client for digest generation.
 
         Uses Gemini by default.
-        Falls back to OpenAI if Gemini unavailable.
+        Falls back to DeepSeek if Gemini unavailable.
 
         Returns:
             LLM client instance.
         """
         provider = LLMProvider(self.config.digest_provider)
-        return self._get_or_create_client(provider, fallback=LLMProvider.OPENAI)
+        return self._get_or_create_client(provider, fallback=LLMProvider.DEEPSEEK)
 
     def _get_or_create_client(
         self,
@@ -114,6 +113,7 @@ class ProviderFactory:
 
         # Try to create client for requested provider
         client = self._create_client(provider)
+        actual_provider = provider
 
         if client is None and fallback:
             logger.warning(
@@ -122,11 +122,13 @@ class ProviderFactory:
                 fallback=fallback.value,
             )
             client = self._create_client(fallback)
+            actual_provider = fallback
 
         if client is None:
             raise ValueError(f"No LLM client available for {provider.value}")
 
-        self._clients[provider] = client
+        # Cache under the actual provider used (fixes caching bug)
+        self._clients[actual_provider] = client
         return client
 
     def _create_client(self, provider: LLMProvider) -> Optional[LLMClient]:
@@ -165,20 +167,6 @@ class ProviderFactory:
                 db=self.db,
                 run_id=self.run_id,
                 default_model=self.config.gemini_model,
-            )
-
-        elif provider == LLMProvider.OPENAI:
-            if not self.config.openai_api_key:
-                logger.warning("openai_api_key_not_configured")
-                return None
-
-            from newsanalysis.integrations.openai_client import OpenAIClient
-
-            return OpenAIClient(
-                api_key=self.config.openai_api_key,
-                db=self.db,
-                run_id=self.run_id,
-                default_model=self.config.model_mini,
             )
 
         return None
