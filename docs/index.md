@@ -1,0 +1,114 @@
+# NewsAnalysis 3.0 Documentation Index
+
+## Project Overview
+
+- **Type:** Monolith (Backend/Data Pipeline)
+- **Language:** Python 3.11+
+- **Architecture:** 5-Stage Pipeline (ETL-style)
+- **Purpose:** AI-powered Swiss news analysis for credit risk intelligence
+
+## Quick Reference
+
+| Attribute | Value |
+|-----------|-------|
+| Tech Stack | Python + Pydantic + SQLite + Multi-LLM |
+| Entry Point | `newsanalysis` CLI command |
+| Architecture | Pipeline: Collect → Filter → Scrape → Summarize → Digest |
+
+## Generated Documentation
+
+### Core Documentation
+- [Project Overview](project-documentation/project-overview.md) - Executive summary
+- [Architecture](project-documentation/architecture.md) - System design and patterns
+- [Data Models](project-documentation/data-models.md) - Database schema documentation
+- [Source Tree Analysis](project-documentation/source-tree-analysis.md) - Code structure
+- [Development Guide](project-documentation/development-guide.md) - Developer setup
+
+### User Guides
+- [User Guide](USER_GUIDE.md) - Complete setup and usage guide
+- [Troubleshooting](TROUBLESHOOTING.md) - Common issues and solutions
+
+## Technical Documentation (Implementation Plan)
+
+Comprehensive technical specifications in `implementation_plan/`:
+
+| # | Document | Description |
+|---|----------|-------------|
+| 1 | [System Architecture](implementation_plan/01-system-architecture.md) | High-level system design |
+| 2 | [LLM Cost Optimization](implementation_plan/02-llm-cost-optimization.md) | Multi-provider strategy |
+| 3 | [Modular Pipeline Design](implementation_plan/03-modular-pipeline-design.md) | Pipeline architecture |
+| 4 | [Database Design](implementation_plan/04-database-design.md) | Schema and data model |
+| 5 | [Python Project Structure](implementation_plan/05-python-project-structure.md) | Code organization |
+| 6 | [API Integration Strategy](implementation_plan/06-api-integration-strategy.md) | External API handling |
+| 7 | [Configuration Management](implementation_plan/07-configuration-management.md) | Config architecture |
+| 8 | [Testing & QA](implementation_plan/08-testing-quality-assurance.md) | Test strategy |
+| 9 | [Deployment & Operations](implementation_plan/09-deployment-operations.md) | Production setup |
+| 10 | [Technology Stack](implementation_plan/10-technology-stack.md) | Tech decisions |
+| 11 | [Data Models & Schemas](implementation_plan/11-data-models-schemas.md) | Pydantic models |
+| 12 | [Implementation Phases](implementation_plan/12-implementation-phases.md) | Development roadmap |
+| 13 | [Swiss News Sources](implementation_plan/13-swiss-news-sources.md) | Source catalog |
+
+## Progress Tracking
+
+- [Phase 1 Progress](implementation_plan/PROGRESS%20Phase%201.md) - Foundation
+- [Phase 2 Progress](implementation_plan/PROGRESS%20Phase%202.md) - Pipeline Core
+- [Phase 3 Progress](implementation_plan/PROGRESS%20Phase%203.md) - Content Processing
+- [Phase 4 Progress](implementation_plan/PROGRESS%20Phase%204.md) - Digest Generation
+- [Phase 5 Progress](implementation_plan/PROGRESS%20Phase%205.md) - Optimization
+- [Phase 6 Progress](implementation_plan/PROGRESS%20Phase%206.md) - Production Readiness
+
+## Change Documentation
+
+Recent changes documented in `stories/`:
+
+- [Multi-Provider LLM Migration](stories/20260104175700-multi-provider-llm-migration-plan.md)
+- [German LLM Output](stories/20260104211500-german-llm-output.md)
+- [Code Review Fixes](stories/20260105093000-code-review-fixes.md)
+
+## Root Documentation
+
+- [README.md](../README.md) - Project introduction and quick start
+- [CLAUDE.md](../CLAUDE.md) - AI assistant instructions
+- [IMPLEMENTATION_SUMMARY.md](../IMPLEMENTATION_SUMMARY.md) - Implementation overview
+
+## Getting Started
+
+### Quick Start
+
+```bash
+# Setup
+python -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev]"
+cp .env.example .env  # Configure API keys
+python scripts/init_db.py
+
+# Run
+newsanalysis run --limit 10  # Test run
+newsanalysis export          # Export digest
+newsanalysis stats           # View statistics
+```
+
+### For Developers
+
+1. Read [Development Guide](project-documentation/development-guide.md)
+2. Review [Architecture](project-documentation/architecture.md)
+3. Explore [Source Tree](project-documentation/source-tree-analysis.md)
+
+### For Operations
+
+1. Follow [User Guide](USER_GUIDE.md) for deployment
+2. Check [Troubleshooting](TROUBLESHOOTING.md) for issues
+3. Review [Deployment & Operations](implementation_plan/09-deployment-operations.md)
+
+## AI-Assisted Development
+
+When working with AI assistants on this codebase:
+
+1. **Start here:** Point AI to this `index.md` file
+2. **Architecture context:** Reference [Architecture](project-documentation/architecture.md)
+3. **Code structure:** Use [Source Tree](project-documentation/source-tree-analysis.md)
+4. **Database work:** Consult [Data Models](project-documentation/data-models.md)
+
+---
+
+*Generated by BMAD document-project workflow on 2026-01-05*
