@@ -85,3 +85,4 @@ Thumbs.db
 config/feeds.local.yaml
 config/*.local.yaml
 scripts/local_*
+nul
