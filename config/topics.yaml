@@ -1,6 +1,6 @@
 creditreform_insights:
   enabled: true
-  confidence_threshold: 0.71
+  confidence_threshold: 0.70
   max_articles_per_run: 35
   max_article_age_days: 0  # Same day only
 
@@ -53,3 +53,34 @@ creditreform_insights:
       - Inflation
       - Arbeitslosigkeit
       - Exportzahlen
+      - Firmenpleiten
+
+    company_lifecycle:
+      - Firmengründung
+      - Firmenkonkurs
+      - Restrukturierung
+      - Turnaround
+      - Handelsregister
+      - Unternehmensverkauf
+      - Übernahme
+
+    debt_collection:
+      - Betreibung
+      - Pfändung
+      - Verlustschein
+      - Zahlungsbefehl
+      - Rechtsöffnung
+
+    kyc_aml_sanctions:
+      - Sanktionen
+      - Due Diligence
+      - Wirtschaftskriminalität
+      - Geldwäscherei
+      - Terrorismusfinanzierung
+
+    ecommerce_fraud:
+      - Online-Betrug
+      - Kreditkartenbetrug
+      - Identitätsdiebstahl
+      - Cyberkriminalität
+      - Phishing
