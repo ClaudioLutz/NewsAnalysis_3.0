@@ -49,6 +49,12 @@ from newsanalysis.utils.logging import setup_logging
     is_flag=True,
     help="Skip digest generation stage",
 )
+@click.option(
+    "--reset",
+    type=click.Choice(["summarization", "digest", "all"]),
+    default=None,
+    help="Reset articles to reprocess: summarization (re-summarize), digest (re-digest), all (full reprocess)",
+)
 def run(
     limit: Optional[int],
     mode: str,
@@ -57,14 +63,18 @@ def run(
     skip_scraping: bool,
     skip_summarization: bool,
     skip_digest: bool,
+    reset: Optional[str],
 ) -> None:
     """Run the news analysis pipeline.
 
     Examples:
-        newsanalysis run                    # Run full pipeline
-        newsanalysis run --limit 10         # Process only 10 articles
-        newsanalysis run --mode express     # Quick mode
-        newsanalysis run --skip-digest      # Skip digest generation
+        newsanalysis run                        # Run full pipeline
+        newsanalysis run --limit 10             # Process only 10 articles
+        newsanalysis run --mode express         # Quick mode
+        newsanalysis run --skip-digest          # Skip digest generation
+        newsanalysis run --reset digest         # Re-generate digest
+        newsanalysis run --reset summarization  # Re-summarize all articles
+        newsanalysis run --reset all            # Full reprocess from scratch
     """
     # Load configuration
     try:
@@ -120,6 +130,10 @@ def run(
     # Initialize database connection
     db = DatabaseConnection(config.db_path)
 
+    # Handle reset flag
+    if reset:
+        _reset_articles(db, reset)
+
     try:
         # Create and run pipeline orchestrator
         orchestrator = PipelineOrchestrator(
@@ -156,3 +170,80 @@ def run(
 
     finally:
         db.close()
+
+
+def _reset_articles(db: DatabaseConnection, reset_type: str) -> None:
+    """Reset articles to allow reprocessing.
+
+    Args:
+        db: Database connection.
+        reset_type: Type of reset (summarization, digest, all).
+    """
+    conn = db.connect()
+
+    if reset_type == "digest":
+        # Reset digested articles to summarized
+        result = conn.execute(
+            """
+            UPDATE articles
+            SET pipeline_stage = 'summarized',
+                included_in_digest = FALSE,
+                digest_version = NULL
+            WHERE pipeline_stage = 'digested' OR included_in_digest = TRUE
+            """
+        )
+        # Also clear digest records for today
+        from datetime import date
+
+        conn.execute("DELETE FROM digests WHERE digest_date = ?", (date.today().isoformat(),))
+        conn.commit()
+        click.echo(f"Reset {result.rowcount} articles for re-digesting")
+
+    elif reset_type == "summarization":
+        # Reset summarized/digested articles back to scraped
+        result = conn.execute(
+            """
+            UPDATE articles
+            SET pipeline_stage = 'scraped',
+                processing_status = 'completed',
+                summary = NULL,
+                summary_title = NULL,
+                key_points = NULL,
+                entities = NULL,
+                summarized_at = NULL,
+                included_in_digest = FALSE,
+                digest_version = NULL
+            WHERE pipeline_stage IN ('summarized', 'digested')
+            """
+        )
+        conn.commit()
+        click.echo(f"Reset {result.rowcount} articles for re-summarization")
+
+    elif reset_type == "all":
+        # Reset all articles to collected stage
+        result = conn.execute(
+            """
+            UPDATE articles
+            SET pipeline_stage = 'collected',
+                processing_status = 'pending',
+                classification_decision = NULL,
+                classification_reason = NULL,
+                confidence = NULL,
+                classified_at = NULL,
+                content = NULL,
+                author = NULL,
+                content_length = NULL,
+                extraction_method = NULL,
+                extraction_quality = NULL,
+                scraped_at = NULL,
+                summary = NULL,
+                summary_title = NULL,
+                key_points = NULL,
+                entities = NULL,
+                summarized_at = NULL,
+                included_in_digest = FALSE,
+                digest_version = NULL
+            """
+        )
+        conn.commit()
+        click.echo(f"Reset {result.rowcount} articles for full reprocessing")

@@ -1,0 +1,514 @@
+{
+  "digest_metadata": {
+    "date": "2026-01-06",
+    "version": 1,
+    "generated_at": "2026-01-06T20:38:40.481538",
+    "article_count": 10,
+    "cluster_count": null,
+    "run_id": "20260106_203738_5ca8eb99"
+  },
+  "meta_analysis": {
+    "key_themes": [
+      "Analysis unavailable"
+    ],
+    "credit_risk_signals": [],
+    "regulatory_updates": [],
+    "market_insights": []
+  },
+  "articles": [
+    {
+      "id": 7,
+      "url": "https://www.nzz.ch/meinung/die-gemeinde-crans-montana-demonstriert-vor-der-weltoeffentlichkeit-ihr-strukturelles-versagen-ld.1919101",
+      "title": "Crans-Montana: Strukturelles Versagen der Gemeinde offenbart sich",
+      "source": "NZZ Recent",
+      "published_at": "2026-01-06T18:38:28+00:00",
+      "topic": "Insolvency and bankruptcy",
+      "confidence": 0.7,
+      "summary": "Die Gemeinde Crans-Montana steht nach dem Grossbrand im \"Le Constellation\" mit 40 Toten und 116 Verletzten massiv in der Kritik. Berichte über unzureichende Brandschutzkontrollen, mangelnde Transparenz und widersprüchliche Aussagen des Gemeindepräsidenten Nicolas Féraud werfen ein schlechtes Licht auf die Gemeindebehörden. Dies impliziert ein erhöhtes operationelles Risiko für Unternehmen, die auf die Effizienz und Zuverlässigkeit der lokalen Verwaltung angewiesen sind. Die Versäumnisse bei der Einhaltung von Sicherheitsvorschriften und die mögliche Verletzung der Aufsichtspflicht durch den Kanton Wallis könnten rechtliche Konsequenzen und finanzielle Belastungen für die Gemeinde nach sich ziehen. Dies könnte sich negativ auf die Kreditwürdigkeit der Gemeinde und somit auf Investitionen und Geschäftstätigkeiten in Crans-Montana auswirken.",
+      "key_points": [
+        "Ungenügende Brandschutzkontrollen in Crans-Montana: Nur ein Drittel der Betriebe 2023 kontrolliert.",
+        "Systematisches Versagen der Gemeinde bei der Brandschutzkontrolle von Gaststätten wird vermutet.",
+        "Fragliche Aufsichtspflicht des Kantons Wallis.",
+        "Widersprüchliche Aussagen des Gemeindepräsidenten Nicolas Féraud.",
+        "Frage nach der Verantwortlichkeit für die Verwendung leicht entflammbarer Materialien im \"Le Constellation\".",
+        "Mangelnde Transparenz und Kommunikation der Gemeinde gegenüber den Opfern und Angehörigen."
+      ],
+      "entities": {
+        "companies": [
+          "Le Constellation"
+        ],
+        "people": [
+          "Nicolas Féraud"
+        ],
+        "locations": [
+          "Crans-Montana",
+          "Wallis"
+        ],
+        "topics": [
+          "Brandschutz",
+          "Katastrophenmanagement",
+          "Kommunale Verwaltung",
+          "Kreditrisiko",
+          "Operationelles Risiko"
+        ]
+      },
+      "metadata": {
+        "feed_priority": 3,
+        "extraction_method": "trafilatura",
+        "extraction_quality": 1.0,
+        "content_length": 3840,
+        "author": "Matthias Sander; Crans-Montana"
+      }
+    },
+    {
+      "id": 14,
+      "url": "https://www.nzz.ch/visuals/warum-ist-strom-in-deutschland-so-teuer-alle-zahlen-ld.1683901",
+      "title": "Deutsche Gasspeicher: Niedrige Füllstände und Auswirkungen auf Energiepreise",
+      "source": "NZZ Recent",
+      "published_at": "2026-01-06T16:23:27+00:00",
+      "topic": "Economic indicators",
+      "confidence": 0.7,
+      "summary": "Die deutschen Gasspeicher weisen aktuell ähnliche niedrige Füllstände wie im Krisenjahr 2022 auf, was erneute Besorgnis hinsichtlich der Energieversorgungssicherheit auslöst. Trotz gesunkener Preise für Neuabschlüsse liegen diese weiterhin über dem Vorkrisenniveau, was die Wettbewerbsfähigkeit energieintensiver Industrien beeinträchtigt. Der Atomausstieg und der Fokus auf erneuerbare Energien haben zu einer erhöhten Importabhängigkeit geführt, insbesondere von Strom aus Kern- und Wasserkraft. Die steigenden Kosten für den Netzausbau und die Integration erneuerbarer Energien belasten die Strompreise zusätzlich. Die Abhängigkeit von LNG-Importen, auch aus Russland, birgt geopolitische Risiken. Die aktuelle Situation erfordert eine sorgfältige Überwachung der Energieversorgungslage und der finanziellen Auswirkungen auf Unternehmen, insbesondere im Hinblick auf Kreditrisiken.",
+      "key_points": [
+        "Gasspeicherstände auf Krisenniveau wie 2022",
+        "Energiepreise weiterhin über Vorkrisenniveau",
+        "Erhöhte Importabhängigkeit nach Atomausstieg",
+        "Steigende Netzausbaukosten belasten Strompreise",
+        "Abhängigkeit von LNG-Importen birgt Risiken",
+        "Energieintensive Industrien stark betroffen",
+        "Kohleausstieg bis 2038 geplant"
+      ],
+      "entities": {
+        "companies": [
+          "Gazprom Germania",
+          "Eurostat",
+          "Friedrich-Alexander-Universität Erlangen-Nürnberg",
+          "KfW",
+          "Trading Hub Europe (THE)"
+        ],
+        "people": [
+          "Simon Off",
+          "Nicolas Staub",
+          "Michel Grautstück",
+          "Roland Shaw",
+          "Rico Klatte",
+          "Franco Gervasi"
+        ],
+        "locations": [
+          "Deutschland",
+          "Ukraine",
+          "Schleswig-Holstein",
+          "USA",
+          "Frankreich",
+          "Spanien",
+          "China",
+          "Benelux-Staaten",
+          "Wilhelmshaven",
+          "Schweden",
+          "Norwegen",
+          "Österreich",
+          "Zypern",
+          "Tschechien",
+          "EU"
+        ],
+        "topics": [
+          "Energiekrise",
+          "Gasspeicher",
+          "Strompreise",
+          "Gaspreise",
+          "Erneuerbare Energien",
+          "Atomausstieg",
+          "LNG-Importe",
+          "Netzausbau",
+          "CO2-Emissionen",
+          "Energieversorgungssicherheit"
+        ]
+      },
+      "metadata": {
+        "feed_priority": 3,
+        "extraction_method": "trafilatura",
+        "extraction_quality": 0.8999699999999999,
+        "content_length": 15003,
+        "author": "Simon Off; Nicolas Staub; Michel Grautstück"
+      }
+    },
+    {
+      "id": 62,
+      "url": "https://www.tagesanzeiger.ch/betrug-in-zuerich-beamtin-stiehlt-ausweise-von-arbeitslosen-864227442420",
+      "title": "Betrugsfall in Zürich: Arbeitslosenversicherung-Mitarbeiterin stiehlt Daten für Kredite und Luxusgüter",
+      "source": "Tages-Anzeiger Front",
+      "published_at": "2026-01-06T14:37:07+00:00",
+      "topic": "E-commerce fraud and risk",
+      "confidence": 0.7,
+      "summary": "Eine Mitarbeiterin der Zürcher Arbeitslosenversicherung hat Daten von etwa 30 Arbeitslosen gestohlen und diese für Betrugszwecke missbraucht. Gemeinsam mit einer Betrügerbande wurden Luxusgüter gekauft und Kredite aufgenommen, was zu einem Schaden von rund einer halben Million Franken führte. Dieser Fall wirft Fragen hinsichtlich der Sicherheitsmassnahmen bei der Kontoeröffnung und Kreditvergabe auf, insbesondere im Hinblick auf die Identitätsprüfung. Die involvierten Banken, teilweise mit Auslandsbezug, sind ebenfalls Gegenstand der Ermittlungen. Für Creditreform bedeutet dies eine erhöhte Sensibilisierung für interne Kontrollmechanismen bei Institutionen mit Zugang zu sensiblen Personendaten und eine verstärkte Prüfung der Identität von Kreditnehmern, um ähnliche Betrugsfälle in Zukunft zu verhindern.",
+      "key_points": [
+        "Mitarbeiterin der Arbeitslosenversicherung Zürich stiehlt Daten von Arbeitslosen.",
+        "Betrug durch Kauf von Luxusgütern und Aufnahme von Krediten auf fremde Namen.",
+        "Schaden von rund einer halben Million Franken.",
+        "Ermittlungen gegen ein Dutzend Hauptbeschuldigte laufen.",
+        "Fragen zur Sicherheit bei Kontoeröffnung und Identitätsprüfung werden aufgeworfen.",
+        "Banken mit In- und Auslandsbezug involviert."
+      ],
+      "entities": {
+        "companies": [
+          "SRF",
+          "Zürcher Arbeitslosenversicherung",
+          "Post",
+          "SBB"
+        ],
+        "people": [],
+        "locations": [
+          "Zürich"
+        ],
+        "topics": [
+          "Betrug",
+          "Datendiebstahl",
+          "Kreditbetrug",
+          "Identitätsmissbrauch",
+          "Arbeitslosenversicherung"
+        ]
+      },
+      "metadata": {
+        "feed_priority": 3,
+        "extraction_method": "trafilatura",
+        "extraction_quality": 1.0,
+        "content_length": 2586,
+        "author": "Simone Steiner"
+      }
+    },
+    {
+      "id": 106,
+      "url": "https://www.derbund.ch/bern-office-world-schliesst-filiale-am-waisenhausplatz-237686893084",
+      "title": "Office World schliesst Filiale in Bern aufgrund Verlagerung zum Onlinehandel",
+      "source": "Der Bund Main",
+      "published_at": "2026-01-06T14:22:40+00:00",
+      "topic": "Company lifecycle events",
+      "confidence": 0.7,
+      "summary": "Office World schliesst seine Filiale im Berner Stadtzentrum sowie Standorte in Sursee und Winterthur. Begründet wird dies mit der zunehmenden Verlagerung des Handels ins Internet, wodurch die Rentabilität der Filialen nicht mehr gegeben sei. Dies deutet auf einen erhöhten Wettbewerbsdruck im Büromaterialhandel hin und unterstreicht die Notwendigkeit für traditionelle Einzelhändler, sich an veränderte Kundenbedürfnisse anzupassen. Die Schliessungen könnten sich negativ auf die Bonität von Office World auswirken, da sie auf strukturelle Herausforderungen im Geschäftsmodell hinweisen. Lieferanten und andere Geschäftspartner sollten die finanzielle Situation von Office World und die Auswirkungen der Filialschliessungen auf den Gesamtumsatz genau beobachten. Die Pax-Versicherung hat bereits einen Nachmieter für die Fläche in Bern gefunden, was die Attraktivität der Lage unterstreicht.",
+      "key_points": [
+        "Office World schliesst Filiale in Bern Ende Januar.",
+        "Weitere Filialschliessungen in Sursee und Winterthur geplant.",
+        "Grund: Verlagerung des Handels ins Internet und mangelnde Rentabilität.",
+        "Betroffene Mitarbeiter werden bei der Jobsuche unterstützt.",
+        "Office World will sich auf innovative Angebote und Services konzentrieren.",
+        "Pax-Versicherung hat bereits einen Nachmieter für die Fläche in Bern."
+      ],
+      "entities": {
+        "companies": [
+          "Office World",
+          "Pax-Versicherung"
+        ],
+        "people": [
+          "Dominik Engeler"
+        ],
+        "locations": [
+          "Bern",
+          "Waisenhausplatz",
+          "Bolligen",
+          "Sursee",
+          "Winterthur"
+        ],
+        "topics": [
+          "Onlinehandel",
+          "Filialschliessung",
+          "Bürobedarf",
+          "Rentabilität",
+          "Marktveränderungen"
+        ]
+      },
+      "metadata": {
+        "feed_priority": 3,
+        "extraction_method": "trafilatura",
+        "extraction_quality": 1.0,
+        "content_length": 1790,
+        "author": "Christoph Hämmann"
+      }
+    },
+    {
+      "id": 94,
+      "url": "https://www.tagesanzeiger.ch/crans-montana-gemeinde-drohen-klagen-ueber-hunderte-millionen-441832783263",
+      "title": "Brand in Crans-Montana: Gemeinde drohen Schadenersatzforderungen in Millionenhöhe",
+      "source": "Tages-Anzeiger Switzerland",
+      "published_at": "2026-01-06T12:07:30+00:00",
+      "topic": "Insolvency and bankruptcy",
+      "confidence": 0.7,
+      "summary": "Nach dem Brand in Crans-Montana drohen der Gemeinde Schadenersatzforderungen in Höhe von mehreren Hundert Millionen Franken. Grund dafür sind Versäumnisse bei der Kontrolle der Bar, in der das Feuer ausbrach. Dies birgt erhebliche finanzielle Risiken für die Gemeinde, da Staatshaftungsklagen drohen. Die mangelnde Brandverhütung und die Verwendung brennbarer Materialien könnten als Amtspflichtverletzung gewertet werden. Die komplexen Haftungsfragen und die internationale Dimension des Falls, da viele Opfer aus dem Ausland stammen, erhöhen die Unsicherheit und das finanzielle Risiko für die Gemeinde zusätzlich. Langwierige Gerichtsverfahren und hohe Behandlungskosten der Opfer belasten die finanzielle Situation weiter.",
+      "key_points": [
+        "Gemeinde Crans-Montana räumt Versäumnisse bei der Barprüfung ein.",
+        "Staatshaftungsklagen gegen Gemeinde und Kanton Wallis erwartet.",
+        "Gesamtschaden wird auf mehrere Hundert Millionen Franken geschätzt.",
+        "Opfern drohen langwierige Prozesse ohne Sammelklagemöglichkeit.",
+        "Internationale Dimension durch ausländische Opfer erschwert die Lage.",
+        "Anwalt fordert Fonds für Opfer und Einberufung eines runden Tisches.",
+        "Behandlungskosten pro Brandopfer können über eine Million Franken betragen."
+      ],
+      "entities": {
+        "companies": [],
+        "people": [
+          "Martin Hablützel",
+          "Nicolas Féraud",
+          "Moritz Leuenberger",
+          "Rolf Steinegger"
+        ],
+        "locations": [
+          "Crans-Montana",
+          "Wallis",
+          "Schweiz",
+          "Frankreich",
+          "Italien"
+        ],
+        "topics": [
+          "Brandkatastrophe",
+          "Staatshaftung",
+          "Schadenersatzforderungen",
+          "Brandverhütung",
+          "Amtspflichtverletzung",
+          "Versicherungsleistungen",
+          "Gerichtsverfahren"
+        ]
+      },
+      "metadata": {
+        "feed_priority": 3,
+        "extraction_method": "trafilatura",
+        "extraction_quality": 0.97648,
+        "content_length": 7352,
+        "author": "Benjamin Bitoun; Nelly Keusch"
+      }
+    },
+    {
+      "id": 138,
+      "url": "https://www.derbund.ch/crans-montana-gemeinde-drohen-klagen-ueber-hunderte-millionen-441832783263",
+      "title": "Brand in Crans-Montana: Gemeinde drohen Schadenersatzforderungen in Millionenhöhe",
+      "source": "Der Bund Business",
+      "published_at": "2026-01-06T12:07:30+00:00",
+      "topic": "Insolvency and bankruptcy",
+      "confidence": 0.7,
+      "summary": "Nach dem Brand in Crans-Montana drohen der Gemeinde Schadenersatzforderungen in Höhe von mehreren Hundert Millionen Franken. Grund dafür sind Versäumnisse bei der Kontrolle der Bar, in der das Feuer ausbrach. Dies birgt erhebliche finanzielle Risiken für die Gemeinde, da Staatshaftungsklagen drohen. Die mangelnde Brandverhütung und die Verwendung brennbarer Materialien könnten als Amtspflichtverletzung gewertet werden. Die komplexen Haftungsfragen und die internationale Dimension des Falls, da viele Opfer aus dem Ausland stammen, erhöhen die Unsicherheit und das finanzielle Risiko für die Gemeinde zusätzlich. Langwierige Gerichtsverfahren und hohe Behandlungskosten der Opfer belasten die finanzielle Situation weiter.",
+      "key_points": [
+        "Gemeinde Crans-Montana räumt Versäumnisse bei der Barprüfung ein.",
+        "Staatshaftungsklagen gegen Gemeinde und Kanton Wallis erwartet.",
+        "Gesamtschaden wird auf mehrere Hundert Millionen Franken geschätzt.",
+        "Opfern drohen langwierige Prozesse ohne Sammelklagemöglichkeit.",
+        "Internationale Dimension durch ausländische Opfer erschwert die Lage.",
+        "Anwalt fordert Fonds für Opfer und Einberufung eines runden Tisches.",
+        "Behandlungskosten pro Brandopfer können über eine Million Franken betragen."
+      ],
+      "entities": {
+        "companies": [],
+        "people": [
+          "Martin Hablützel",
+          "Nicolas Féraud",
+          "Moritz Leuenberger",
+          "Rolf Steinegger"
+        ],
+        "locations": [
+          "Crans-Montana",
+          "Wallis",
+          "Schweiz",
+          "Frankreich",
+          "Italien"
+        ],
+        "topics": [
+          "Brandkatastrophe",
+          "Staatshaftung",
+          "Schadenersatzforderungen",
+          "Brandverhütung",
+          "Amtspflichtverletzung",
+          "Versicherungsleistungen",
+          "Gerichtsverfahren"
+        ]
+      },
+      "metadata": {
+        "feed_priority": 3,
+        "extraction_method": "trafilatura",
+        "extraction_quality": 0.97648,
+        "content_length": 7352,
+        "author": "Benjamin Bitoun; Nelly Keusch"
+      }
+    },
+    {
+      "id": 141,
+      "url": "https://www.derbund.ch/venezuela-maduros-geheime-gold-transporte-in-die-schweiz-855872866927",
+      "title": "Venezuelas Goldabzug in die Schweiz: Auswirkungen auf Kreditrisiko",
+      "source": "Der Bund Business",
+      "published_at": "2026-01-06T10:00:48+00:00",
+      "topic": "Regulatory and compliance (FINMA, nDSG, SchKG, Geldwäscherei, GwG)",
+      "confidence": 0.7,
+      "summary": "Venezuelas heimlicher Transfer von 127 Tonnen Gold im Wert von 4,7 Milliarden Franken in die Schweiz zwischen 2012 und 2016 verdeutlicht die extreme finanzielle Notlage des Landes. Der Versuch, durch den Verkauf des Goldes einen Staatsbankrott abzuwenden, scheiterte. Seit 2017 ist Venezuela zahlungsunfähig. Dies unterstreicht das hohe Kreditrisiko bei Geschäften mit Venezuela und die Notwendigkeit strenger Due-Diligence-Prüfungen. Die Transaktionen, die anfänglich nicht gegen Sanktionen verstießen, zeigen die Bedeutung der Überwachung regulatorischer Entwicklungen. Die Abhängigkeit Venezuelas von Rohstoffexporten (Öl) und die Anfälligkeit für Preisschwankungen sind wesentliche Faktoren bei der Beurteilung des Länderrisikos. Die Verschärfung der Schweizer Sanktionen ab 2018 verdeutlicht die sich ändernden Rahmenbedingungen für internationale Geschäftsbeziehungen.",
+      "key_points": [
+        "Venezuela transferierte 127 Tonnen Gold im Wert von 4,7 Mrd. CHF in die Schweiz.",
+        "Der Goldverkauf sollte den Staatsbankrott verhindern, scheiterte aber.",
+        "Venezuela ist seit 2017 zahlungsunfähig.",
+        "Schweizer Raffinerien schmolzen das Gold ein und verkauften es weiter.",
+        "Die Schweiz verschärfte 2018 die Sanktionen gegen Venezuela.",
+        "Der Ölpreisverfall 2014 verschärfte die Wirtschaftskrise Venezuelas."
+      ],
+      "entities": {
+        "companies": [
+          "Zentralbank Venezuelas"
+        ],
+        "people": [
+          "Nicolás Maduro"
+        ],
+        "locations": [
+          "Venezuela",
+          "Schweiz",
+          "Grossbritannien",
+          "Türkei"
+        ],
+        "topics": [
+          "Staatsbankrott",
+          "Goldhandel",
+          "Sanktionen",
+          "Kreditrisiko",
+          "Rohstoffpreise"
+        ]
+      },
+      "metadata": {
+        "feed_priority": 3,
+        "extraction_method": "trafilatura",
+        "extraction_quality": 1.0,
+        "content_length": 1975,
+        "author": "Patricia Shams"
+      }
+    },
+    {
+      "id": 173,
+      "url": "https://www.srf.ch/sendungen/kassensturz-espresso/espresso/staatsanwaltschaft-ermittelt-mitarbeiterin-der-arbeitslosenkasse-stiehlt-daten-fuer-betrug",
+      "title": "Datenmissbrauch bei Arbeitslosenkasse Zürich: Betrug mit Identitätsdiebstahl",
+      "source": "SRF Latest",
+      "published_at": "2026-01-06T09:37:44+01:00",
+      "topic": "KYC/AML and sanctions",
+      "confidence": 0.7,
+      "summary": "Die Zürcher Staatsanwaltschaft ermittelt in einem umfangreichen Betrugsfall, bei dem eine Mitarbeiterin der Arbeitslosenkasse sensible Daten an Dritte weitergab. Diese Daten wurden missbraucht, um Kredite zu beantragen, Waren zu bestellen und Konten zu eröffnen. Der Gesamtschaden wird auf rund eine halbe Million Franken geschätzt. Dies unterstreicht die erheblichen Kreditrisiken, die mit Identitätsdiebstahl und Datenmissbrauch verbunden sind. Finanzinstitute müssen ihre Online-Identifikationsverfahren verstärken und die Sorgfaltspflichten bei der Kontoeröffnung und Kreditvergabe erhöhen. Negative Bonitätseinträge der Opfer erschweren die Situation zusätzlich und verdeutlichen die langfristigen finanziellen Folgen für die Betroffenen. Die laufenden Ermittlungen und die Beteiligung verschiedener Banken deuten auf systemische Schwächen hin.",
+      "key_points": [
+        "Mitarbeiterin der Arbeitslosenkasse stiehlt Daten für Betrug.",
+        "Betrug umfasst Kreditanträge, Warenbestellungen und Kontoeröffnungen.",
+        "Gesamtschaden wird auf rund 500'000 Franken geschätzt.",
+        "Opfer erleiden negative Bonitätseinträge.",
+        "Ermittlungen gegen ein Dutzend Beschuldigte laufen.",
+        "Banken akzeptieren online beglaubigte Ausweiskopien, was missbraucht wurde."
+      ],
+      "entities": {
+        "companies": [
+          "SBB",
+          "Post"
+        ],
+        "people": [],
+        "locations": [
+          "Zürich",
+          "Schweiz"
+        ],
+        "topics": [
+          "Betrug",
+          "Identitätsdiebstahl",
+          "Kreditrisiko",
+          "Datenmissbrauch",
+          "Arbeitslosenversicherung"
+        ]
+      },
+      "metadata": {
+        "feed_priority": 3,
+        "extraction_method": "trafilatura",
+        "extraction_quality": 1.0,
+        "content_length": 3565,
+        "author": "Autor Oliver Fueter"
+      }
+    },
+    {
+      "id": 166,
+      "url": "https://www.srf.ch/news/wirtschaft/venezuela-und-die-schweiz-die-mysterioesen-goldlieferungen-aus-venezuela-in-die-schweiz",
+      "title": "Venezuelas Goldlieferungen in die Schweiz: Auswirkungen auf Kreditrisiken",
+      "source": "SRF Latest",
+      "published_at": "2026-01-06T06:30:15+01:00",
+      "topic": "Regulatory and compliance (FINMA, nDSG, SchKG, Geldwäscherei, GwG)",
+      "confidence": 0.7,
+      "summary": "Zwischen 2012 und 2016 lieferte Venezuela 127 Tonnen Gold im Wert von 4.7 Milliarden Franken in die Schweiz zur Verarbeitung und Weiterleitung. Diese Transaktionen erfolgten unter dem Regime von Nicolás Maduro, um den Staatsbankrott aufgrund einer schweren Wirtschaftskrise ab 2014 abzuwenden. Der Zusammenbruch des Ölpreises führte zu einem BIP-Rückgang von 80 Prozent und zwang Venezuela, Gold als Sicherheit für Kredite zu verwenden. Trotz dieser Massnahmen konnte Venezuela ab 2017 seinen finanziellen Verpflichtungen nicht mehr nachkommen, was zu Auslandsschulden von bis zu 170 Milliarden Dollar führte. Der Handel zwischen der Schweiz und Venezuela ist stark zurückgegangen, da Schweizer Unternehmen aufgrund des hohen Risikos von Zahlungsausfällen und drohenden US-Sanktionen kaum noch Geschäfte tätigen. Die Schweiz hat 2018 ihre Bestimmungen zu Finanztransaktionen verschärft, was solche Transaktionen erschwert.",
+      "key_points": [
+        "Venezuela lieferte zwischen 2012 und 2016 127 Tonnen Gold in die Schweiz.",
+        "Die Goldtransfers dienten zur Abwendung des Staatsbankrotts während der Wirtschaftskrise.",
+        "Venezuelas Auslandsschulden werden auf bis zu 170 Milliarden Dollar geschätzt.",
+        "Der Handel zwischen der Schweiz und Venezuela ist stark zurückgegangen.",
+        "Die Schweiz hat 2018 ihre Finanztransaktionsbestimmungen verschärft.",
+        "Das Gold wurde teilweise verkauft oder als Sicherheit für Kredite verwendet."
+      ],
+      "entities": {
+        "companies": [
+          "Zentralbank von Venezuela"
+        ],
+        "people": [
+          "Nicolás Maduro"
+        ],
+        "locations": [
+          "Venezuela",
+          "Schweiz",
+          "Grossbritannien",
+          "Türkei",
+          "USA"
+        ],
+        "topics": [
+          "Goldlieferungen",
+          "Wirtschaftskrise",
+          "Staatsbankrott",
+          "Kreditrisiken",
+          "Finanztransaktionen",
+          "Sanktionen"
+        ]
+      },
+      "metadata": {
+        "feed_priority": 3,
+        "extraction_method": "trafilatura",
+        "extraction_quality": 1.0,
+        "content_length": 3367,
+        "author": "Autor Manuel Rentsch"
+      }
+    },
+    {
+      "id": 190,
+      "url": "https://www.srf.ch/news/wirtschaft/verhaltene-prognosen-was-uns-2026-wirtschaftlich-bringt",
+      "title": "Verhaltene Wirtschaftsprognosen für 2026: Auswirkungen auf die Kreditrisikobewertung",
+      "source": "SRF Latest",
+      "published_at": "2026-01-06T05:44:53+01:00",
+      "topic": "Economic indicators",
+      "confidence": 0.7,
+      "summary": "Die Schweizer Wirtschaft wird 2026 voraussichtlich ohne Krise, aber mit geringem Wachstum in das neue Jahr starten. Trotz stabiler Kennzahlen besteht eine wachsende Verunsicherung bei den Konsumenten aufgrund stagnierender Löhne, steigender Krankenkassenprämien und hoher Mieten, was die Kaufkraft erheblich beeinträchtigt. Dies könnte sich negativ auf den Privatkonsum auswirken, der eine tragende Säule der Schweizer Wirtschaft darstellt. Der zunehmende Anteil staatlicher Beschäftigung deutet auf eine mögliche Verdrängung der Privatwirtschaft hin, insbesondere in exportorientierten Branchen. Diese Entwicklungen erfordern eine sorgfältige Beobachtung der finanziellen Gesundheit von Unternehmen und Haushalten, um potenzielle Kreditrisiken frühzeitig zu erkennen und zu bewerten.",
+      "key_points": [
+        "Stagnierende Löhne und steigende Lebenshaltungskosten belasten die Kaufkraft der Konsumenten.",
+        "Der Privatkonsum wächst hauptsächlich durch Bevölkerungszunahme, nicht durch höhere Pro-Kopf-Ausgaben.",
+        "Ein wachsender Anteil staatlicher Beschäftigung könnte die Privatwirtschaft verdrängen.",
+        "Exportorientierte Branchen könnten besonders betroffen sein.",
+        "Die Arbeitslosigkeit wird voraussichtlich leicht steigen.",
+        "Ältere Arbeitnehmer haben Schwierigkeiten, wieder eine Anstellung zu finden."
+      ],
+      "entities": {
+        "companies": [
+          "Schweizerischer Gewerkschaftsbund",
+          "Economiesuisse"
+        ],
+        "people": [
+          "Eveline Kobler",
+          "Daniel Lampart",
+          "Rudolf Minsch"
+        ],
+        "locations": [
+          "Schweiz"
+        ],
+        "topics": [
+          "Wirtschaftsprognose",
+          "Kaufkraft",
+          "Arbeitsmarkt",
+          "Löhne",
+          "Konsum",
+          "Kreditrisiko"
+        ]
+      },
+      "metadata": {
+        "feed_priority": 3,
+        "extraction_method": "trafilatura",
+        "extraction_quality": 1.0,
+        "content_length": 3622,
+        "author": "Autor Harry Stitzel"
+      }
+    }
+  ]
+}

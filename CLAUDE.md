@@ -1,18 +1,3 @@
-## Internet Research for Technical Decisions
-
-Before implementing significant architectural changes, dependency additions, or adopting new APIs/services:
-
-* **Search for up-to-date information** using WebSearch to verify:
-  * Current pricing (API costs change frequently)
-  * Latest API versions and capabilities
-  * Best practices and production-tested patterns
-  * Known issues or limitations
-  * Community feedback and enterprise adoption
-
-* **Always check dates** - Prefer sources from the last 6 months for rapidly evolving technologies (LLM APIs, AI services)
-* **Cross-reference multiple sources** - Don't rely on a single article or outdated documentation
-* **Document sources** - Include links to official documentation and pricing pages in commit messages or story files
-
 ---
 
 ## Change Documentation (required)
