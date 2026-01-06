@@ -226,7 +226,7 @@ class TestHtmlEmailFormatter:
             "version": 1,
             "generated_at": "2026-01-06T08:30:00",
             "meta_analysis_json": '{"key_themes": ["Swiss Banking"], "credit_risk_signals": ["Company X bankruptcy"]}',
-            "markdown_output": "## Article 1\nTest content",
+            "json_output": '{"articles": [{"title": "Test Article", "summary": "Brief summary", "key_points": ["Point 1", "Point 2"], "source": "Reuters", "url": "https://example.com"}]}',
         }
 
         html = formatter.format(digest_data)
@@ -237,4 +237,35 @@ class TestHtmlEmailFormatter:
         assert "5" in html  # article count
         assert "Swiss Banking" in html
         assert "Company X bankruptcy" in html
-        assert "Article 1" in html
+        assert "Test Article" in html
+        assert "Brief summary" in html
+        assert "Point 1" in html
+
+    def test_parse_articles(self):
+        """Should parse articles from JSON output."""
+        formatter = HtmlEmailFormatter()
+
+        json_output = '{"articles": [{"title": "News Title", "summary": "A summary", "key_points": ["Key 1", "Key 2", "Key 3", "Key 4"], "source": "Source", "url": "https://test.com"}]}'
+        articles = formatter._parse_articles(json_output)
+
+        assert len(articles) == 1
+        assert articles[0]["title"] == "News Title"
+        assert articles[0]["summary"] == "A summary"
+        assert len(articles[0]["key_points"]) == 2  # Limited to 2
+        assert articles[0]["source"] == "Source"
+        assert articles[0]["url"] == "https://test.com"
+
+    def test_parse_articles_empty(self):
+        """Should return empty list for empty input."""
+        formatter = HtmlEmailFormatter()
+
+        assert formatter._parse_articles(None) == []
+        assert formatter._parse_articles("") == []
+
+    def test_parse_articles_invalid_json(self):
+        """Should return empty list for invalid JSON."""
+        formatter = HtmlEmailFormatter()
+
+        result = formatter._parse_articles("not valid json")
+
+        assert result == []

@@ -20,8 +20,8 @@ user_prompt_template: |
   Create a structured summary in JSON format:
   {{
     "title": "Normalized title (max 150 chars)",
-    "summary": "150-200 word summary focusing on credit risk relevance",
-    "key_points": ["bullet point 1", "bullet point 2", ...],  // 2-8 points
+    "summary": "1-2 sentence summary (max 50 words) focusing on the key message",
+    "key_points": ["short bullet point 1", "short bullet point 2"],  // 2-3 concise points
     "entities": {{
       "companies": ["company names mentioned"],
       "people": ["key people mentioned"],
@@ -39,16 +39,16 @@ output_schema:
       description: "Normalized article title"
     summary:
       type: string
-      minLength: 100
-      maxLength: 1000
-      description: "Article summary (150-200 words)"
+      minLength: 20
+      maxLength: 300
+      description: "Brief article summary (1-2 sentences, max 50 words)"
     key_points:
       type: array
       items:
         type: string
       minItems: 2
-      maxItems: 8
-      description: "Key bullet points"
+      maxItems: 3
+      description: "Concise key bullet points"
     entities:
       type: object
       properties:

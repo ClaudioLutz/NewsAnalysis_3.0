@@ -31,11 +31,11 @@ class SummaryResponse(BaseModel):
     title: str = Field(..., description="Normalized article title")
     summary: str = Field(
         ...,
-        description="Article summary (150-200 words)",
+        description="Brief summary (1-2 sentences, max 50 words)",
     )
     key_points: List[str] = Field(
         ...,
-        description="Key bullet points (2-8 items)",
+        description="Concise key bullet points (2-3 items)",
     )
     entities: EntityList = Field(
         default_factory=EntityList,

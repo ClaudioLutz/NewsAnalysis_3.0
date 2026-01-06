@@ -3,9 +3,8 @@
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
-import markdown
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from newsanalysis.utils.logging import get_logger
@@ -33,7 +32,7 @@ class HtmlEmailFormatter:
 
         Args:
             digest_data: Dictionary from DigestRepository.get_digest_by_date()
-                containing markdown_output, meta_analysis_json, article_count, etc.
+                containing json_output, meta_analysis_json, article_count, etc.
 
         Returns:
             HTML string formatted for Outlook email.
@@ -47,6 +46,17 @@ class HtmlEmailFormatter:
         # Parse meta-analysis JSON
         meta_analysis = self._parse_meta_analysis(digest_data.get("meta_analysis_json"))
 
+        # Filter out "Analysis unavailable" placeholders
+        for key in ["key_themes", "credit_risk_signals", "regulatory_updates", "market_insights"]:
+            if key in meta_analysis:
+                meta_analysis[key] = [
+                    item for item in meta_analysis[key]
+                    if item and "unavailable" not in item.lower()
+                ]
+
+        # Parse articles from JSON output for brief summaries (sorted by relevance)
+        articles = self._parse_articles(digest_data.get("json_output"))
+
         # Format date in German style
         digest_date = self._format_date(digest_data.get("digest_date"))
 
@@ -59,7 +69,7 @@ class HtmlEmailFormatter:
             credit_risk_signals=meta_analysis.get("credit_risk_signals", []),
             regulatory_updates=meta_analysis.get("regulatory_updates", []),
             market_insights=meta_analysis.get("market_insights", []),
-            markdown_content=self._markdown_to_html(digest_data.get("markdown_output", "")),
+            articles=articles,
             version=digest_data.get("version", 1),
             generated_at=digest_data.get("generated_at", ""),
         )
@@ -84,6 +94,56 @@ class HtmlEmailFormatter:
         except json.JSONDecodeError as e:
             logger.warning("meta_analysis_parse_failed", error=str(e))
             return {}
+
+    def _parse_articles(self, json_output: Optional[str]) -> List[Dict[str, Any]]:
+        """Parse articles from JSON output for brief summaries.
+
+        Args:
+            json_output: Full JSON digest output string.
+
+        Returns:
+            List of article dictionaries with title, summary, key_points, source, url.
+        """
+        if not json_output:
+            return []
+
+        try:
+            data = json.loads(json_output)
+            articles = data.get("articles", [])
+
+            # Sort by confidence/relevance (descending)
+            articles = sorted(
+                articles,
+                key=lambda a: a.get("confidence", 0),
+                reverse=True
+            )
+
+            # Extract only needed fields for brief display
+            brief_articles = []
+            for article in articles:
+                # Truncate summary to first sentence or ~150 chars
+                summary = article.get("summary", "")
+                if summary:
+                    # Try to cut at first sentence
+                    first_sentence_end = summary.find(". ")
+                    if first_sentence_end > 0 and first_sentence_end < 200:
+                        summary = summary[:first_sentence_end + 1]
+                    elif len(summary) > 150:
+                        summary = summary[:147].rsplit(" ", 1)[0] + "..."
+
+                brief_articles.append({
+                    "title": article.get("title", "Untitled"),
+                    "summary": summary,
+                    "key_points": article.get("key_points", [])[:2],  # Limit to 2 key points
+                    "source": article.get("source", ""),
+                    "url": article.get("url", ""),
+                })
+
+            return brief_articles
+
+        except json.JSONDecodeError as e:
+            logger.warning("json_output_parse_failed", error=str(e))
+            return []
 
     def _format_date(self, date_str: str | None) -> str:
         """Format date string in German style.
@@ -121,26 +181,3 @@ class HtmlEmailFormatter:
         except (ValueError, TypeError):
             return date_str
 
-    def _markdown_to_html(self, md_content: str) -> str:
-        """Convert markdown content to HTML.
-
-        Args:
-            md_content: Markdown formatted string.
-
-        Returns:
-            HTML formatted string.
-        """
-        if not md_content:
-            return ""
-
-        try:
-            # Convert markdown to HTML with common extensions
-            html = markdown.markdown(
-                md_content,
-                extensions=["tables", "nl2br"],
-            )
-            return html
-        except Exception as e:
-            logger.warning("markdown_conversion_failed", error=str(e))
-            # Return escaped plain text as fallback
-            return f"<pre>{md_content}</pre>"
