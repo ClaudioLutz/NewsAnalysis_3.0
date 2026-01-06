@@ -119,22 +119,24 @@ class DigestGenerator:
         """Get summarized articles for digest.
 
         Args:
-            digest_date: Date to get articles for.
+            digest_date: Date to get articles for (used for logging only).
 
         Returns:
-            List of summarized articles.
+            List of summarized articles not yet included in a digest.
         """
-        # Get articles that are summarized but not yet in a digest
+        # Get all summarized articles not yet in a digest
+        # Note: We don't filter by published_at date because:
+        # 1. Articles may be published over multiple days
+        # 2. The pipeline may run at midnight causing date mismatches
+        # 3. What matters is: summarized + not yet digested
         cursor = self.article_repo.db.execute(
             """
             SELECT * FROM articles
-            WHERE DATE(published_at) = ?
-            AND pipeline_stage = 'summarized'
+            WHERE pipeline_stage = 'summarized'
             AND processing_status = 'completed'
             AND (included_in_digest = FALSE OR included_in_digest IS NULL)
             ORDER BY feed_priority ASC, confidence DESC, published_at DESC
             """,
-            (digest_date.isoformat(),),
         )
 
         rows = cursor.fetchall()

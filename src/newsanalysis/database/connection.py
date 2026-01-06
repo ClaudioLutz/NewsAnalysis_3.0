@@ -9,6 +9,8 @@ from typing import Optional
 
 import structlog
 
+from newsanalysis.database.migrations import run_migrations
+
 logger = structlog.get_logger(__name__)
 
 # Global registry of connections for cleanup
@@ -90,6 +92,9 @@ class DatabaseConnection:
             # Initialize schema if database is new
             if needs_init:
                 self._initialize_schema()
+            else:
+                # Run migrations for existing databases
+                run_migrations(self._connection)
 
             # Register for cleanup
             _active_connections.append(self)

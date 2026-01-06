@@ -1,11 +1,28 @@
 -- NewsAnalysis 2.0 Database Schema
 -- SQLite 3.38+ with FTS5 support
+-- Schema Version: 3
 
 -- Enable foreign keys
 PRAGMA foreign_keys = ON;
 
 -- Enable WAL mode for better concurrency
 PRAGMA journal_mode = WAL;
+
+-- Table: schema_info
+-- Track schema version for migrations
+CREATE TABLE IF NOT EXISTS schema_info (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    version INTEGER NOT NULL,
+    applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    description TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_schema_info_version ON schema_info(version);
+
+-- Initialize schema version (only if empty)
+INSERT INTO schema_info (version, description)
+SELECT 3, 'Initial schema - FTS triggers disabled to prevent corruption'
+WHERE NOT EXISTS (SELECT 1 FROM schema_info);
 
 -- Table: articles
 -- Primary table storing all article data across pipeline stages
@@ -93,7 +110,9 @@ CREATE INDEX IF NOT EXISTS idx_articles_digest_included ON articles(digest_date,
 CREATE INDEX IF NOT EXISTS idx_articles_is_duplicate ON articles(is_duplicate);
 CREATE INDEX IF NOT EXISTS idx_articles_canonical_hash ON articles(canonical_url_hash);
 
--- Full-Text Search
+-- Full-Text Search (table kept for future use, but triggers DISABLED)
+-- FTS triggers were causing "database disk image is malformed" errors
+-- during concurrent UPDATE operations. See docs/stories for details.
 CREATE VIRTUAL TABLE IF NOT EXISTS articles_fts USING fts5(
     title,
     summary,
@@ -101,21 +120,14 @@ CREATE VIRTUAL TABLE IF NOT EXISTS articles_fts USING fts5(
     content_rowid='id'
 );
 
--- Triggers to keep FTS index updated
-CREATE TRIGGER IF NOT EXISTS articles_fts_insert AFTER INSERT ON articles BEGIN
-    INSERT INTO articles_fts(rowid, title, summary)
-    VALUES (new.id, new.title, new.summary);
-END;
-
-CREATE TRIGGER IF NOT EXISTS articles_fts_update AFTER UPDATE ON articles BEGIN
-    UPDATE articles_fts
-    SET title = new.title, summary = new.summary
-    WHERE rowid = new.id;
-END;
-
-CREATE TRIGGER IF NOT EXISTS articles_fts_delete AFTER DELETE ON articles BEGIN
-    DELETE FROM articles_fts WHERE rowid = old.id;
-END;
+-- NOTE: FTS triggers INTENTIONALLY REMOVED - they cause database corruption
+-- during pipeline execution. FTS index can be rebuilt manually if needed:
+--   INSERT INTO articles_fts(articles_fts) VALUES('rebuild');
+--
+-- Original triggers (DO NOT RE-ENABLE without fixing corruption issue):
+-- CREATE TRIGGER articles_fts_insert AFTER INSERT ON articles ...
+-- CREATE TRIGGER articles_fts_update AFTER UPDATE ON articles ...
+-- CREATE TRIGGER articles_fts_delete AFTER DELETE ON articles ...
 
 -- Table: processed_links
 -- Cache table for fast URL deduplication across runs
