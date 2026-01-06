@@ -11,6 +11,7 @@ from newsanalysis.core.article import (
     ClassificationResult,
     ScrapedContent,
 )
+from newsanalysis.pipeline.dedup.duplicate_detector import DuplicateGroup
 from newsanalysis.database.connection import DatabaseConnection
 from newsanalysis.utils.exceptions import DatabaseError
 from newsanalysis.utils.logging import get_logger
@@ -360,6 +361,8 @@ class ArticleRepository:
     def get_articles_for_summarization(self, limit: Optional[int] = None) -> List[Article]:
         """Get articles that have been scraped and need summarization.
 
+        Excludes articles marked as duplicates - only canonical articles are summarized.
+
         Args:
             limit: Maximum number of articles to return.
 
@@ -374,6 +377,7 @@ class ArticleRepository:
                 SELECT * FROM articles
                 WHERE pipeline_stage = 'scraped'
                   AND processing_status = 'completed'
+                  AND (is_duplicate = FALSE OR is_duplicate IS NULL)
                 ORDER BY feed_priority ASC, published_at DESC
             """
 
@@ -517,7 +521,130 @@ class ArticleRepository:
             processing_status=row["processing_status"],
             error_message=row["error_message"],
             error_count=row["error_count"],
+            is_duplicate=row.get("is_duplicate", False),
+            canonical_url_hash=row.get("canonical_url_hash"),
             run_id=row["run_id"],
             created_at=_parse_datetime(row["created_at"]),
             updated_at=_parse_datetime(row["updated_at"]),
         )
+
+    def save_duplicate_groups(
+        self,
+        groups: List[DuplicateGroup],
+        run_id: str,
+    ) -> int:
+        """Save duplicate groups to database and mark duplicate articles.
+
+        Args:
+            groups: List of DuplicateGroup objects from detector.
+            run_id: Pipeline run identifier.
+
+        Returns:
+            Number of articles marked as duplicates.
+
+        Raises:
+            DatabaseError: If database operation fails.
+        """
+        if not groups:
+            return 0
+
+        logger.info("saving_duplicate_groups", count=len(groups), run_id=run_id)
+
+        try:
+            total_duplicates = 0
+
+            for group in groups:
+                # Insert duplicate group record
+                group_query = """
+                    INSERT INTO duplicate_groups (
+                        canonical_url_hash, confidence, duplicate_count,
+                        detected_at, run_id
+                    ) VALUES (?, ?, ?, ?, ?)
+                """
+
+                group_params = (
+                    group.canonical_url_hash,
+                    group.confidence,
+                    len(group.duplicate_url_hashes),
+                    group.detected_at,
+                    run_id,
+                )
+
+                cursor = self.db.execute(group_query, group_params)
+                group_id = cursor.lastrowid
+
+                # Insert duplicate members and update articles
+                for dup_hash in group.duplicate_url_hashes:
+                    # Insert member record
+                    member_query = """
+                        INSERT INTO duplicate_members (
+                            group_id, duplicate_url_hash, comparison_confidence
+                        ) VALUES (?, ?, ?)
+                    """
+                    self.db.execute(member_query, (group_id, dup_hash, group.confidence))
+
+                    # Mark article as duplicate
+                    update_query = """
+                        UPDATE articles
+                        SET is_duplicate = TRUE,
+                            canonical_url_hash = ?,
+                            updated_at = ?
+                        WHERE url_hash = ?
+                    """
+                    self.db.execute(
+                        update_query,
+                        (group.canonical_url_hash, datetime.now(), dup_hash),
+                    )
+                    total_duplicates += 1
+
+            self.db.commit()
+
+            logger.info(
+                "duplicate_groups_saved",
+                groups=len(groups),
+                duplicates_marked=total_duplicates,
+            )
+
+            return total_duplicates
+
+        except Exception as e:
+            self.db.rollback()
+            logger.error("save_duplicate_groups_failed", error=str(e))
+            raise DatabaseError(f"Failed to save duplicate groups: {e}") from e
+
+    def get_articles_for_deduplication(self, limit: Optional[int] = None) -> List[Article]:
+        """Get scraped articles that need semantic deduplication.
+
+        Args:
+            limit: Maximum number of articles to return.
+
+        Returns:
+            List of articles ready for deduplication check.
+
+        Raises:
+            DatabaseError: If database operation fails.
+        """
+        try:
+            query = """
+                SELECT * FROM articles
+                WHERE pipeline_stage = 'scraped'
+                  AND processing_status = 'completed'
+                  AND is_duplicate = FALSE
+                ORDER BY published_at DESC, feed_priority ASC
+            """
+
+            if limit:
+                query += f" LIMIT {limit}"
+
+            cursor = self.db.execute(query)
+            rows = cursor.fetchall()
+
+            articles = [self._row_to_article(row) for row in rows]
+
+            logger.info("articles_fetched_for_deduplication", count=len(articles))
+
+            return articles
+
+        except Exception as e:
+            logger.error("fetch_articles_for_deduplication_failed", error=str(e))
+            raise DatabaseError(f"Failed to fetch articles for deduplication: {e}") from e

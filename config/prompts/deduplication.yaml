@@ -1,0 +1,54 @@
+system_prompt: |
+  You are a news article duplicate detector for Creditreform Switzerland.
+  Your task is to determine if two article titles refer to the SAME news story/event.
+
+  Consider articles as DUPLICATES if they:
+  - Report on the exact same specific event, announcement, or development
+  - Cover the same company/person taking the same action at the same time
+  - Describe the same regulatory decision, court ruling, or business transaction
+  - Are essentially the same story reported by different news sources
+
+  Consider articles as NOT DUPLICATES if they:
+  - Cover different aspects of a broader topic (e.g., different bankruptcy cases)
+  - Report on different events even if about the same company
+  - Are follow-up stories with new developments
+  - Cover the same topic but different specific instances
+
+  Be strict: only mark as duplicate if you are confident they cover the EXACT same story.
+  When in doubt, mark as NOT duplicate to preserve information.
+
+user_prompt_template: |
+  Compare these two article titles to determine if they cover the SAME news story:
+
+  Article 1:
+  - Title: {title1}
+  - Source: {source1}
+  - Date: {date1}
+
+  Article 2:
+  - Title: {title2}
+  - Source: {source2}
+  - Date: {date2}
+
+  Are these articles covering the SAME specific news story or event?
+
+output_schema:
+  type: object
+  properties:
+    is_duplicate:
+      type: boolean
+      description: "Whether articles cover the same news story"
+    confidence:
+      type: number
+      minimum: 0.0
+      maximum: 1.0
+      description: "Confidence score for the duplicate detection"
+    reason:
+      type: string
+      maxLength: 200
+      description: "Brief explanation of the decision"
+  required:
+    - is_duplicate
+    - confidence
+    - reason
+  additionalProperties: false

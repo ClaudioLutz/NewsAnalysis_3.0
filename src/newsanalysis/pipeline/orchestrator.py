@@ -13,6 +13,7 @@ from newsanalysis.database.repository import ArticleRepository
 from newsanalysis.integrations.provider_factory import ProviderFactory
 from newsanalysis.core.enums import ExtractionMethod
 from newsanalysis.pipeline.collectors import create_collector
+from newsanalysis.pipeline.dedup import DuplicateDetector
 from newsanalysis.pipeline.filters.ai_filter import AIFilter
 from newsanalysis.pipeline.formatters import (
     GermanReportFormatter,
@@ -91,6 +92,14 @@ class PipelineOrchestrator:
             timeout=config.request_timeout_sec,
         )
 
+        # Initialize duplicate detector with classification client (DeepSeek - cheap)
+        dedup_client = self.provider_factory.get_classification_client()
+        self.duplicate_detector = DuplicateDetector(
+            llm_client=dedup_client,
+            confidence_threshold=0.75,
+            time_window_hours=48,
+        )
+
         # Initialize summarizer with summarization client (Gemini by default)
         summarization_client = self.provider_factory.get_summarization_client()
         self.summarizer = ArticleSummarizer(
@@ -135,6 +144,8 @@ class PipelineOrchestrator:
                 "matched": 0,
                 "rejected": 0,
                 "scraped": 0,
+                "deduplicated": 0,
+                "duplicates_found": 0,
                 "summarized": 0,
                 "digested": 0,
             }
@@ -155,6 +166,12 @@ class PipelineOrchestrator:
             if not self.pipeline_config.skip_scraping:
                 scraped_count = await self._run_scraping()
                 stats["scraped"] = scraped_count
+
+            # Stage 3.5: Semantic Deduplication
+            if not self.pipeline_config.skip_summarization:
+                dedup_stats = await self._run_deduplication()
+                stats["deduplicated"] = dedup_stats["checked"]
+                stats["duplicates_found"] = dedup_stats["duplicates"]
 
             # Stage 4: Summarization
             if not self.pipeline_config.skip_summarization:
@@ -344,6 +361,54 @@ class PipelineOrchestrator:
         )
 
         return scraped_count
+
+    async def _run_deduplication(self) -> Dict[str, int]:
+        """Run semantic deduplication stage.
+
+        Detects articles from different sources that cover the same news story.
+        Marks duplicates so they are skipped during summarization.
+
+        Returns:
+            Statistics dict with checked and duplicates counts.
+        """
+        logger.info("stage_deduplication_starting")
+
+        # Get articles that need deduplication check
+        articles = self.repository.get_articles_for_deduplication(limit=None)
+
+        if len(articles) < 2:
+            logger.info("insufficient_articles_for_deduplication", count=len(articles))
+            return {"checked": len(articles), "duplicates": 0}
+
+        logger.info("articles_to_deduplicate", count=len(articles))
+
+        try:
+            # Run duplicate detection
+            duplicate_groups, duplicate_hashes = await self.duplicate_detector.detect_duplicates(
+                articles=articles,
+                max_concurrent=10,
+            )
+
+            # Save duplicate groups to database
+            if duplicate_groups:
+                self.repository.save_duplicate_groups(duplicate_groups, self.run_id)
+
+            logger.info(
+                "stage_deduplication_complete",
+                checked=len(articles),
+                groups=len(duplicate_groups),
+                duplicates=len(duplicate_hashes),
+            )
+
+            return {
+                "checked": len(articles),
+                "duplicates": len(duplicate_hashes),
+            }
+
+        except Exception as e:
+            logger.error("deduplication_failed", error=str(e))
+            # Don't fail the pipeline - deduplication is optional
+            return {"checked": len(articles), "duplicates": 0}
 
     async def _run_summarization(self) -> int:
         """Run article summarization stage.

@@ -152,6 +152,10 @@ class Article(BaseModel):
     error_message: Optional[str] = None
     error_count: int = 0
 
+    # Semantic Deduplication
+    is_duplicate: bool = False
+    canonical_url_hash: Optional[str] = None
+
     # Metadata
     run_id: str
     created_at: datetime = Field(default_factory=datetime.now)

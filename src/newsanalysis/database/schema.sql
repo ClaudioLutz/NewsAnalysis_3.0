@@ -64,6 +64,10 @@ CREATE TABLE IF NOT EXISTS articles (
     error_message TEXT,
     error_count INTEGER DEFAULT 0,
 
+    -- Semantic Deduplication (Step 3.5 - after scraping, before summarization)
+    is_duplicate BOOLEAN DEFAULT FALSE,  -- TRUE if this is a duplicate of another article
+    canonical_url_hash TEXT,  -- If duplicate, points to the canonical article's url_hash
+
     -- Run Tracking
     run_id TEXT NOT NULL,
 
@@ -86,6 +90,8 @@ CREATE INDEX IF NOT EXISTS idx_articles_stage_status ON articles(pipeline_stage,
 CREATE INDEX IF NOT EXISTS idx_articles_match_stage ON articles(is_match, pipeline_stage);
 CREATE INDEX IF NOT EXISTS idx_articles_created_stage ON articles(created_at, pipeline_stage);
 CREATE INDEX IF NOT EXISTS idx_articles_digest_included ON articles(digest_date, included_in_digest);
+CREATE INDEX IF NOT EXISTS idx_articles_is_duplicate ON articles(is_duplicate);
+CREATE INDEX IF NOT EXISTS idx_articles_canonical_hash ON articles(canonical_url_hash);
 
 -- Full-Text Search
 CREATE VIRTUAL TABLE IF NOT EXISTS articles_fts USING fts5(
@@ -336,3 +342,52 @@ CREATE TABLE IF NOT EXISTS digests (
 
 CREATE INDEX IF NOT EXISTS idx_digests_date ON digests(digest_date);
 CREATE INDEX IF NOT EXISTS idx_digests_run_id ON digests(run_id);
+
+-- Table: duplicate_groups
+-- Track semantic duplicate groups for cross-source deduplication
+CREATE TABLE IF NOT EXISTS duplicate_groups (
+    -- Primary Key
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+    -- Canonical Article (the one that will be summarized)
+    canonical_url_hash TEXT NOT NULL,
+
+    -- Group Metadata
+    confidence REAL NOT NULL,  -- Average confidence across comparisons
+    duplicate_count INTEGER NOT NULL,  -- Number of duplicates in group
+
+    -- Timestamps
+    detected_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    -- Run Tracking
+    run_id TEXT NOT NULL,
+
+    FOREIGN KEY (canonical_url_hash) REFERENCES articles(url_hash)
+);
+
+CREATE INDEX IF NOT EXISTS idx_duplicate_groups_canonical ON duplicate_groups(canonical_url_hash);
+CREATE INDEX IF NOT EXISTS idx_duplicate_groups_run_id ON duplicate_groups(run_id);
+CREATE INDEX IF NOT EXISTS idx_duplicate_groups_detected_at ON duplicate_groups(detected_at);
+
+-- Table: duplicate_members
+-- Track which articles belong to which duplicate group
+CREATE TABLE IF NOT EXISTS duplicate_members (
+    -- Primary Key
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+    -- Group Reference
+    group_id INTEGER NOT NULL,
+
+    -- Duplicate Article
+    duplicate_url_hash TEXT NOT NULL,
+
+    -- Comparison Details
+    comparison_confidence REAL,  -- Confidence when compared to canonical
+
+    FOREIGN KEY (group_id) REFERENCES duplicate_groups(id) ON DELETE CASCADE,
+    FOREIGN KEY (duplicate_url_hash) REFERENCES articles(url_hash),
+    UNIQUE(group_id, duplicate_url_hash)
+);
+
+CREATE INDEX IF NOT EXISTS idx_duplicate_members_group ON duplicate_members(group_id);
+CREATE INDEX IF NOT EXISTS idx_duplicate_members_hash ON duplicate_members(duplicate_url_hash);
