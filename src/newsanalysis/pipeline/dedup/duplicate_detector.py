@@ -2,6 +2,7 @@
 
 import asyncio
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
 
 from pydantic import BaseModel, Field
@@ -73,7 +74,7 @@ class DuplicateDetector:
 
         # Load prompt configuration
         try:
-            config = load_yaml(prompt_config_path)
+            config = load_yaml(Path(prompt_config_path))
             self.system_prompt = config["system_prompt"]
             self.user_prompt_template = config["user_prompt_template"]
         except Exception as e:
