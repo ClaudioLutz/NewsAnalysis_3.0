@@ -5,6 +5,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List
 
+import markdown
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from newsanalysis.utils.logging import get_logger
@@ -58,7 +59,7 @@ class HtmlEmailFormatter:
             credit_risk_signals=meta_analysis.get("credit_risk_signals", []),
             regulatory_updates=meta_analysis.get("regulatory_updates", []),
             market_insights=meta_analysis.get("market_insights", []),
-            markdown_content=digest_data.get("markdown_output", ""),
+            markdown_content=self._markdown_to_html(digest_data.get("markdown_output", "")),
             version=digest_data.get("version", 1),
             generated_at=digest_data.get("generated_at", ""),
         )
@@ -119,3 +120,27 @@ class HtmlEmailFormatter:
             return f"{day}. {month} {year}"
         except (ValueError, TypeError):
             return date_str
+
+    def _markdown_to_html(self, md_content: str) -> str:
+        """Convert markdown content to HTML.
+
+        Args:
+            md_content: Markdown formatted string.
+
+        Returns:
+            HTML formatted string.
+        """
+        if not md_content:
+            return ""
+
+        try:
+            # Convert markdown to HTML with common extensions
+            html = markdown.markdown(
+                md_content,
+                extensions=["tables", "nl2br"],
+            )
+            return html
+        except Exception as e:
+            logger.warning("markdown_conversion_failed", error=str(e))
+            # Return escaped plain text as fallback
+            return f"<pre>{md_content}</pre>"
