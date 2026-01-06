@@ -3,7 +3,7 @@
 import click
 
 from newsanalysis.__version__ import __version__
-from newsanalysis.cli.commands import cost_report, export, health, run, stats
+from newsanalysis.cli.commands import cost_report, email, export, health, run, stats
 
 
 @click.group()
@@ -24,6 +24,7 @@ cli.add_command(export)
 cli.add_command(stats)
 cli.add_command(cost_report)
 cli.add_command(health)
+cli.add_command(email)
 
 
 def main() -> None:

@@ -105,6 +105,10 @@ class Config(BaseSettings):
     # Environment
     environment: Literal["development", "staging", "production"] = "development"
 
+    # Email Settings
+    email_recipient: Optional[str] = Field(default=None)
+    email_subject_template: str = "Bonitäts-News: {date} - {count} relevante Artikel"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bonitäts-News Digest - {{ date }}</title>
+  <!--[if mso]>
+  <style type="text/css">
+    table { border-collapse: collapse; }
+    td { padding: 0; }
+  </style>
+  <![endif]-->
+</head>
+<body width="100%" style="margin: 0; padding: 0; background-color: #f4f4f4; font-family: Arial, Helvetica, sans-serif; -webkit-font-smoothing: antialiased;" role="article" aria-label="Bonitäts-News Digest">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f4f4f4;">
+    <tr>
+      <td align="center" style="padding: 20px 10px;">
+        <!-- Main Container -->
+        <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="background-color: #ffffff; border-radius: 4px;">
+
+          <!-- Header -->
+          <tr>
+            <td style="background-color: #003366; padding: 25px 30px; border-radius: 4px 4px 0 0;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td>
+                    <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: bold;">
+                      Bonit&auml;ts-News
+                    </h1>
+                    <p style="margin: 8px 0 0 0; color: #a8c5e2; font-size: 14px;">
+                      {{ date }} &bull; {{ article_count }} relevante Artikel
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          {% if credit_risk_signals %}
+          <!-- Credit Risk Signals (Priority Section) -->
+          <tr>
+            <td style="padding: 25px 30px; background-color: #fff8e6; border-left: 4px solid #f0ad4e;">
+              <h2 style="margin: 0 0 15px 0; color: #8a6d3b; font-size: 16px; font-weight: bold;">
+                &#9888; Risiko-Signale
+              </h2>
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                {% for signal in credit_risk_signals %}
+                <tr>
+                  <td style="padding: 6px 0; color: #333333; font-size: 14px; line-height: 1.5;">
+                    &bull; {{ signal }}
+                  </td>
+                </tr>
+                {% endfor %}
+              </table>
+            </td>
+          </tr>
+          {% endif %}
+
+          {% if key_themes %}
+          <!-- Key Themes -->
+          <tr>
+            <td style="padding: 25px 30px; border-bottom: 1px solid #e0e0e0;">
+              <h2 style="margin: 0 0 15px 0; color: #003366; font-size: 16px; font-weight: bold;">
+                Wichtige Themen
+              </h2>
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                {% for theme in key_themes %}
+                <tr>
+                  <td style="padding: 6px 0; color: #333333; font-size: 14px; line-height: 1.5;">
+                    &bull; {{ theme }}
+                  </td>
+                </tr>
+                {% endfor %}
+              </table>
+            </td>
+          </tr>
+          {% endif %}
+
+          {% if regulatory_updates %}
+          <!-- Regulatory Updates -->
+          <tr>
+            <td style="padding: 25px 30px; border-bottom: 1px solid #e0e0e0;">
+              <h2 style="margin: 0 0 15px 0; color: #003366; font-size: 16px; font-weight: bold;">
+                Regulatorische Updates
+              </h2>
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                {% for update in regulatory_updates %}
+                <tr>
+                  <td style="padding: 6px 0; color: #333333; font-size: 14px; line-height: 1.5;">
+                    &bull; {{ update }}
+                  </td>
+                </tr>
+                {% endfor %}
+              </table>
+            </td>
+          </tr>
+          {% endif %}
+
+          {% if market_insights %}
+          <!-- Market Insights -->
+          <tr>
+            <td style="padding: 25px 30px; border-bottom: 1px solid #e0e0e0;">
+              <h2 style="margin: 0 0 15px 0; color: #003366; font-size: 16px; font-weight: bold;">
+                Markt-Einblicke
+              </h2>
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                {% for insight in market_insights %}
+                <tr>
+                  <td style="padding: 6px 0; color: #333333; font-size: 14px; line-height: 1.5;">
+                    &bull; {{ insight }}
+                  </td>
+                </tr>
+                {% endfor %}
+              </table>
+            </td>
+          </tr>
+          {% endif %}
+
+          <!-- Articles Content -->
+          <tr>
+            <td style="padding: 25px 30px;">
+              <h2 style="margin: 0 0 20px 0; color: #003366; font-size: 16px; font-weight: bold;">
+                Artikel-&Uuml;bersicht
+              </h2>
+              <div style="color: #333333; font-size: 14px; line-height: 1.6;">
+                {{ markdown_content | safe }}
+              </div>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: #f8f8f8; padding: 20px 30px; border-radius: 0 0 4px 4px; border-top: 1px solid #e0e0e0;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td style="color: #888888; font-size: 12px; line-height: 1.4;">
+                    <p style="margin: 0;">
+                      NewsAnalysis v{{ version }} &bull; Generiert: {{ generated_at }}
+                    </p>
+                    <p style="margin: 8px 0 0 0;">
+                      Creditreform Schweiz &bull; Automatisch generierter Digest
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+        </table>
+        <!-- End Main Container -->
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
