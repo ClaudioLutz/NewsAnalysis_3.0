@@ -16,6 +16,72 @@ feeds:
     rate_limit_seconds: 5.0
     enabled: true
 
+  # SNB - Swiss National Bank feeds
+  - name: "SNB Monetary Policy"
+    type: "rss"
+    url: "https://www.snb.ch/public/de/rss/mopo"
+    priority: 1
+    max_age_hours: 168
+    rate_limit_seconds: 5.0
+    enabled: true
+
+  - name: "SNB Interest Rates"
+    type: "rss"
+    url: "https://www.snb.ch/public/de/rss/interestRates"
+    priority: 1
+    max_age_hours: 168
+    rate_limit_seconds: 5.0
+    enabled: true
+
+  - name: "SNB Ad Hoc"
+    type: "rss"
+    url: "https://www.snb.ch/public/de/rss/adhoc"
+    priority: 1
+    max_age_hours: 168
+    rate_limit_seconds: 5.0
+    enabled: true
+
+  - name: "SNB Press Releases"
+    type: "rss"
+    url: "https://www.snb.ch/public/de/rss/pressrel"
+    priority: 1
+    max_age_hours: 168
+    rate_limit_seconds: 5.0
+    enabled: true
+
+  - name: "SNB Statistics"
+    type: "rss"
+    url: "https://www.snb.ch/public/de/rss/statistics"
+    priority: 1
+    max_age_hours: 168
+    rate_limit_seconds: 5.0
+    enabled: true
+
+  - name: "SNB Business Cycle"
+    type: "rss"
+    url: "https://www.snb.ch/public/de/rss/buscycletrends"
+    priority: 1
+    max_age_hours: 168
+    rate_limit_seconds: 5.0
+    enabled: true
+
+  - name: "SNB Exchange Rates"
+    type: "rss"
+    url: "https://www.snb.ch/public/de/rss/exchangeRates"
+    priority: 1
+    max_age_hours: 168
+    rate_limit_seconds: 5.0
+    enabled: true
+
+  # Federal Administration
+  - name: "Federal Press Releases"
+    type: "rss"
+    url: "https://www.news.admin.ch/NSBSubscriber/feeds/rss"
+    priority: 1
+    max_age_hours: 168
+    rate_limit_seconds: 5.0
+    enabled: true
+
   # Tier 2: Financial Sources (3-day retention)
   - name: "Finews"
     type: "rss"
@@ -23,7 +89,7 @@ feeds:
     priority: 2
     max_age_hours: 72
     rate_limit_seconds: 3.0
-    enabled: true
+    enabled: false  # 404 Not Found
 
   - name: "Cash"
     type: "rss"
@@ -31,7 +97,7 @@ feeds:
     priority: 2
     max_age_hours: 72
     rate_limit_seconds: 3.0
-    enabled: true
+    enabled: false  # Parse error
 
   - name: "Finanzen.ch News"
     type: "rss"
@@ -39,7 +105,7 @@ feeds:
     priority: 2
     max_age_hours: 72
     rate_limit_seconds: 3.0
-    enabled: true
+    enabled: false  # 403 Forbidden
 
   - name: "Finanzen.ch Analysis"
     type: "rss"
@@ -47,7 +113,7 @@ feeds:
     priority: 2
     max_age_hours: 72
     rate_limit_seconds: 3.0
-    enabled: true
+    enabled: false  # 403 Forbidden
 
   - name: "StartupTicker"
     type: "rss"
@@ -55,11 +121,51 @@ feeds:
     priority: 2
     max_age_hours: 72
     rate_limit_seconds: 3.0
-    enabled: true
+    enabled: false  # Parse error
 
   - name: "FinTech News Switzerland"
     type: "rss"
     url: "https://fintechnews.ch/feed/"
+    priority: 2
+    max_age_hours: 72
+    rate_limit_seconds: 3.0
+    enabled: true
+
+  - name: "FintechNews Blockchain"
+    type: "rss"
+    url: "https://fintechnews.ch/blockchain_bitcoin/feed/"
+    priority: 2
+    max_age_hours: 72
+    rate_limit_seconds: 3.0
+    enabled: true
+
+  - name: "FintechNews AI"
+    type: "rss"
+    url: "https://fintechnews.ch/aifintech/feed/"
+    priority: 2
+    max_age_hours: 72
+    rate_limit_seconds: 3.0
+    enabled: true
+
+  - name: "FintechNews Regtech"
+    type: "rss"
+    url: "https://fintechnews.ch/regtech/feed/"
+    priority: 2
+    max_age_hours: 72
+    rate_limit_seconds: 3.0
+    enabled: true
+
+  - name: "FintechNews Open Banking"
+    type: "rss"
+    url: "https://fintechnews.ch/open-banking/feed/"
+    priority: 2
+    max_age_hours: 72
+    rate_limit_seconds: 3.0
+    enabled: true
+
+  - name: "FintechNews Funding"
+    type: "rss"
+    url: "https://fintechnews.ch/funding/feed/"
     priority: 2
     max_age_hours: 72
     rate_limit_seconds: 3.0
@@ -181,7 +287,7 @@ feeds:
     priority: 3
     max_age_hours: 24
     rate_limit_seconds: 2.0
-    enabled: true
+    enabled: false  # 400 Bad Request
 
   # French-language sources (Romandie)
   - name: "Tribune de Genève"
@@ -195,6 +301,87 @@ feeds:
   - name: "24 heures"
     type: "rss"
     url: "https://partner-feeds.publishing.tamedia.ch/rss/24heures/front"
+    priority: 3
+    max_age_hours: 24
+    rate_limit_seconds: 2.0
+    enabled: true
+
+  - name: "Le Temps Économie"
+    type: "rss"
+    url: "https://www.letemps.ch/economie.rss"
+    priority: 3
+    max_age_hours: 24
+    rate_limit_seconds: 2.0
+    enabled: true
+
+  - name: "Le Temps Suisse"
+    type: "rss"
+    url: "https://www.letemps.ch/suisse.rss"
+    priority: 3
+    max_age_hours: 24
+    rate_limit_seconds: 2.0
+    enabled: true
+
+  - name: "Le Temps Cyber"
+    type: "rss"
+    url: "https://www.letemps.ch/cyber.rss"
+    priority: 3
+    max_age_hours: 24
+    rate_limit_seconds: 2.0
+    enabled: true
+
+  # Italian-language sources (Ticino)
+  - name: "RSI Economia"
+    type: "rss"
+    url: "https://www.rsi.ch/info/economia/?f=rss"
+    priority: 3
+    max_age_hours: 24
+    rate_limit_seconds: 2.0
+    enabled: true
+
+  - name: "RSI Info"
+    type: "rss"
+    url: "https://www.rsi.ch/info/?f=rss"
+    priority: 3
+    max_age_hours: 24
+    rate_limit_seconds: 2.0
+    enabled: true
+
+  - name: "RSI Svizzera"
+    type: "rss"
+    url: "https://www.rsi.ch/info/svizzera/?f=rss"
+    priority: 3
+    max_age_hours: 24
+    rate_limit_seconds: 2.0
+    enabled: true
+
+  - name: "LaRegione Economia"
+    type: "rss"
+    url: "https://media.laregione.ch/files/domains/laregione.ch/rss/rss_economia.xml"
+    priority: 3
+    max_age_hours: 24
+    rate_limit_seconds: 2.0
+    enabled: true
+
+  - name: "LaRegione Main"
+    type: "rss"
+    url: "https://media.laregione.ch/files/domains/laregione.ch/rss/feed_rss.xml"
+    priority: 3
+    max_age_hours: 24
+    rate_limit_seconds: 2.0
+    enabled: true
+
+  - name: "LaRegione Ticino"
+    type: "rss"
+    url: "https://media.laregione.ch/files/domains/laregione.ch/rss/rss_ticino.xml"
+    priority: 3
+    max_age_hours: 24
+    rate_limit_seconds: 2.0
+    enabled: true
+
+  - name: "LaRegione Svizzera"
+    type: "rss"
+    url: "https://media.laregione.ch/files/domains/laregione.ch/rss/rss_svizzera.xml"
     priority: 3
     max_age_hours: 24
     rate_limit_seconds: 2.0
