@@ -91,7 +91,7 @@ class Config(BaseSettings):
     # Logging
     log_level: str = "INFO"
     log_format: str = "json"
-    log_file: Optional[Path] = None
+    log_dir: Path = Path("./logs")
 
     # Output
     output_dir: Path = Path("./out")
@@ -149,5 +149,5 @@ class Config(BaseSettings):
             self.db_backup_dir.mkdir(parents=True, exist_ok=True)
 
         # Create log directory
-        if self.log_file:
-            self.log_file.parent.mkdir(parents=True, exist_ok=True)
+        if self.log_dir:
+            self.log_dir.mkdir(parents=True, exist_ok=True)

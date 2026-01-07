@@ -2,7 +2,9 @@
 
 import logging
 import sys
-from typing import Literal
+from logging.handlers import TimedRotatingFileHandler
+from pathlib import Path
+from typing import Literal, Optional
 
 import structlog
 
@@ -10,12 +12,15 @@ import structlog
 def setup_logging(
     log_level: str = "INFO",
     log_format: Literal["json", "console"] = "json",
+    log_dir: Optional[Path] = None,
 ) -> None:
     """Configure structured logging with structlog.
 
     Args:
         log_level: Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
         log_format: Output format ("json" or "console")
+        log_dir: Directory for log files. If provided, logs will be written
+            to files with daily rotation and 30-day retention.
     """
     # Shared processors for both formats
     shared_processors = [
@@ -35,6 +40,9 @@ def setup_logging(
     else:  # console format
         formatter_processor = structlog.dev.ConsoleRenderer(colors=True)
 
+    # Console formatter for file output (human-readable, no colors for text files)
+    file_formatter_processor = structlog.dev.ConsoleRenderer(colors=False)
+
     # Configure structlog
     structlog.configure(
         processors=shared_processors + [
@@ -46,9 +54,9 @@ def setup_logging(
         cache_logger_on_first_use=True,
     )
 
-    # Configure stdlib logging to use ProcessorFormatter
-    handler = logging.StreamHandler(sys.stdout)
-    handler.setFormatter(
+    # Console handler
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setFormatter(
         structlog.stdlib.ProcessorFormatter(
             processor=formatter_processor,
             foreign_pre_chain=shared_processors,
@@ -57,8 +65,29 @@ def setup_logging(
 
     # Configure standard library logging
     root_logger = logging.getLogger()
-    root_logger.addHandler(handler)
+    root_logger.addHandler(console_handler)
     root_logger.setLevel(getattr(logging, log_level.upper()))
+
+    # File handler with daily rotation and 30-day retention
+    if log_dir:
+        log_dir = Path(log_dir)
+        log_dir.mkdir(parents=True, exist_ok=True)
+        log_file = log_dir / "newsanalysis.log"
+
+        file_handler = TimedRotatingFileHandler(
+            filename=log_file,
+            when="midnight",
+            interval=1,
+            backupCount=30,
+            encoding="utf-8",
+        )
+        file_handler.setFormatter(
+            structlog.stdlib.ProcessorFormatter(
+                processor=file_formatter_processor,
+                foreign_pre_chain=shared_processors,
+            )
+        )
+        root_logger.addHandler(file_handler)
 
     # Reduce noise from third-party libraries
     logging.getLogger("urllib3").setLevel(logging.WARNING)

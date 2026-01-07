@@ -23,7 +23,7 @@ def main() -> None:
         sys.exit(1)
 
     # Setup logging
-    setup_logging(log_level=config.log_level, log_format=config.log_format)
+    setup_logging(log_level=config.log_level, log_format=config.log_format, log_dir=config.log_dir)
 
     # Initialize database
     print(f"Initializing database at: {config.db_path}")

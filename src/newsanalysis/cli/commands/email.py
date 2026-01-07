@@ -59,7 +59,7 @@ def email(
         raise click.Abort()
 
     # Setup logging
-    setup_logging(log_level=config.log_level, log_format=config.log_format)
+    setup_logging(log_level=config.log_level, log_format=config.log_format, log_dir=config.log_dir)
 
     # Determine recipients
     if recipient:
