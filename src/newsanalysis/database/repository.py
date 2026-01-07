@@ -629,7 +629,7 @@ class ArticleRepository:
                 SELECT * FROM articles
                 WHERE pipeline_stage = 'scraped'
                   AND processing_status = 'completed'
-                  AND is_duplicate = FALSE
+                  AND (is_duplicate = FALSE OR is_duplicate IS NULL)
                 ORDER BY published_at DESC, feed_priority ASC
             """
 

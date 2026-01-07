@@ -521,16 +521,28 @@ class PipelineOrchestrator:
                 german_report=german_report,
             )
 
+            # Digest saved successfully - from here on, we consider it a success
+            # even if post-save operations fail
+            digest_saved = True
+
             # Mark articles as digested AFTER successful save
             # This ensures we don't have orphaned "digested" articles if save fails
-            await self.digest_generator.mark_articles_digested(
-                digest.articles, digest.date, digest.version
-            )
+            try:
+                await self.digest_generator.mark_articles_digested(
+                    digest.articles, digest.date, digest.version
+                )
+            except Exception as e:
+                logger.error("mark_articles_digested_failed", error=str(e))
+                # Continue - digest is still valid
 
             # Write outputs to files
-            await self._write_digest_outputs(
-                digest_date, json_output, german_report
-            )
+            try:
+                await self._write_digest_outputs(
+                    digest_date, json_output, german_report
+                )
+            except Exception as e:
+                logger.error("digest_file_write_failed", error=str(e))
+                # Continue - digest is still valid
 
             logger.info("stage_digest_generation_complete", digest_id=digest_id)
 

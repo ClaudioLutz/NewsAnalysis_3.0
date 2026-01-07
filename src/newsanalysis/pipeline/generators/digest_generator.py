@@ -151,6 +151,7 @@ class DigestGenerator:
             WHERE pipeline_stage = 'summarized'
             AND processing_status = 'completed'
             AND (included_in_digest = FALSE OR included_in_digest IS NULL)
+            AND (is_duplicate = FALSE OR is_duplicate IS NULL)
             ORDER BY feed_priority ASC, confidence DESC, published_at DESC
             """,
         )
