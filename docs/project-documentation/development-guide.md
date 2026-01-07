@@ -5,9 +5,9 @@
 - **Python 3.11+** (Python 3.13 supported)
 - **Git** for version control
 - API keys (at least one required):
-  - DeepSeek API key (recommended for classification)
-  - Google API key (recommended for summarization)
-  - OpenAI API key (fallback provider)
+  - DeepSeek API key (recommended for classification and deduplication)
+  - Google API key (recommended for summarization and digest)
+  - Note: DeepSeek and Gemini are bidirectional fallbacks for each other
 
 ## Environment Setup
 
@@ -87,6 +87,15 @@ newsanalysis stats --detailed
 
 # Health check
 newsanalysis health --verbose
+
+# API cost report
+newsanalysis cost-report               # View API costs
+newsanalysis cost-report --days 7      # Last 7 days
+
+# Email digest (Windows with Outlook)
+newsanalysis email                     # Send today's digest
+newsanalysis email --date 2026-01-03   # Send specific date
+newsanalysis email --preview           # Preview in Outlook without sending
 ```
 
 ### Development Scripts
@@ -212,10 +221,11 @@ See [source-tree-analysis.md](source-tree-analysis.md) for detailed structure.
 ### Modifying Database Schema
 
 1. Update `src/newsanalysis/database/schema.sql`
-2. Create migration script in `scripts/`
-3. Update affected models in `src/newsanalysis/core/`
-4. Update repository methods
-5. Update tests
+2. Add migration function in `src/newsanalysis/database/migrations.py`
+3. Increment `CURRENT_SCHEMA_VERSION` in migrations.py
+4. Update affected models in `src/newsanalysis/core/`
+5. Update repository methods
+6. Update tests
 
 ## Configuration
 
@@ -225,20 +235,26 @@ See `.env.example` for all available options:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `OPENAI_API_KEY` | - | OpenAI API key |
-| `DEEPSEEK_API_KEY` | - | DeepSeek API key |
-| `GOOGLE_API_KEY` | - | Google Gemini API key |
+| `OPENAI_API_KEY` | - | OpenAI API key (optional) |
+| `DEEPSEEK_API_KEY` | - | DeepSeek API key (recommended) |
+| `GOOGLE_API_KEY` | - | Google Gemini API key (recommended) |
 | `DB_PATH` | `./news.db` | Database file path |
 | `CONFIDENCE_THRESHOLD` | `0.70` | Classification threshold |
 | `DAILY_COST_LIMIT` | `2.0` | Daily API cost limit |
+| `EMAIL_RECIPIENTS` | - | Comma-separated email recipients |
+| `EMAIL_AUTO_SEND` | `false` | Auto-send email after digest |
 
 ### YAML Configuration
 
 | File | Purpose |
 |------|---------|
-| `config/feeds.yaml` | News source definitions |
+| `config/feeds.yaml` | 24 news source definitions |
 | `config/topics.yaml` | Classification topics |
-| `config/prompts/` | LLM prompt templates |
+| `config/prompts/classification.yaml` | Classification prompts |
+| `config/prompts/deduplication.yaml` | Duplicate detection prompts |
+| `config/prompts/summarization.yaml` | Summarization prompts |
+| `config/prompts/meta_analysis.yaml` | Meta-analysis prompts |
+| `config/templates/german_report.md.j2` | German report template |
 
 ## Debugging
 

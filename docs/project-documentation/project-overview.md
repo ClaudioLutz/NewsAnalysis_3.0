@@ -13,9 +13,9 @@ NewsAnalysis 3.0 transforms high-volume Swiss business news into actionable cred
 | Feature | Benefit |
 |---------|---------|
 | **Cost-Optimized** | ~$2.50/month for 100 articles/day (88% savings) |
-| **Multi-Provider LLM** | DeepSeek + Gemini + OpenAI fallback |
+| **Multi-Provider LLM** | DeepSeek + Gemini (bidirectional fallback) |
 | **German Output** | All summaries in Hochdeutsch |
-| **Swiss-Focused** | 25+ Swiss news sources |
+| **Swiss-Focused** | 24 Swiss news sources |
 | **Production-Ready** | Error handling, monitoring, cost tracking |
 
 ## Quick Reference
@@ -35,22 +35,22 @@ NewsAnalysis 3.0 transforms high-volume Swiss business news into actionable cred
 | **CLI** | Click |
 | **Models** | Pydantic |
 | **Database** | SQLite + SQLAlchemy |
-| **AI** | DeepSeek, Gemini, OpenAI |
+| **AI** | DeepSeek, Gemini |
 | **Scraping** | Trafilatura, Playwright |
 | **Testing** | pytest |
 
 ### Architecture Type
 
-**5-Stage Data Pipeline** (ETL-style)
+**5-Stage Data Pipeline** (ETL-style with semantic deduplication)
 
 ```
-RSS/HTML → Collect → Filter → Scrape → Summarize → Digest
-                       ↓
-              DeepSeek (classify)
-                       ↓
-              Gemini (summarize)
-                       ↓
-              German Reports
+RSS/HTML → Collect → Filter → Scrape → Dedup → Summarize → Digest
+                       ↓                          ↓          ↓
+              DeepSeek (classify)        Gemini (summarize)  │
+                       ↓                          ↓          │
+                       └──────────────────────────┴──────────┘
+                                         ↓
+                              German Reports → Email
 ```
 
 ## Repository Structure
@@ -109,6 +109,9 @@ python scripts/init_db.py
 newsanalysis run --limit 10  # Test run
 newsanalysis export          # Export digest
 newsanalysis stats           # View statistics
+newsanalysis cost-report     # View API costs
+newsanalysis health          # System health check
+newsanalysis email           # Send digest via Outlook
 ```
 
 ## Documentation Map
