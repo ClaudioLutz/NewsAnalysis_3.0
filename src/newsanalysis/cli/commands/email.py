@@ -61,15 +61,23 @@ def email(
     # Setup logging
     setup_logging(log_level=config.log_level, log_format=config.log_format)
 
-    # Determine recipient
-    email_recipient = recipient or config.email_recipient
-    if not email_recipient:
-        click.echo("Error: No recipient specified.", err=True)
+    # Determine recipients
+    if recipient:
+        # Command line override - single recipient
+        email_recipients = [recipient]
+    else:
+        # Use configured recipients
+        email_recipients = config.email_recipient_list
+
+    if not email_recipients:
+        click.echo("Error: No recipients specified.", err=True)
         click.echo(
-            "Set EMAIL_RECIPIENT in .env or use --recipient option.",
+            "Set EMAIL_RECIPIENTS in .env or use --recipient option.",
             err=True,
         )
         raise click.Abort()
+
+    recipients_display = ", ".join(email_recipients)
 
     # Determine date
     target_date = digest_date.date() if digest_date else date.today()
@@ -82,7 +90,7 @@ def email(
     click.echo("NewsAnalysis Email Digest")
     click.echo("=" * 50)
     click.echo(f"Date: {target_date}")
-    click.echo(f"Recipient: {email_recipient}")
+    click.echo(f"Recipients: {recipients_display}")
     click.echo(f"Mode: {'Preview' if preview else 'Send'}")
     click.echo("=" * 50)
 
@@ -140,7 +148,7 @@ def email(
                 click.echo("\nSending email...")
 
             result = email_service.send_html_email(
-                to=email_recipient,
+                to=email_recipients,
                 subject=subject,
                 html_body=html_body,
                 preview=preview,

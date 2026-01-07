@@ -25,6 +25,8 @@ from newsanalysis.pipeline.scrapers import create_scraper
 from newsanalysis.pipeline.summarizers import ArticleSummarizer
 from newsanalysis.services.cache_service import CacheService
 from newsanalysis.services.config_loader import ConfigLoader, load_feeds_config
+from newsanalysis.services.digest_formatter import HtmlEmailFormatter
+from newsanalysis.services.email_service import OutlookEmailService
 from newsanalysis.utils.exceptions import PipelineError
 from newsanalysis.utils.logging import get_logger
 
@@ -182,6 +184,11 @@ class PipelineOrchestrator:
             if not self.pipeline_config.skip_digest:
                 digest_count = await self._run_digest_generation()
                 stats["digested"] = digest_count
+
+                # Stage 6: Email Sending (if enabled and digest was generated)
+                if digest_count > 0 and self.config.email_auto_send:
+                    email_sent = await self._run_email_sending()
+                    stats["email_sent"] = 1 if email_sent else 0
 
             # Complete pipeline run
             self._complete_pipeline_run(stats, success=True)
@@ -514,6 +521,12 @@ class PipelineOrchestrator:
                 german_report=german_report,
             )
 
+            # Mark articles as digested AFTER successful save
+            # This ensures we don't have orphaned "digested" articles if save fails
+            await self.digest_generator.mark_articles_digested(
+                digest.articles, digest.date, digest.version
+            )
+
             # Write outputs to files
             await self._write_digest_outputs(
                 digest_date, json_output, german_report
@@ -563,6 +576,68 @@ class PipelineOrchestrator:
         except Exception as e:
             logger.error("digest_file_write_failed", error=str(e))
             # Don't raise - files are secondary to database
+
+    async def _run_email_sending(self) -> bool:
+        """Send digest email to configured recipients.
+
+        Returns:
+            True if email was sent successfully, False otherwise.
+        """
+        logger.info("stage_email_sending_starting")
+
+        recipients = self.config.email_recipient_list
+        if not recipients:
+            logger.warning("email_skipped", reason="No recipients configured")
+            return False
+
+        try:
+            # Get today's digest
+            digest_date = datetime.now().date()
+            digest_data = self.digest_repository.get_digest_by_date(digest_date)
+
+            if not digest_data:
+                logger.warning("email_skipped", reason="No digest found for today")
+                return False
+
+            # Format as HTML
+            formatter = HtmlEmailFormatter()
+            html_body = formatter.format(digest_data)
+
+            # Create subject
+            try:
+                subject = self.config.email_subject_template.format(
+                    date=digest_date.strftime("%d.%m.%Y"),
+                    count=digest_data["article_count"],
+                )
+            except KeyError:
+                subject = f"Bonitäts-News: {digest_date.strftime('%d.%m.%Y')} - {digest_data['article_count']} relevante Artikel"
+
+            # Send email
+            with OutlookEmailService() as email_service:
+                if not email_service.is_available():
+                    logger.warning("email_skipped", reason="Outlook not available")
+                    return False
+
+                result = email_service.send_html_email(
+                    to=recipients,
+                    subject=subject,
+                    html_body=html_body,
+                    preview=False,
+                )
+
+                if result.success:
+                    logger.info(
+                        "stage_email_sending_complete",
+                        recipients=", ".join(recipients),
+                    )
+                    return True
+                else:
+                    logger.error("email_send_failed", error=result.message)
+                    return False
+
+        except Exception as e:
+            logger.error("email_send_failed", error=str(e))
+            return False
 
     def _generate_run_id(self) -> str:
         """Generate unique run ID.

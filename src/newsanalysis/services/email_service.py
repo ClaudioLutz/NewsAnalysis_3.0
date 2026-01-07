@@ -104,7 +104,7 @@ class OutlookEmailService:
 
     def send_html_email(
         self,
-        to: str,
+        to: str | list[str],
         subject: str,
         html_body: str,
         preview: bool = False,
@@ -112,7 +112,7 @@ class OutlookEmailService:
         """Send an HTML email via Outlook.
 
         Args:
-            to: Recipient email address.
+            to: Recipient email address or list of addresses.
             subject: Email subject line.
             html_body: HTML content of the email body.
             preview: If True, display email in Outlook without sending.
@@ -127,28 +127,36 @@ class OutlookEmailService:
                     message="Could not connect to Outlook. Ensure Outlook is installed and running.",
                 )
 
+        # Convert list to semicolon-separated string (Outlook format)
+        if isinstance(to, list):
+            recipients = "; ".join(to)
+            recipient_display = ", ".join(to)
+        else:
+            recipients = to
+            recipient_display = to
+
         try:
             import pywintypes
 
             # Create mail item (0 = olMailItem)
             mail = self._outlook.CreateItem(0)
-            mail.To = to
+            mail.To = recipients
             mail.Subject = subject
             mail.HTMLBody = html_body
 
             if preview:
                 mail.Display(True)
-                logger.info("email_displayed", recipient=to, subject=subject)
+                logger.info("email_displayed", recipients=recipient_display, subject=subject)
                 return EmailResult(
                     success=True,
                     message="Email opened in Outlook for preview",
                 )
             else:
                 mail.Send()
-                logger.info("email_sent", recipient=to, subject=subject)
+                logger.info("email_sent", recipients=recipient_display, subject=subject)
                 return EmailResult(
                     success=True,
-                    message=f"Email sent successfully to {to}",
+                    message=f"Email sent successfully to {recipient_display}",
                 )
 
         except pywintypes.com_error as e:

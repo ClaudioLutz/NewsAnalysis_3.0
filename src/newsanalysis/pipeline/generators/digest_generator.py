@@ -64,6 +64,11 @@ class DigestGenerator:
 
         Raises:
             PipelineError: If digest generation fails.
+
+        Note:
+            This method does NOT mark articles as digested. The caller should
+            call mark_articles_digested() AFTER successfully saving the digest
+            to the database to avoid orphaned "digested" articles if save fails.
         """
         logger.info(
             "generating_digest",
@@ -85,8 +90,18 @@ class DigestGenerator:
             # Generate meta-analysis
             meta_analysis = await self._generate_meta_analysis(articles, run_id)
 
-            # Determine version
-            version = self._get_next_version(digest_date, incremental)
+            # Determine version - auto-increment if digest exists for this date
+            existing_version = self.digest_repo.get_latest_version(digest_date)
+            if existing_version > 0:
+                # Digest already exists for today - create incremental version
+                version = existing_version + 1
+                logger.info(
+                    "creating_incremental_digest",
+                    existing_version=existing_version,
+                    new_version=version,
+                )
+            else:
+                version = 1
 
             # Create digest
             digest = DailyDigest(
@@ -99,8 +114,9 @@ class DigestGenerator:
                 run_id=run_id,
             )
 
-            # Mark articles as included in digest
-            await self._mark_articles_digested(articles, digest_date, version)
+            # NOTE: Do NOT mark articles as digested here!
+            # The orchestrator should call mark_articles_digested() AFTER
+            # successfully saving the digest to avoid data inconsistency.
 
             logger.info(
                 "digest_generated",
@@ -249,26 +265,13 @@ class DigestGenerator:
 
         return "\n\n".join(summaries)
 
-    def _get_next_version(self, digest_date: date, incremental: bool) -> int:
-        """Get next version number for digest.
-
-        Args:
-            digest_date: Date of the digest.
-            incremental: Whether this is an incremental update.
-
-        Returns:
-            Version number.
-        """
-        if not incremental:
-            return 1
-
-        latest_version = self.digest_repo.get_latest_version(digest_date)
-        return latest_version + 1
-
-    async def _mark_articles_digested(
+    async def mark_articles_digested(
         self, articles: List[Article], digest_date: date, version: int
     ) -> None:
         """Mark articles as included in digest.
+
+        This should be called AFTER the digest has been successfully saved
+        to the database to ensure data consistency.
 
         Args:
             articles: Articles to mark.

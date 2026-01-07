@@ -106,8 +106,29 @@ class Config(BaseSettings):
     environment: Literal["development", "staging", "production"] = "development"
 
     # Email Settings
-    email_recipient: Optional[str] = Field(default=None)
+    email_recipients: Optional[str] = Field(
+        default=None,
+        description="Comma-separated list of email recipients",
+    )
     email_subject_template: str = "Bonitäts-News: {date} - {count} relevante Artikel"
+    email_auto_send: bool = Field(
+        default=False,
+        description="Automatically send email after digest generation",
+    )
+
+    @property
+    def email_recipient(self) -> Optional[str]:
+        """Get first email recipient for backward compatibility."""
+        if self.email_recipients:
+            return self.email_recipients.split(",")[0].strip()
+        return None
+
+    @property
+    def email_recipient_list(self) -> list[str]:
+        """Get list of email recipients."""
+        if not self.email_recipients:
+            return []
+        return [r.strip() for r in self.email_recipients.split(",") if r.strip()]
 
     model_config = SettingsConfigDict(
         env_file=".env",
