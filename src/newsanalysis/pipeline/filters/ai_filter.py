@@ -117,7 +117,7 @@ class AIFilter:
                     )
                 else:
                     results.append(result)
-                    logger.debug(
+                    logger.info(
                         "article_classified",
                         title=chunk[j].title[:50],
                         match=result.is_match,
@@ -156,7 +156,7 @@ class AIFilter:
                 article.title, str(article.url)
             )
             if cached_result:
-                logger.debug(
+                logger.info(
                     "using_cached_classification",
                     title=article.title[:50],
                     match=cached_result.is_match,
