@@ -9,9 +9,12 @@ from pydantic import ValidationError
 from newsanalysis.core.article import (
     Article,
     ArticleMetadata,
+    ArticleSummary,
     ClassificationResult,
+    EntityData,
 )
 from newsanalysis.core.config import FeedConfig
+from newsanalysis.core.enums import ArticleTopic
 
 
 @pytest.mark.unit
@@ -165,3 +168,78 @@ class TestFeedConfig:
             feed_type="rss",
         )
         assert config.enabled is True
+
+
+@pytest.mark.unit
+class TestArticleTopic:
+    """Tests for ArticleTopic enum."""
+
+    def test_article_topic_valid_values(self):
+        """Should create ArticleTopic from valid string values."""
+        assert ArticleTopic("insolvency_bankruptcy") == ArticleTopic.INSOLVENCY_BANKRUPTCY
+        assert ArticleTopic("credit_risk") == ArticleTopic.CREDIT_RISK
+        assert ArticleTopic("other") == ArticleTopic.OTHER
+        assert ArticleTopic("board_changes") == ArticleTopic.BOARD_CHANGES
+
+    def test_article_topic_all_12_values(self):
+        """Should have exactly 12 topic values."""
+        assert len(ArticleTopic) == 12
+
+    def test_article_topic_invalid_value_raises(self):
+        """Should raise ValueError for invalid topic string."""
+        with pytest.raises(ValueError):
+            ArticleTopic("invalid_topic")
+
+    def test_article_topic_is_string_enum(self):
+        """ArticleTopic should be usable as string."""
+        topic = ArticleTopic.CREDIT_RISK
+        assert topic.value == "credit_risk"
+        # String enum value accessible via .value or direct comparison
+        assert topic == "credit_risk"
+
+
+@pytest.mark.unit
+class TestArticleSummary:
+    """Tests for ArticleSummary model with topic field."""
+
+    def test_article_summary_with_topic(self):
+        """Should create ArticleSummary with explicit topic."""
+        summary = ArticleSummary(
+            summary_title="Test Title",
+            summary="Test summary text",
+            key_points=["Point 1", "Point 2"],
+            entities=EntityData(),
+            topic=ArticleTopic.INSOLVENCY_BANKRUPTCY,
+        )
+        assert summary.topic == ArticleTopic.INSOLVENCY_BANKRUPTCY
+
+    def test_article_summary_default_topic_is_other(self):
+        """Should default topic to OTHER when not provided."""
+        summary = ArticleSummary(
+            summary_title="Test Title",
+            summary="Test summary text",
+            key_points=["Point 1", "Point 2"],
+            entities=EntityData(),
+        )
+        assert summary.topic == ArticleTopic.OTHER
+
+    def test_article_summary_topic_from_string(self):
+        """Should accept topic as string value."""
+        summary = ArticleSummary(
+            summary_title="Test Title",
+            summary="Test summary text",
+            key_points=["Point 1", "Point 2"],
+            entities=EntityData(),
+            topic="credit_risk",
+        )
+        assert summary.topic == ArticleTopic.CREDIT_RISK
+
+    def test_article_summary_requires_key_points(self):
+        """Should require at least 2 key points."""
+        with pytest.raises(ValidationError):
+            ArticleSummary(
+                summary_title="Test Title",
+                summary="Test summary text",
+                key_points=["Only one point"],
+                entities=EntityData(),
+            )

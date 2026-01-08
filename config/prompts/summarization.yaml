@@ -21,13 +21,14 @@ user_prompt_template: |
   {{
     "title": "Normalized title (max 150 chars)",
     "summary": "1-2 sentence summary (max 50 words) focusing on the key message",
-    "key_points": ["short bullet point 1", "short bullet point 2"],  // 2-3 concise points
+    "key_points": ["short bullet point 1", "short bullet point 2"],
     "entities": {{
       "companies": ["company names mentioned"],
       "people": ["key people mentioned"],
       "locations": ["locations mentioned"],
       "topics": ["main topics/themes"]
-    }}
+    }},
+    "topic": "Primary topic - exactly ONE of: insolvency_bankruptcy, credit_risk, regulatory_compliance, kyc_aml_sanctions, payment_behavior, debt_collection, board_changes, company_lifecycle, economic_indicators, market_intelligence, ecommerce_fraud, other"
   }}
 
 output_schema:
@@ -73,9 +74,14 @@ output_schema:
         - people
         - locations
         - topics
+    topic:
+      type: string
+      enum: [insolvency_bankruptcy, credit_risk, regulatory_compliance, kyc_aml_sanctions, payment_behavior, debt_collection, board_changes, company_lifecycle, economic_indicators, market_intelligence, ecommerce_fraud, other]
+      description: "Primary topic classification"
   required:
     - title
     - summary
     - key_points
     - entities
+    - topic
   additionalProperties: false

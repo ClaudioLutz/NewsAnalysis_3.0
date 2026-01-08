@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
+from newsanalysis.pipeline.formatters.german_formatter import TOPIC_PRIORITY, TOPIC_TRANSLATIONS
 from newsanalysis.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -54,8 +55,8 @@ class HtmlEmailFormatter:
                     if item and "unavailable" not in item.lower()
                 ]
 
-        # Parse articles from JSON output for brief summaries (sorted by relevance)
-        articles = self._parse_articles(digest_data.get("json_output"))
+        # Parse articles from JSON output grouped by topic
+        articles_by_topic = self._parse_articles(digest_data.get("json_output"))
 
         # Format date in German style
         digest_date = self._format_date(digest_data.get("digest_date"))
@@ -69,7 +70,8 @@ class HtmlEmailFormatter:
             credit_risk_signals=meta_analysis.get("credit_risk_signals", []),
             regulatory_updates=meta_analysis.get("regulatory_updates", []),
             market_insights=meta_analysis.get("market_insights", []),
-            articles=articles,
+            articles_by_topic=articles_by_topic,
+            topic_translations=TOPIC_TRANSLATIONS,
             version=digest_data.get("version", 1),
             generated_at=digest_data.get("generated_at", ""),
         )
@@ -95,55 +97,91 @@ class HtmlEmailFormatter:
             logger.warning("meta_analysis_parse_failed", error=str(e))
             return {}
 
-    def _parse_articles(self, json_output: Optional[str]) -> List[Dict[str, Any]]:
-        """Parse articles from JSON output for brief summaries.
+    def _parse_articles(self, json_output: Optional[str]) -> Dict[str, List[Dict[str, Any]]]:
+        """Parse articles from JSON output and group by topic.
 
         Args:
             json_output: Full JSON digest output string.
 
         Returns:
-            List of article dictionaries with title, summary, key_points, source, url.
+            Dictionary mapping topic to list of article dicts, ordered by TOPIC_PRIORITY.
         """
         if not json_output:
-            return []
+            return {}
 
         try:
             data = json.loads(json_output)
             articles = data.get("articles", [])
 
-            # Sort by confidence/relevance (descending)
-            articles = sorted(
-                articles,
-                key=lambda a: a.get("confidence", 0),
-                reverse=True
-            )
-
-            # Extract only needed fields for brief display
-            brief_articles = []
+            # Group by topic (unknown topics fall through to "other")
+            articles_by_topic: Dict[str, List[Dict[str, Any]]] = {}
             for article in articles:
-                # Truncate summary to first sentence or ~150 chars
-                summary = article.get("summary", "")
-                if summary:
-                    # Try to cut at first sentence
-                    first_sentence_end = summary.find(". ")
-                    if first_sentence_end > 0 and first_sentence_end < 200:
-                        summary = summary[:first_sentence_end + 1]
-                    elif len(summary) > 150:
-                        summary = summary[:147].rsplit(" ", 1)[0] + "..."
+                topic = article.get("topic", "other")
+                # Fallback unknown topics to "other" to prevent article loss
+                if topic not in TOPIC_PRIORITY:
+                    logger.warning("unknown_topic_fallback", topic=topic)
+                    topic = "other"
 
-                brief_articles.append({
+                if topic not in articles_by_topic:
+                    articles_by_topic[topic] = []
+
+                # Smart truncate summary at sentence boundary
+                summary = self._truncate_summary(article.get("summary", ""))
+
+                articles_by_topic[topic].append({
                     "title": article.get("title", "Untitled"),
-                    "summary": summary,
-                    "key_points": article.get("key_points", [])[:2],  # Limit to 2 key points
-                    "source": article.get("source", ""),
                     "url": article.get("url", ""),
+                    "source": article.get("source", ""),
+                    "summary": summary,
+                    "key_points": article.get("key_points", [])[:2],
+                    "topic": topic,
+                    "confidence": article.get("confidence", 0),
                 })
 
-            return brief_articles
+            # Sort articles within each topic by confidence (descending)
+            for topic in articles_by_topic:
+                articles_by_topic[topic].sort(
+                    key=lambda a: a.get("confidence", 0),
+                    reverse=True
+                )
+
+            # Order topics by priority, filter empty topics
+            sorted_by_topic = {
+                t: articles_by_topic[t]
+                for t in TOPIC_PRIORITY
+                if t in articles_by_topic and articles_by_topic[t]
+            }
+
+            return sorted_by_topic
 
         except json.JSONDecodeError as e:
             logger.warning("json_output_parse_failed", error=str(e))
-            return []
+            return {}
+
+    def _truncate_summary(self, summary: str, max_length: int = 200) -> str:
+        """Smart truncate summary at sentence boundary.
+
+        Args:
+            summary: Original summary text.
+            max_length: Maximum length before truncation.
+
+        Returns:
+            Truncated summary, preferring sentence boundaries.
+        """
+        if not summary or len(summary) <= max_length:
+            return summary
+
+        # Try to cut at first sentence within max_length
+        first_sentence_end = summary.find(". ")
+        if 0 < first_sentence_end < max_length:
+            return summary[:first_sentence_end + 1]
+
+        # Otherwise cut at word boundary
+        truncated = summary[:max_length - 3]
+        last_space = truncated.rfind(" ")
+        if last_space > max_length // 2:
+            return truncated[:last_space] + "..."
+        return truncated + "..."
 
     def _format_date(self, date_str: str | None) -> str:
         """Format date string in German style.

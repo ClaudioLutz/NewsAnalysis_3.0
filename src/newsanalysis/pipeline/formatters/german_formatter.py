@@ -25,6 +25,50 @@ GERMAN_MONTHS = {
     12: "Dezember",
 }
 
+# Topic display priority (risk-critical first)
+TOPIC_PRIORITY = [
+    "insolvency_bankruptcy",
+    "credit_risk",
+    "regulatory_compliance",
+    "kyc_aml_sanctions",
+    "payment_behavior",
+    "debt_collection",
+    "board_changes",
+    "company_lifecycle",
+    "economic_indicators",
+    "market_intelligence",
+    "ecommerce_fraud",
+    "other",
+]
+
+# Topic translations (English to German)
+TOPIC_TRANSLATIONS = {
+    "insolvency_bankruptcy": "Insolvenzen",
+    "credit_risk": "Bonität",
+    "regulatory_compliance": "Regulierung",
+    "kyc_aml_sanctions": "Sanktionen & Compliance",
+    "payment_behavior": "Zahlungsverhalten",
+    "debt_collection": "Inkasso",
+    "board_changes": "Mutationen Gremien",
+    "company_lifecycle": "Fusionen & Übernahmen",
+    "economic_indicators": "Wirtschaftsindikatoren",
+    "market_intelligence": "Marktentwicklungen",
+    "ecommerce_fraud": "Betrug & Cyberkriminalität",
+    "other": "Sonstige",
+    # Legacy mappings for backwards compatibility
+    "bankruptcies": "Insolvenzen",
+    "financial_distress": "Finanzielle Schwierigkeiten",
+    "creditreform_insights": "Creditreform Insights",
+    "creditworthiness": "Bonität",
+    "industry_trends": "Branchentrends",
+    "regulatory": "Regulierung",
+    "market_developments": "Marktentwicklungen",
+    "legal": "Rechtliches",
+    "mergers_acquisitions": "Fusionen & Übernahmen",
+    "Other": "Sonstige",
+    "Sonstige": "Sonstige",
+}
+
 
 class GermanReportFormatter:
     """Format digest as German rating report (Bonitäts-Tagesanalyse)."""
@@ -124,21 +168,4 @@ class GermanReportFormatter:
         Returns:
             Topic in German.
         """
-        translations = {
-            "bankruptcies": "Insolvenzen",
-            "financial_distress": "Finanzielle Schwierigkeiten",
-            "debt_collection": "Inkasso & Forderungsmanagement",
-            "creditreform_insights": "Creditreform Insights",
-            "creditworthiness": "Bonität",
-            "payment_behavior": "Zahlungsverhalten",
-            "industry_trends": "Branchentrends",
-            "regulatory": "Regulierung",
-            "market_developments": "Marktentwicklungen",
-            "legal": "Rechtliches",
-            "mergers_acquisitions": "Fusionen & Übernahmen",
-            "economic_indicators": "Wirtschaftsindikatoren",
-            "Other": "Sonstige",
-            "Sonstige": "Sonstige",
-        }
-
-        return translations.get(topic, topic)
+        return TOPIC_TRANSLATIONS.get(topic, topic)

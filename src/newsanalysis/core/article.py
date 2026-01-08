@@ -5,7 +5,7 @@ from typing import List, Optional
 
 from pydantic import BaseModel, Field, HttpUrl, field_validator
 
-from newsanalysis.core.enums import ExtractionMethod
+from newsanalysis.core.enums import ArticleTopic, ExtractionMethod
 
 
 class ArticleMetadata(BaseModel):
@@ -96,6 +96,7 @@ class ArticleSummary(BaseModel):
     summary: str = Field(...)  # Removed length constraints
     key_points: List[str] = Field(...)  # Removed length constraints
     entities: EntityData
+    topic: ArticleTopic = Field(default=ArticleTopic.OTHER)
 
     summarized_at: datetime = Field(default_factory=datetime.now)
 

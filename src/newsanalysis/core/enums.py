@@ -45,3 +45,24 @@ class PipelineMode(str, Enum):
     FULL = "full"
     EXPRESS = "express"
     EXPORT = "export"
+
+
+class ArticleTopic(str, Enum):
+    """Article topic classification for digest grouping.
+
+    NOTE: Enum member order has no functional meaning.
+    Display priority is controlled by TOPIC_PRIORITY list in german_formatter.py
+    """
+
+    INSOLVENCY_BANKRUPTCY = "insolvency_bankruptcy"
+    CREDIT_RISK = "credit_risk"
+    REGULATORY_COMPLIANCE = "regulatory_compliance"
+    KYC_AML_SANCTIONS = "kyc_aml_sanctions"
+    PAYMENT_BEHAVIOR = "payment_behavior"
+    DEBT_COLLECTION = "debt_collection"
+    BOARD_CHANGES = "board_changes"
+    COMPANY_LIFECYCLE = "company_lifecycle"
+    ECONOMIC_INDICATORS = "economic_indicators"
+    MARKET_INTELLIGENCE = "market_intelligence"
+    ECOMMERCE_FRAUD = "ecommerce_fraud"
+    OTHER = "other"

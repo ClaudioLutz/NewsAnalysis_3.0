@@ -9,6 +9,7 @@ from typing import Dict, List, Optional
 from pydantic import BaseModel, Field
 
 from newsanalysis.core.article import ArticleSummary, EntityData
+from newsanalysis.core.enums import ArticleTopic
 from newsanalysis.integrations.provider_factory import LLMClient
 from newsanalysis.services.cache_service import CacheService
 from newsanalysis.services.config_loader import load_yaml
@@ -40,6 +41,10 @@ class SummaryResponse(BaseModel):
     entities: EntityList = Field(
         default_factory=EntityList,
         description="Extracted entities (companies, people, locations, topics)",
+    )
+    topic: ArticleTopic = Field(
+        default=ArticleTopic.OTHER,
+        description="Primary topic classification",
     )
 
 
@@ -119,11 +124,20 @@ class ArticleSummarizer:
                         locations=entities_dict.get("locations", []),
                         topics=entities_dict.get("topics", []),
                     )
+
+                    # Extract topic from entities JSON (backwards compatible)
+                    topic_str = entities_dict.get("topic", "other")
+                    try:
+                        topic = ArticleTopic(topic_str)
+                    except ValueError:
+                        topic = ArticleTopic.OTHER
+
                     return ArticleSummary(
                         summary_title=cached_summary["summary_title"],
                         summary=cached_summary["summary"],
                         key_points=json.loads(cached_summary["key_points"]),
                         entities=entities,
+                        topic=topic,
                         summarized_at=datetime.now(),
                     )
 
@@ -162,12 +176,21 @@ class ArticleSummarizer:
                 topics=entities_dict.get("topics", []),
             )
 
+            # Parse topic with fallback
+            topic_str = content_dict.get("topic", "other")
+            try:
+                topic = ArticleTopic(topic_str)
+            except ValueError:
+                logger.warning("invalid_topic_fallback", topic=topic_str)
+                topic = ArticleTopic.OTHER
+
             # Create ArticleSummary
             summary = ArticleSummary(
                 summary_title=content_dict["title"],
                 summary=content_dict["summary"],
                 key_points=content_dict["key_points"],
                 entities=entities,
+                topic=topic,
                 summarized_at=datetime.now(),
             )
 
@@ -183,6 +206,7 @@ class ArticleSummarizer:
                         "people": entities.people,
                         "locations": entities.locations,
                         "topics": entities.topics,
+                        "topic": summary.topic.value,
                     }),
                 )
 
@@ -193,6 +217,7 @@ class ArticleSummarizer:
                 cost=usage["cost"],
                 num_key_points=len(summary.key_points),
                 num_companies=len(entities.companies),
+                topic=summary.topic.value,
             )
 
             return summary
