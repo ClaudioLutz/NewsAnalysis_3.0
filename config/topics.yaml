@@ -25,11 +25,27 @@ creditreform_insights:
     regulatory_compliance:
       - FINMA
       - Basel III
-      - nDSG
-      - Datenschutz
       - Compliance
       - Geldwäschereigesetz
       - GwG
+
+    data_protection:
+      - DSG
+      - Datenschutzgesetz
+      - nDSG
+      - revDSG
+      - Datenschutz
+      - EDÖB
+      - Personendaten
+      - Datenbearbeitung
+      - Datenweitergabe
+      - Auskunftsrecht
+      - Löschungsrecht
+      - Einwilligung
+      - Datenschutzverletzung
+      - DSGVO
+      - Privacy
+      - Datensicherheit
 
     payment_behavior:
       - Zahlungsmoral

@@ -57,6 +57,7 @@ class ArticleTopic(str, Enum):
     INSOLVENCY_BANKRUPTCY = "insolvency_bankruptcy"
     CREDIT_RISK = "credit_risk"
     REGULATORY_COMPLIANCE = "regulatory_compliance"
+    DATA_PROTECTION = "data_protection"
     KYC_AML_SANCTIONS = "kyc_aml_sanctions"
     PAYMENT_BEHAVIOR = "payment_behavior"
     DEBT_COLLECTION = "debt_collection"
