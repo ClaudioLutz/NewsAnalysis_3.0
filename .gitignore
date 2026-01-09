@@ -68,9 +68,13 @@ logs/
 # Output
 out/
 
+# Cache
+cache/
+
 # Temporary files
 *.tmp
 temp/
+=*
 
 # Backup files
 *.bak

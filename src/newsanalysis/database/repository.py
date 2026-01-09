@@ -6,6 +6,7 @@ from typing import List, Optional
 
 from newsanalysis.core.article import (
     Article,
+    ArticleImage,
     ArticleMetadata,
     ArticleSummary,
     ClassificationResult,
@@ -650,3 +651,144 @@ class ArticleRepository:
         except Exception as e:
             logger.error("fetch_articles_for_deduplication_failed", error=str(e))
             raise DatabaseError(f"Failed to fetch articles for deduplication: {e}") from e
+
+    def save_article_images(self, images: List[ArticleImage]) -> int:
+        """Save article images to database.
+
+        Args:
+            images: List of ArticleImage objects to save
+
+        Returns:
+            Number of images saved
+
+        Raises:
+            DatabaseError: If database operation fails
+        """
+        if not images:
+            return 0
+
+        try:
+            saved_count = 0
+
+            for image in images:
+                # Skip if no article_id
+                if not image.article_id:
+                    logger.warning("image_missing_article_id", url=image.image_url)
+                    continue
+
+                # Insert or ignore (UNIQUE constraint on article_id + image_url)
+                query = """
+                    INSERT OR IGNORE INTO article_images (
+                        article_id, image_url, local_path, image_width, image_height,
+                        format, file_size, extraction_quality, is_featured,
+                        extraction_method, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """
+
+                params = (
+                    image.article_id,
+                    image.image_url,
+                    image.local_path,
+                    image.image_width,
+                    image.image_height,
+                    image.format,
+                    image.file_size,
+                    image.extraction_quality,
+                    1 if image.is_featured else 0,
+                    image.extraction_method,
+                    image.created_at,
+                )
+
+                self.db.execute(query, params)
+                saved_count += 1
+
+            self.db.commit()
+
+            logger.info("article_images_saved", count=saved_count)
+
+            return saved_count
+
+        except Exception as e:
+            self.db.rollback()
+            logger.error("save_article_images_failed", error=str(e))
+            raise DatabaseError(f"Failed to save article images: {e}") from e
+
+    def get_article_images(self, article_id: int) -> List[ArticleImage]:
+        """Get images for an article.
+
+        Args:
+            article_id: Article database ID
+
+        Returns:
+            List of ArticleImage objects
+
+        Raises:
+            DatabaseError: If database operation fails
+        """
+        try:
+            query = """
+                SELECT
+                    id, article_id, image_url, local_path, image_width, image_height,
+                    format, file_size, extraction_quality, is_featured,
+                    extraction_method, created_at
+                FROM article_images
+                WHERE article_id = ?
+                ORDER BY is_featured DESC, id ASC
+            """
+
+            cursor = self.db.execute(query, (article_id,))
+            rows = cursor.fetchall()
+
+            images = []
+            for row in rows:
+                image = ArticleImage(
+                    id=row[0],
+                    article_id=row[1],
+                    image_url=row[2],
+                    local_path=row[3],
+                    image_width=row[4],
+                    image_height=row[5],
+                    format=row[6],
+                    file_size=row[7],
+                    extraction_quality=row[8],
+                    is_featured=bool(row[9]),
+                    extraction_method=row[10],
+                    created_at=_parse_datetime(row[11]) or datetime.now(),
+                )
+                images.append(image)
+
+            logger.debug("article_images_fetched", article_id=article_id, count=len(images))
+
+            return images
+
+        except Exception as e:
+            logger.error("fetch_article_images_failed", article_id=article_id, error=str(e))
+            raise DatabaseError(f"Failed to fetch article images: {e}") from e
+
+    def delete_article_images(self, article_id: int) -> int:
+        """Delete all images for an article.
+
+        Args:
+            article_id: Article database ID
+
+        Returns:
+            Number of images deleted
+
+        Raises:
+            DatabaseError: If database operation fails
+        """
+        try:
+            query = "DELETE FROM article_images WHERE article_id = ?"
+            cursor = self.db.execute(query, (article_id,))
+            deleted_count = cursor.rowcount
+
+            self.db.commit()
+
+            logger.info("article_images_deleted", article_id=article_id, count=deleted_count)
+
+            return deleted_count
+
+        except Exception as e:
+            self.db.rollback()
+            logger.error("delete_article_images_failed", article_id=article_id, error=str(e))
+            raise DatabaseError(f"Failed to delete article images: {e}") from e

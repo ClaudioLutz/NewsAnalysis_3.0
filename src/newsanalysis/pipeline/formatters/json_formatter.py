@@ -74,7 +74,7 @@ class JSONFormatter:
         Returns:
             Article dictionary.
         """
-        return {
+        formatted = {
             "id": article.id,
             "url": str(article.url),
             "title": article.summary_title or article.title,
@@ -100,3 +100,9 @@ class JSONFormatter:
                 "author": article.author,
             },
         }
+
+        # Include duplicate sources if available (for grouped articles)
+        if article.duplicate_sources:
+            formatted["duplicate_sources"] = article.duplicate_sources
+
+        return formatted

@@ -245,27 +245,31 @@ class TestHtmlEmailFormatter:
         """Should parse articles from JSON output."""
         formatter = HtmlEmailFormatter()
 
-        json_output = '{"articles": [{"title": "News Title", "summary": "A summary", "key_points": ["Key 1", "Key 2", "Key 3", "Key 4"], "source": "Source", "url": "https://test.com"}]}'
-        articles = formatter._parse_articles(json_output)
+        json_output = '{"articles": [{"title": "News Title", "summary": "A summary", "key_points": ["Key 1", "Key 2", "Key 3", "Key 4"], "source": "Source", "url": "https://test.com", "topic": "other"}]}'
+        articles_by_topic = formatter._parse_articles(json_output)
 
-        assert len(articles) == 1
-        assert articles[0]["title"] == "News Title"
-        assert articles[0]["summary"] == "A summary"
-        assert len(articles[0]["key_points"]) == 2  # Limited to 2
-        assert articles[0]["source"] == "Source"
-        assert articles[0]["url"] == "https://test.com"
+        # Function returns dict of topic -> list of articles
+        assert isinstance(articles_by_topic, dict)
+        assert "other" in articles_by_topic
+        assert len(articles_by_topic["other"]) == 1
+        article = articles_by_topic["other"][0]
+        assert article["title"] == "News Title"
+        assert article["summary"] == "A summary"
+        assert len(article["key_points"]) == 2  # Limited to 2
+        assert article["source"] == "Source"
+        assert article["url"] == "https://test.com"
 
     def test_parse_articles_empty(self):
-        """Should return empty list for empty input."""
+        """Should return empty dict for empty input."""
         formatter = HtmlEmailFormatter()
 
-        assert formatter._parse_articles(None) == []
-        assert formatter._parse_articles("") == []
+        assert formatter._parse_articles(None) == {}
+        assert formatter._parse_articles("") == {}
 
     def test_parse_articles_invalid_json(self):
-        """Should return empty list for invalid JSON."""
+        """Should return empty dict for invalid JSON."""
         formatter = HtmlEmailFormatter()
 
         result = formatter._parse_articles("not valid json")
 
-        assert result == []
+        assert result == {}

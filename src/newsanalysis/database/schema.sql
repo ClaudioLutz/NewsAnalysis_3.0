@@ -1,6 +1,6 @@
 -- NewsAnalysis 2.0 Database Schema
 -- SQLite 3.38+ with FTS5 support
--- Schema Version: 3
+-- Schema Version: 4
 
 -- Enable foreign keys
 PRAGMA foreign_keys = ON;
@@ -21,7 +21,7 @@ CREATE INDEX IF NOT EXISTS idx_schema_info_version ON schema_info(version);
 
 -- Initialize schema version (only if empty)
 INSERT INTO schema_info (version, description)
-SELECT 3, 'Initial schema - FTS triggers disabled to prevent corruption'
+SELECT 4, 'Initial schema - Added image extraction support'
 WHERE NOT EXISTS (SELECT 1 FROM schema_info);
 
 -- Table: articles
@@ -403,3 +403,37 @@ CREATE TABLE IF NOT EXISTS duplicate_members (
 
 CREATE INDEX IF NOT EXISTS idx_duplicate_members_group ON duplicate_members(group_id);
 CREATE INDEX IF NOT EXISTS idx_duplicate_members_hash ON duplicate_members(duplicate_url_hash);
+
+-- Table: article_images
+-- Store image metadata for articles (images stored in filesystem)
+CREATE TABLE IF NOT EXISTS article_images (
+    -- Primary Key
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+    -- Article Reference
+    article_id INTEGER NOT NULL,
+
+    -- Image URLs and Paths
+    image_url TEXT NOT NULL,          -- Original image URL from article
+    local_path TEXT,                  -- Local filesystem path if cached
+
+    -- Image Metadata
+    image_width INTEGER,              -- Image dimensions
+    image_height INTEGER,
+    format TEXT,                      -- JPEG, PNG, WebP, etc.
+    file_size INTEGER,                -- In bytes
+
+    -- Extraction Details
+    extraction_quality TEXT,          -- 'high', 'medium', 'low'
+    is_featured BOOLEAN DEFAULT 0,    -- Primary article image
+    extraction_method TEXT,           -- 'newspaper3k', 'beautifulsoup', 'og_image'
+
+    -- Timestamps
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (article_id) REFERENCES articles(id) ON DELETE CASCADE,
+    UNIQUE(article_id, image_url)  -- Prevent duplicate images per article
+);
+
+CREATE INDEX IF NOT EXISTS idx_article_images_article_id ON article_images(article_id);
+CREATE INDEX IF NOT EXISTS idx_article_images_featured ON article_images(is_featured);

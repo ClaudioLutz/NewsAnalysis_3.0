@@ -109,6 +109,34 @@ class ArticleSummary(BaseModel):
         return v
 
 
+class ArticleImage(BaseModel):
+    """Metadata for an image associated with an article."""
+
+    # Database ID
+    id: Optional[int] = None
+
+    # Article Reference
+    article_id: Optional[int] = None
+
+    # Image URLs and Paths
+    image_url: str = Field(..., min_length=1)
+    local_path: Optional[str] = None
+
+    # Image Metadata
+    image_width: Optional[int] = None
+    image_height: Optional[int] = None
+    format: Optional[str] = None  # JPEG, PNG, WebP, etc.
+    file_size: Optional[int] = None  # In bytes
+
+    # Extraction Details
+    extraction_quality: Optional[str] = None  # 'high', 'medium', 'low'
+    is_featured: bool = False  # Primary article image
+    extraction_method: Optional[str] = None  # 'newspaper3k', 'beautifulsoup', 'og_image'
+
+    # Timestamps
+    created_at: datetime = Field(default_factory=datetime.now)
+
+
 class Article(BaseModel):
     """Complete article with all processing stages."""
 
@@ -156,6 +184,12 @@ class Article(BaseModel):
     # Semantic Deduplication
     is_duplicate: bool = False
     canonical_url_hash: Optional[str] = None
+
+    # Images (Step 3.5 - after scraping)
+    images: Optional[List[ArticleImage]] = None
+
+    # Digest Grouping (added at digest generation time)
+    duplicate_sources: Optional[List[dict]] = None  # Sources from grouped similar articles
 
     # Metadata
     run_id: str

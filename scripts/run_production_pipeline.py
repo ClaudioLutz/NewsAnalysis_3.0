@@ -90,81 +90,159 @@ async def main():
         print("=" * 70)
         print("PIPELINE RESULTS")
         print("=" * 70)
-        print()
-        print(f"Collected: {stats['collected']} new articles")
-        print(f"Filtered: {stats['filtered']} articles processed")
-        print(f"  - Matched: {stats['matched']} relevant")
-        print(f"  - Rejected: {stats['rejected']} not relevant")
-        print(f"Scraped: {stats['scraped']} (skipped - Playwright not installed)")
-        print(f"Summarized: {stats['summarized']} articles")
-        print(f"Digest: {stats['digested']} generated")
-        print()
 
-        # Show costs by provider
-        print("=" * 70)
-        print("COST BREAKDOWN BY PROVIDER")
-        print("=" * 70)
-        print()
+        # Article processing statistics
+        print("\nArticle Processing:")
+        if stats.get("collected", 0) > 0:
+            print(f"  Collected:     {stats['collected']:>6} articles")
 
-        cursor = db.execute("""
-            SELECT
-                CASE
-                    WHEN model LIKE 'deepseek:%' THEN 'DeepSeek'
-                    WHEN model LIKE 'gemini:%' THEN 'Gemini'
-                    ELSE 'OpenAI'
-                END as provider,
-                request_type,
-                COUNT(*) as calls,
-                SUM(input_tokens) as input_tokens,
-                SUM(output_tokens) as output_tokens,
-                SUM(cost) as total_cost
-            FROM api_calls
+        if stats.get("filtered", 0) > 0:
+            filtered = stats['filtered']
+            matched = stats.get("matched", 0)
+            rejected = stats.get("rejected", 0)
+            match_rate = (matched / filtered * 100) if filtered > 0 else 0
+            print(f"  Filtered:      {filtered:>6} articles")
+            print(f"    - Matched:   {matched:>6} ({match_rate:.1f}%)")
+            print(f"    - Rejected:  {rejected:>6} ({100-match_rate:.1f}%)")
+
+        if stats.get("scraped", 0) > 0:
+            print(f"  Scraped:       {stats['scraped']:>6} articles (skipped - Playwright not installed)")
+
+        if stats.get("deduplicated", 0) > 0:
+            dedup = stats['deduplicated']
+            dupes = stats.get("duplicates_found", 0)
+            print(f"  Deduplicated:  {dedup:>6} articles checked ({dupes} duplicates found)")
+
+        if stats.get("summarized", 0) > 0:
+            print(f"  Summarized:    {stats['summarized']:>6} articles")
+
+        if stats.get("digested", 0) > 0:
+            print(f"  Digested:      {stats['digested']:>6} digest(s) generated")
+
+        # Get run metrics from database
+        run_result = db.execute(
+            """
+            SELECT total_cost, total_tokens, duration_seconds
+            FROM pipeline_runs
             WHERE run_id = ?
-            GROUP BY provider, request_type
-            ORDER BY provider, request_type
-        """, (orchestrator.run_id,))
+            """,
+            (orchestrator.run_id,)
+        )
+        run_row = run_result.fetchone()
 
-        current_provider = None
-        provider_totals = {}
+        if run_row:
+            total_cost = run_row['total_cost'] or 0.0
+            total_tokens = run_row['total_tokens'] or 0
+            duration = run_row['duration_seconds']
 
-        for row in cursor.fetchall():
-            provider = row['provider']
-            request_type = row['request_type']
-            calls = row['calls']
-            cost = row['total_cost']
+            # API costs and tokens
+            print("\nAPI Usage & Costs:")
+            if total_cost > 0:
+                print(f"  Total Cost:    ${total_cost:>8.4f}")
+                print(f"  Total Tokens:  {total_tokens:>9,}")
 
-            if provider != current_provider:
-                if current_provider:
-                    print()
-                current_provider = provider
-                print(f"{provider}:")
-                provider_totals[provider] = 0.0
+                # Cost breakdown by provider
+                provider_result = db.execute(
+                    """
+                    SELECT
+                        CASE
+                            WHEN model LIKE 'deepseek%' THEN 'DeepSeek'
+                            WHEN model LIKE 'gemini%' THEN 'Gemini'
+                            WHEN model LIKE 'gpt%' OR model LIKE 'o1%' THEN 'OpenAI'
+                            ELSE 'Other'
+                        END as provider,
+                        COALESCE(SUM(cost), 0.0) as provider_cost,
+                        COALESCE(SUM(total_tokens), 0) as provider_tokens,
+                        COUNT(*) as calls
+                    FROM api_calls
+                    WHERE run_id = ?
+                    GROUP BY provider
+                    ORDER BY provider_cost DESC
+                    """,
+                    (orchestrator.run_id,)
+                )
+                provider_rows = provider_result.fetchall()
 
-            print(f"  {request_type:<25} {calls:>6} calls  ${cost:>10.6f}")
-            provider_totals[provider] += cost
+                if provider_rows:
+                    print("\n  By Provider:")
+                    for row in provider_rows:
+                        provider = row['provider']
+                        cost = row['provider_cost']
+                        tokens = row['provider_tokens']
+                        calls = row['calls']
+                        pct = (cost / total_cost * 100) if total_cost > 0 else 0
+                        print(f"    {provider:<10} ${cost:>8.4f} ({pct:>5.1f}%)  |  {tokens:>9,} tokens  |  {calls:>4} calls")
 
-        print()
-        print("-" * 70)
-        print("Provider Totals:")
-        total_cost = 0.0
-        for provider, cost in provider_totals.items():
-            print(f"  {provider:<30} ${cost:>10.6f}")
-            total_cost += cost
+                # Cost breakdown by module
+                module_result = db.execute(
+                    """
+                    SELECT
+                        module,
+                        COALESCE(SUM(cost), 0.0) as module_cost,
+                        COALESCE(SUM(total_tokens), 0) as module_tokens,
+                        COUNT(*) as calls
+                    FROM api_calls
+                    WHERE run_id = ?
+                    GROUP BY module
+                    ORDER BY module_cost DESC
+                    """,
+                    (orchestrator.run_id,)
+                )
+                module_rows = module_result.fetchall()
 
-        print("-" * 70)
-        print(f"  {'TOTAL':<30} ${total_cost:>10.6f}")
-        print()
+                if module_rows:
+                    print("\n  By Module:")
+                    for row in module_rows:
+                        module = row['module']
+                        cost = row['module_cost']
+                        tokens = row['module_tokens']
+                        calls = row['calls']
+                        pct = (cost / total_cost * 100) if total_cost > 0 else 0
+                        print(f"    {module:<15} ${cost:>8.4f} ({pct:>5.1f}%)  |  {tokens:>9,} tokens  |  {calls:>4} calls")
 
-        # Compare with OpenAI
-        openai_equivalent = total_cost * 15  # Rough estimate
-        savings = openai_equivalent - total_cost
-        savings_pct = (savings / openai_equivalent * 100) if openai_equivalent > 0 else 0
+                # Compare with OpenAI estimate
+                openai_equivalent = total_cost * 15  # Rough estimate
+                savings = openai_equivalent - total_cost
+                savings_pct = (savings / openai_equivalent * 100) if openai_equivalent > 0 else 0
 
-        print("Estimated Cost Comparison:")
-        print(f"  Multi-Provider (DeepSeek + Gemini): ${total_cost:.6f}")
-        print(f"  OpenAI Only (estimated):             ${openai_equivalent:.6f}")
-        print(f"  Savings:                             ${savings:.6f} ({savings_pct:.1f}%)")
-        print()
+                print("\n  Estimated Savings vs OpenAI-only:")
+                print(f"    OpenAI estimate: ${openai_equivalent:>8.4f}")
+                print(f"    Savings:         ${savings:>8.4f} ({savings_pct:.1f}%)")
+
+            # Duration
+            if duration:
+                minutes = int(duration // 60)
+                seconds = duration % 60
+                print(f"\n  Duration:      {minutes}m {seconds:.1f}s")
+
+        # Cache performance
+        cache_result = db.execute(
+            """
+            SELECT
+                cache_type,
+                requests,
+                hits,
+                misses,
+                hit_rate,
+                api_calls_saved,
+                cost_saved
+            FROM cache_stats
+            WHERE date = date('now')
+            ORDER BY cache_type
+            """
+        )
+        cache_rows = cache_result.fetchall()
+
+        if cache_rows:
+            print("\nCache Performance (Today):")
+            for row in cache_rows:
+                cache_type = row['cache_type']
+                requests = row['requests']
+                hits = row['hits']
+                hit_rate = row['hit_rate']
+                cost_saved = row['cost_saved']
+                if requests > 0:
+                    print(f"  {cache_type.capitalize():<15} Hit Rate: {hit_rate:>5.1f}%  |  {hits}/{requests} hits  |  ${cost_saved:>7.4f} saved")
 
         # Show final database state
         cursor = db.execute("""
@@ -173,11 +251,11 @@ async def main():
             GROUP BY pipeline_stage
         """)
 
-        print("Final Database State:")
+        print("\nFinal Database State:")
         for row in cursor.fetchall():
             print(f"  {row['pipeline_stage']}: {row['count']}")
-        print()
 
+        print()
         print("=" * 70)
         print("✓ PRODUCTION PIPELINE COMPLETE!")
         print("=" * 70)

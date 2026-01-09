@@ -18,7 +18,7 @@ import structlog
 logger = structlog.get_logger(__name__)
 
 # Current schema version - increment when adding migrations
-CURRENT_SCHEMA_VERSION = 3
+CURRENT_SCHEMA_VERSION = 4
 
 # Type alias for migration functions
 MigrationFunc = Callable[[sqlite3.Connection], None]
@@ -265,10 +265,63 @@ def migrate_v2_to_v3(conn: sqlite3.Connection) -> None:
     logger.info("migration_complete", version=3)
 
 
+def migrate_v3_to_v4(conn: sqlite3.Connection) -> None:
+    """Migration v3 -> v4: Add image extraction support.
+
+    Adds:
+    - article_images table for storing image metadata
+    - Related indexes for performance
+    """
+    logger.info("applying_migration", from_version=3, to_version=4)
+
+    # Create article_images table if missing
+    if not table_exists(conn, "article_images"):
+        conn.execute(
+            """
+            CREATE TABLE article_images (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                article_id INTEGER NOT NULL,
+                image_url TEXT NOT NULL,
+                local_path TEXT,
+                image_width INTEGER,
+                image_height INTEGER,
+                format TEXT,
+                file_size INTEGER,
+                extraction_quality TEXT,
+                is_featured BOOLEAN DEFAULT 0,
+                extraction_method TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+                FOREIGN KEY (article_id) REFERENCES articles(id) ON DELETE CASCADE,
+                UNIQUE(article_id, image_url)
+            )
+            """
+        )
+        logger.info("migration_created_table", table="article_images")
+
+        # Create indexes for article_images
+        conn.execute(
+            """
+            CREATE INDEX idx_article_images_article_id
+            ON article_images(article_id)
+            """
+        )
+        conn.execute(
+            """
+            CREATE INDEX idx_article_images_featured
+            ON article_images(is_featured)
+            """
+        )
+        logger.info("migration_created_indexes", table="article_images")
+
+    logger.info("migration_complete", version=4)
+
+
 # Registry of migrations: version -> migration function
 MIGRATIONS: dict[int, MigrationFunc] = {
     2: migrate_v1_to_v2,
     3: migrate_v2_to_v3,
+    4: migrate_v3_to_v4,
 }
 
 

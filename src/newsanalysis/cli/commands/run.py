@@ -142,22 +142,15 @@ def run(
             pipeline_config=pipeline_config,
         )
 
+        # Store run_id for later retrieval
+        run_id = orchestrator.run_id
+
         # Run pipeline (async)
         stats = asyncio.run(orchestrator.run())
 
-        # Display results
-        click.echo("\nPipeline Results:")
-        click.echo("=" * 50)
+        # Display comprehensive results
+        _display_pipeline_results(db, run_id, stats)
 
-        if stats.get("collected", 0) > 0:
-            click.echo(f"Articles collected: {stats['collected']}")
-
-        if stats.get("filtered", 0) > 0:
-            click.echo(f"Articles filtered: {stats['filtered']}")
-            click.echo(f"  - Matched: {stats.get('matched', 0)}")
-            click.echo(f"  - Rejected: {stats.get('rejected', 0)}")
-
-        click.echo("=" * 50)
         click.echo("\nPipeline completed successfully!")
 
     except KeyboardInterrupt:
@@ -170,6 +163,151 @@ def run(
 
     finally:
         db.close()
+
+
+def _display_pipeline_results(db: DatabaseConnection, run_id: str, stats: dict) -> None:
+    """Display comprehensive pipeline results including costs.
+
+    Args:
+        db: Database connection.
+        run_id: Pipeline run ID.
+        stats: Basic statistics from pipeline.
+    """
+    conn = db.connect()
+
+    click.echo("\nPipeline Results:")
+    click.echo("=" * 70)
+
+    # Article processing statistics
+    click.echo("\nArticle Processing:")
+    if stats.get("collected", 0) > 0:
+        click.echo(f"  Collected:     {stats['collected']:>6} articles")
+
+    if stats.get("filtered", 0) > 0:
+        click.echo(f"  Filtered:      {stats['filtered']:>6} articles")
+        matched = stats.get("matched", 0)
+        rejected = stats.get("rejected", 0)
+        match_rate = (matched / stats['filtered'] * 100) if stats['filtered'] > 0 else 0
+        click.echo(f"    - Matched:   {matched:>6} ({match_rate:.1f}%)")
+        click.echo(f"    - Rejected:  {rejected:>6} ({100-match_rate:.1f}%)")
+
+    if stats.get("scraped", 0) > 0:
+        click.echo(f"  Scraped:       {stats['scraped']:>6} articles")
+
+    if stats.get("deduplicated", 0) > 0:
+        dedup = stats['deduplicated']
+        dupes = stats.get("duplicates_found", 0)
+        click.echo(f"  Deduplicated:  {dedup:>6} articles checked ({dupes} duplicates found)")
+
+    if stats.get("summarized", 0) > 0:
+        click.echo(f"  Summarized:    {stats['summarized']:>6} articles")
+
+    if stats.get("digested", 0) > 0:
+        click.echo(f"  Digested:      {stats['digested']:>6} digest(s) generated")
+
+    # API costs and tokens
+    click.echo("\nAPI Usage & Costs:")
+
+    # Get total cost and tokens from pipeline_runs
+    run_result = conn.execute(
+        """
+        SELECT total_cost, total_tokens, duration_seconds
+        FROM pipeline_runs
+        WHERE run_id = ?
+        """,
+        (run_id,)
+    )
+    run_row = run_result.fetchone()
+
+    if run_row:
+        total_cost, total_tokens, duration = run_row
+
+        if total_cost and total_cost > 0:
+            click.echo(f"  Total Cost:    ${total_cost:>8.4f}")
+            click.echo(f"  Total Tokens:  {total_tokens:>9,}")
+
+            # Cost breakdown by provider (extract from model name)
+            provider_result = conn.execute(
+                """
+                SELECT
+                    CASE
+                        WHEN model LIKE 'deepseek%' THEN 'DeepSeek'
+                        WHEN model LIKE 'gemini%' THEN 'Gemini'
+                        WHEN model LIKE 'gpt%' OR model LIKE 'o1%' THEN 'OpenAI'
+                        ELSE 'Other'
+                    END as provider,
+                    COALESCE(SUM(cost), 0.0) as provider_cost,
+                    COALESCE(SUM(total_tokens), 0) as provider_tokens,
+                    COUNT(*) as calls
+                FROM api_calls
+                WHERE run_id = ?
+                GROUP BY provider
+                ORDER BY provider_cost DESC
+                """,
+                (run_id,)
+            )
+            provider_rows = provider_result.fetchall()
+
+            if provider_rows:
+                click.echo("\n  By Provider:")
+                for provider, cost, tokens, calls in provider_rows:
+                    pct = (cost / total_cost * 100) if total_cost > 0 else 0
+                    click.echo(f"    {provider:<10} ${cost:>8.4f} ({pct:>5.1f}%)  |  {tokens:>9,} tokens  |  {calls:>4} calls")
+
+            # Cost breakdown by module
+            module_result = conn.execute(
+                """
+                SELECT
+                    module,
+                    COALESCE(SUM(cost), 0.0) as module_cost,
+                    COALESCE(SUM(total_tokens), 0) as module_tokens,
+                    COUNT(*) as calls
+                FROM api_calls
+                WHERE run_id = ?
+                GROUP BY module
+                ORDER BY module_cost DESC
+                """,
+                (run_id,)
+            )
+            module_rows = module_result.fetchall()
+
+            if module_rows:
+                click.echo("\n  By Module:")
+                for module, cost, tokens, calls in module_rows:
+                    pct = (cost / total_cost * 100) if total_cost > 0 else 0
+                    click.echo(f"    {module:<15} ${cost:>8.4f} ({pct:>5.1f}%)  |  {tokens:>9,} tokens  |  {calls:>4} calls")
+
+        # Duration
+        if duration:
+            minutes = int(duration // 60)
+            seconds = duration % 60
+            click.echo(f"\n  Duration:      {minutes}m {seconds:.1f}s")
+
+    # Cache performance (for this run, we approximate from today's cache stats)
+    cache_result = conn.execute(
+        """
+        SELECT
+            cache_type,
+            requests,
+            hits,
+            misses,
+            hit_rate,
+            api_calls_saved,
+            cost_saved
+        FROM cache_stats
+        WHERE date = date('now')
+        ORDER BY cache_type
+        """
+    )
+    cache_rows = cache_result.fetchall()
+
+    if cache_rows:
+        click.echo("\nCache Performance (Today):")
+        for cache_type, requests, hits, misses, hit_rate, api_saved, cost_saved in cache_rows:
+            if requests > 0:
+                click.echo(f"  {cache_type.capitalize():<15} Hit Rate: {hit_rate:>5.1f}%  |  {hits}/{requests} hits  |  ${cost_saved:>7.4f} saved")
+
+    click.echo("=" * 70)
 
 
 def _reset_articles(db: DatabaseConnection, reset_type: str) -> None:

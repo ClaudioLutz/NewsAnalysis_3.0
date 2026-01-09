@@ -2,7 +2,8 @@
 
 import sys
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Optional
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from newsanalysis.utils.logging import get_logger
 
@@ -178,6 +179,140 @@ class OutlookEmailService:
             )
         except Exception as e:
             logger.error("email_send_failed", error=str(e))
+            return EmailResult(
+                success=False,
+                message=f"Unexpected error: {e}",
+            )
+
+    def send_html_email_with_images(
+        self,
+        to: str | list[str],
+        subject: str,
+        html_body: str,
+        image_attachments: Optional[Dict[str, str]] = None,
+        preview: bool = False,
+    ) -> EmailResult:
+        """Send an HTML email with embedded images via Outlook.
+
+        Args:
+            to: Recipient email address or list of addresses.
+            subject: Email subject line.
+            html_body: HTML content with cid: references (e.g., <img src="cid:image1">).
+            image_attachments: Dictionary mapping CID to file path
+                              (e.g., {"image1": "/path/to/image.jpg"}).
+            preview: If True, display email in Outlook without sending.
+
+        Returns:
+            EmailResult with success status and message.
+        """
+        if not self._outlook:
+            if not self.connect():
+                return EmailResult(
+                    success=False,
+                    message="Could not connect to Outlook. Ensure Outlook is installed and running.",
+                )
+
+        # Convert list to semicolon-separated string (Outlook format)
+        if isinstance(to, list):
+            recipients = "; ".join(to)
+            recipient_display = ", ".join(to)
+        else:
+            recipients = to
+            recipient_display = to
+
+        try:
+            import pywintypes
+
+            # Create mail item (0 = olMailItem)
+            mail = self._outlook.CreateItem(0)
+            mail.To = recipients
+            mail.Subject = subject
+            mail.HTMLBody = html_body
+
+            # Attach images with Content-ID if provided
+            if image_attachments:
+                for cid, image_path in image_attachments.items():
+                    image_file = Path(image_path)
+
+                    if not image_file.exists():
+                        logger.warning(
+                            "image_attachment_not_found",
+                            cid=cid,
+                            path=str(image_path),
+                        )
+                        continue
+
+                    try:
+                        # Add attachment
+                        attachment = mail.Attachments.Add(str(image_file.absolute()))
+
+                        # Set Content-ID property
+                        # PR_ATTACH_CONTENT_ID = 0x3712001F
+                        attachment.PropertyAccessor.SetProperty(
+                            "http://schemas.microsoft.com/mapi/proptag/0x3712001F",
+                            cid,
+                        )
+
+                        logger.debug(
+                            "image_attached_with_cid",
+                            cid=cid,
+                            path=str(image_path),
+                            size=image_file.stat().st_size,
+                        )
+
+                    except Exception as e:
+                        logger.warning(
+                            "image_attachment_failed",
+                            cid=cid,
+                            path=str(image_path),
+                            error=str(e),
+                        )
+                        # Continue with other attachments
+
+            if preview:
+                mail.Display(True)
+                logger.info(
+                    "email_with_images_displayed",
+                    recipients=recipient_display,
+                    subject=subject,
+                    image_count=len(image_attachments) if image_attachments else 0,
+                )
+                return EmailResult(
+                    success=True,
+                    message="Email with images opened in Outlook for preview",
+                )
+            else:
+                mail.Send()
+                logger.info(
+                    "email_with_images_sent",
+                    recipients=recipient_display,
+                    subject=subject,
+                    image_count=len(image_attachments) if image_attachments else 0,
+                )
+                return EmailResult(
+                    success=True,
+                    message=f"Email with {len(image_attachments) if image_attachments else 0} images sent successfully to {recipient_display}",
+                )
+
+        except pywintypes.com_error as e:
+            # Defensive extraction of COM error details
+            try:
+                error_code = e.args[0] if e.args and len(e.args) > 0 else "Unknown"
+                error_msg = e.args[2] if len(e.args) > 2 else str(e)
+            except (IndexError, TypeError):
+                error_code = "Unknown"
+                error_msg = str(e)
+            logger.error(
+                "email_with_images_send_failed",
+                error_code=str(error_code),
+                error_message=str(error_msg),
+            )
+            return EmailResult(
+                success=False,
+                message=f"COM Error {error_code}: {error_msg}",
+            )
+        except Exception as e:
+            logger.error("email_with_images_send_failed", error=str(e))
             return EmailResult(
                 success=False,
                 message=f"Unexpected error: {e}",

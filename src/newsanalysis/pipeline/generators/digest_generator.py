@@ -132,15 +132,16 @@ class DigestGenerator:
             raise PipelineError(f"Digest generation failed: {e}") from e
 
     async def _get_digest_articles(self, digest_date: date) -> List[Article]:
-        """Get summarized articles for digest.
+        """Get summarized articles for digest, including duplicates grouped together.
 
         Args:
             digest_date: Date to get articles for (used for logging only).
 
         Returns:
             List of summarized articles not yet included in a digest.
+            Duplicate articles are grouped with their canonical article.
         """
-        # Get all summarized articles not yet in a digest
+        # Get all summarized articles not yet in a digest (including duplicates)
         # Note: We don't filter by published_at date because:
         # 1. Articles may be published over multiple days
         # 2. The pipeline may run at midnight causing date mismatches
@@ -151,7 +152,6 @@ class DigestGenerator:
             WHERE pipeline_stage = 'summarized'
             AND processing_status = 'completed'
             AND (included_in_digest = FALSE OR included_in_digest IS NULL)
-            AND (is_duplicate = FALSE OR is_duplicate IS NULL)
             ORDER BY feed_priority ASC, confidence DESC, published_at DESC
             """,
         )
@@ -159,18 +159,243 @@ class DigestGenerator:
         rows = cursor.fetchall()
 
         # Convert to Article objects
-        articles = []
+        all_articles = []
         for row in rows:
             try:
                 article = self.article_repo._row_to_article(row)
-                articles.append(article)
+                all_articles.append(article)
             except Exception as e:
                 logger.warning(
                     "article_conversion_failed", article_id=row["id"], error=str(e)
                 )
                 continue
 
-        return articles
+        # Group duplicate articles with their canonical versions
+        grouped_articles = self._group_duplicate_articles(all_articles)
+
+        # Cluster similar articles by topic and content
+        clustered_articles = self._cluster_similar_articles(grouped_articles)
+
+        logger.info(
+            "articles_grouped_and_clustered",
+            total_articles=len(all_articles),
+            after_dedup_grouping=len(grouped_articles),
+            after_clustering=len(clustered_articles),
+        )
+
+        return clustered_articles
+
+    def _group_duplicate_articles(self, articles: List[Article]) -> List[Article]:
+        """Group duplicate articles with their canonical versions.
+
+        For articles marked as duplicates, we merge them with their canonical article
+        by combining sources and keeping the canonical article's summary.
+
+        Args:
+            articles: List of all articles (including duplicates).
+
+        Returns:
+            List of canonical articles with duplicate sources merged.
+        """
+        # Build index of articles by url_hash
+        articles_by_hash = {a.url_hash: a for a in articles if a.url_hash}
+
+        # Separate canonical articles from duplicates
+        canonical_articles = []
+        duplicate_articles = []
+
+        for article in articles:
+            if article.is_duplicate and article.canonical_url_hash:
+                duplicate_articles.append(article)
+            else:
+                canonical_articles.append(article)
+
+        # Group duplicates with their canonical articles
+        for duplicate in duplicate_articles:
+            canonical = articles_by_hash.get(duplicate.canonical_url_hash)
+
+            if canonical:
+                # Initialize duplicate_sources list if not exists
+                if canonical.duplicate_sources is None:
+                    canonical.duplicate_sources = []
+
+                # Add duplicate's source to the canonical article
+                canonical.duplicate_sources.append({
+                    "source": duplicate.source,
+                    "url": str(duplicate.url),
+                    "title": duplicate.title,
+                })
+
+                logger.debug(
+                    "duplicate_grouped",
+                    canonical_id=canonical.id,
+                    duplicate_id=duplicate.id,
+                    duplicate_source=duplicate.source,
+                )
+            else:
+                # Canonical article not found - treat duplicate as standalone
+                logger.warning(
+                    "canonical_not_found",
+                    duplicate_id=duplicate.id,
+                    canonical_hash=duplicate.canonical_url_hash,
+                )
+                canonical_articles.append(duplicate)
+
+        logger.info(
+            "duplicate_grouping_complete",
+            canonical_count=len(canonical_articles),
+            duplicate_count=len(duplicate_articles),
+        )
+
+        return canonical_articles
+
+    def _cluster_similar_articles(self, articles: List[Article]) -> List[Article]:
+        """Cluster semantically similar articles by topic and title keywords.
+
+        Groups articles about the same event that weren't caught by duplicate detection.
+        Uses topic + title keyword overlap to identify related articles.
+
+        Args:
+            articles: List of articles (already grouped by duplicates).
+
+        Returns:
+            List of articles with similar articles merged as duplicate_sources.
+        """
+        # Group articles by topic first
+        articles_by_topic = {}
+        for article in articles:
+            topic = article.topic or "other"
+            if topic not in articles_by_topic:
+                articles_by_topic[topic] = []
+            articles_by_topic[topic].append(article)
+
+        clustered = []
+        total_clusters = 0
+
+        # Within each topic, find similar articles
+        for topic, topic_articles in articles_by_topic.items():
+            if len(topic_articles) <= 1:
+                clustered.extend(topic_articles)
+                continue
+
+            # Sort by confidence (highest first)
+            topic_articles.sort(key=lambda a: a.confidence or 0, reverse=True)
+
+            used = set()
+            for i, article in enumerate(topic_articles):
+                if i in used:
+                    continue
+
+                # Extract keywords from this article's title
+                article_keywords = self._extract_keywords(article.summary_title or article.title or "")
+
+                # Find similar articles in the same topic
+                similar_indices = []
+                for j in range(i + 1, len(topic_articles)):
+                    if j in used:
+                        continue
+
+                    other = topic_articles[j]
+                    other_keywords = self._extract_keywords(other.summary_title or other.title or "")
+
+                    # Calculate keyword overlap
+                    if self._is_similar(article_keywords, other_keywords):
+                        similar_indices.append(j)
+                        used.add(j)
+
+                # If we found similar articles, merge them
+                if similar_indices:
+                    # Initialize duplicate_sources if not exists
+                    if article.duplicate_sources is None:
+                        article.duplicate_sources = []
+
+                    # Add similar articles as duplicate sources
+                    for idx in similar_indices:
+                        similar = topic_articles[idx]
+                        article.duplicate_sources.append({
+                            "source": similar.source,
+                            "url": str(similar.url),
+                            "title": similar.title,
+                        })
+
+                        logger.debug(
+                            "articles_clustered",
+                            main_id=article.id,
+                            similar_id=similar.id,
+                            topic=topic,
+                        )
+
+                    total_clusters += 1
+
+                clustered.append(article)
+                used.add(i)
+
+        logger.info(
+            "article_clustering_complete",
+            input_articles=len(articles),
+            output_articles=len(clustered),
+            clusters_formed=total_clusters,
+        )
+
+        return clustered
+
+    def _extract_keywords(self, text: str) -> set:
+        """Extract significant keywords from text.
+
+        Args:
+            text: Title or text to extract keywords from.
+
+        Returns:
+            Set of lowercase keywords.
+        """
+        if not text:
+            return set()
+
+        # German and English stopwords
+        stopwords = {
+            # German
+            "der", "die", "das", "den", "dem", "des", "ein", "eine", "einer", "einem",
+            "im", "in", "auf", "von", "zu", "mit", "und", "oder", "aber", "ist", "sind",
+            "wird", "werden", "wurde", "wurden", "hat", "haben", "für", "bei", "nach",
+            # English
+            "the", "a", "an", "in", "on", "at", "to", "for", "of", "with", "and", "or",
+            "but", "is", "are", "was", "were", "has", "have", "had", "be", "been",
+        }
+
+        # Extract words (remove punctuation, convert to lowercase)
+        import re
+        words = re.findall(r'\b[a-zA-ZäöüÄÖÜß]+\b', text.lower())
+
+        # Filter stopwords and short words
+        keywords = {w for w in words if len(w) > 3 and w not in stopwords}
+
+        return keywords
+
+    def _is_similar(self, keywords1: set, keywords2: set, threshold: float = 0.3) -> bool:
+        """Check if two keyword sets are similar enough to cluster.
+
+        Args:
+            keywords1: First set of keywords.
+            keywords2: Second set of keywords.
+            threshold: Minimum overlap ratio (default: 30%).
+
+        Returns:
+            True if articles should be clustered together.
+        """
+        if not keywords1 or not keywords2:
+            return False
+
+        # Calculate Jaccard similarity (intersection / union)
+        intersection = keywords1 & keywords2
+        union = keywords1 | keywords2
+
+        if not union:
+            return False
+
+        similarity = len(intersection) / len(union)
+
+        # Also check for substantial keyword overlap (at least 2 common keywords)
+        return similarity >= threshold and len(intersection) >= 2
 
     async def _generate_meta_analysis(
         self, articles: List[Article], run_id: str

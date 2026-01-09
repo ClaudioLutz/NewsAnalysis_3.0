@@ -23,10 +23,14 @@ from newsanalysis.pipeline.formatters import (
 from newsanalysis.pipeline.generators import DigestGenerator
 from newsanalysis.pipeline.scrapers import create_scraper
 from newsanalysis.pipeline.summarizers import ArticleSummarizer
+from newsanalysis.pipeline.extractors.image_extractor import ImageExtractor
 from newsanalysis.services.cache_service import CacheService
 from newsanalysis.services.config_loader import ConfigLoader, load_feeds_config
 from newsanalysis.services.digest_formatter import HtmlEmailFormatter
 from newsanalysis.services.email_service import OutlookEmailService
+from newsanalysis.services.image_cache import ImageCache
+from newsanalysis.services.image_download_service import ImageDownloadService
+from newsanalysis.services.metrics_tracker import MetricsTracker
 from newsanalysis.utils.exceptions import PipelineError
 from newsanalysis.utils.logging import get_logger
 
@@ -123,6 +127,19 @@ class PipelineOrchestrator:
         self.markdown_formatter = MarkdownFormatter()
         self.german_formatter = GermanReportFormatter()
 
+        # Initialize image extraction services
+        self.image_extractor = ImageExtractor(
+            timeout=config.request_timeout_sec,
+            max_images=5,
+        )
+        self.image_cache = ImageCache(
+            cache_root=Path("cache"),
+            days_to_keep=30,
+        )
+
+        # Initialize metrics tracker
+        self.metrics = MetricsTracker()
+
         logger.info("pipeline_initialized", run_id=self.run_id, mode=self.pipeline_config.mode)
 
     async def run(self) -> Dict[str, int]:
@@ -136,6 +153,9 @@ class PipelineOrchestrator:
         """
         logger.info("pipeline_starting", run_id=self.run_id)
 
+        # Start metrics tracking
+        self.metrics.start_pipeline()
+
         # Track pipeline run
         self._start_pipeline_run()
 
@@ -146,6 +166,8 @@ class PipelineOrchestrator:
                 "matched": 0,
                 "rejected": 0,
                 "scraped": 0,
+                "images_extracted": 0,
+                "images_downloaded": 0,
                 "deduplicated": 0,
                 "duplicates_found": 0,
                 "summarized": 0,
@@ -169,7 +191,13 @@ class PipelineOrchestrator:
                 scraped_count = await self._run_scraping()
                 stats["scraped"] = scraped_count
 
-            # Stage 3.5: Semantic Deduplication
+            # Stage 3.5: Image Extraction and Download
+            if not self.pipeline_config.skip_scraping:
+                image_stats = await self._run_image_extraction()
+                stats["images_extracted"] = image_stats["extracted"]
+                stats["images_downloaded"] = image_stats["downloaded"]
+
+            # Stage 3.6: Semantic Deduplication
             if not self.pipeline_config.skip_summarization:
                 dedup_stats = await self._run_deduplication()
                 stats["deduplicated"] = dedup_stats["checked"]
@@ -193,6 +221,13 @@ class PipelineOrchestrator:
             # Complete pipeline run
             self._complete_pipeline_run(stats, success=True)
 
+            # Log comprehensive metrics
+            self.metrics.log_metrics_summary()
+
+            # Check health status
+            health = self.metrics.check_health()
+            logger.info("pipeline_health_check", health_status=health["status"], warnings=health["warnings"], errors=health["errors"])
+
             logger.info("pipeline_completed", run_id=self.run_id, stats=stats)
 
             return stats
@@ -200,6 +235,10 @@ class PipelineOrchestrator:
         except Exception as e:
             logger.error("pipeline_failed", run_id=self.run_id, error=str(e))
             self._complete_pipeline_run({}, success=False, error=str(e))
+
+            # Log metrics even on failure
+            self.metrics.log_metrics_summary()
+
             raise PipelineError(f"Pipeline execution failed: {e}") from e
 
     async def _run_collection(self) -> int:
@@ -368,6 +407,128 @@ class PipelineOrchestrator:
         )
 
         return scraped_count
+
+    async def _run_image_extraction(self) -> Dict[str, int]:
+        """Run image extraction and download stage.
+
+        Returns:
+            Statistics dict with extracted and downloaded counts.
+        """
+        logger.info("stage_image_extraction_starting")
+
+        # Start timer for image extraction stage
+        self.metrics.start_timer("image_extraction")
+
+        # Get articles that have been scraped
+        articles = self.repository.get_articles_for_deduplication(limit=None)
+
+        if not articles:
+            logger.info("no_articles_for_image_extraction")
+            self.metrics.record_stage_metrics("image_extraction", {
+                "articles_processed": 0,
+                "images_extracted": 0,
+                "images_downloaded": 0,
+                "duration_seconds": self.metrics.stop_timer("image_extraction"),
+            })
+            return {"extracted": 0, "downloaded": 0}
+
+        logger.info("articles_for_image_extraction", count=len(articles))
+
+        total_extracted = 0
+        total_downloaded = 0
+        total_failed = 0
+        total_cached = 0
+
+        # Use ImageDownloadService as context manager
+        async with ImageDownloadService(
+            image_cache=self.image_cache,
+            timeout=self.config.request_timeout_sec,
+            max_concurrent=10,
+            max_retries=3,
+        ) as download_service:
+            for article in articles:
+                try:
+                    # Extract image URLs
+                    images = await self.image_extractor.extract_images(
+                        url=str(article.url),
+                        html_content=None,  # Will be fetched by extractor
+                    )
+
+                    if images:
+                        total_extracted += len(images)
+
+                        # Set article_id on images
+                        for img in images:
+                            img.article_id = article.id
+
+                        # Download images
+                        downloaded_images = await download_service.download_article_images(
+                            article=article,
+                            images=images,
+                        )
+
+                        if downloaded_images:
+                            total_downloaded += len(downloaded_images)
+
+                            # Count cached vs new downloads
+                            for img in downloaded_images:
+                                if img.local_path and Path(img.local_path).exists():
+                                    total_cached += 1
+
+                            # Save to database
+                            self.repository.save_article_images(downloaded_images)
+
+                            logger.info(
+                                "article_images_processed",
+                                article_id=article.id,
+                                extracted=len(images),
+                                downloaded=len(downloaded_images),
+                            )
+
+                except Exception as e:
+                    total_failed += 1
+                    logger.error(
+                        "image_extraction_failed",
+                        article_id=article.id,
+                        url=str(article.url),
+                        error=str(e),
+                        exc_info=True,
+                    )
+                    # Continue with other articles - don't fail pipeline
+
+        # Stop timer and record stage metrics
+        duration = self.metrics.stop_timer("image_extraction")
+
+        # Update global metrics
+        self.metrics.set_metric("images_extracted_count", total_extracted)
+        self.metrics.set_metric("images_downloaded_count", total_downloaded)
+        self.metrics.set_metric("images_failed_count", total_failed)
+        self.metrics.set_metric("images_cached_count", total_cached)
+
+        # Record stage-specific metrics
+        self.metrics.record_stage_metrics("image_extraction", {
+            "articles_processed": len(articles),
+            "images_extracted": total_extracted,
+            "images_downloaded": total_downloaded,
+            "images_failed": total_failed,
+            "images_cached": total_cached,
+            "duration_seconds": round(duration, 2),
+        })
+
+        logger.info(
+            "stage_image_extraction_complete",
+            articles=len(articles),
+            extracted=total_extracted,
+            downloaded=total_downloaded,
+            failed=total_failed,
+            cached=total_cached,
+            duration_seconds=round(duration, 2),
+        )
+
+        return {
+            "extracted": total_extracted,
+            "downloaded": total_downloaded,
+        }
 
     async def _run_deduplication(self) -> Dict[str, int]:
         """Run semantic deduplication stage.
@@ -611,9 +772,12 @@ class PipelineOrchestrator:
                 logger.warning("email_skipped", reason="No digest found for today")
                 return False
 
-            # Format as HTML
-            formatter = HtmlEmailFormatter()
-            html_body = formatter.format(digest_data)
+            # Format as HTML with images
+            formatter = HtmlEmailFormatter(article_repository=self.repository)
+            html_body, image_cid_mapping = formatter.format_with_images(
+                digest_data,
+                include_images=True
+            )
 
             # Create subject
             try:
@@ -624,16 +788,17 @@ class PipelineOrchestrator:
             except KeyError:
                 subject = f"Bonitäts-News: {digest_date.strftime('%d.%m.%Y')} - {digest_data['article_count']} relevante Artikel"
 
-            # Send email
+            # Send email with images
             with OutlookEmailService() as email_service:
                 if not email_service.is_available():
                     logger.warning("email_skipped", reason="Outlook not available")
                     return False
 
-                result = email_service.send_html_email(
+                result = email_service.send_html_email_with_images(
                     to=recipients,
                     subject=subject,
                     html_body=html_body,
+                    image_attachments=image_cid_mapping,
                     preview=False,
                 )
 
@@ -641,6 +806,7 @@ class PipelineOrchestrator:
                     logger.info(
                         "stage_email_sending_complete",
                         recipients=", ".join(recipients),
+                        images_attached=len(image_cid_mapping),
                     )
                     return True
                 else:
@@ -697,21 +863,59 @@ class PipelineOrchestrator:
             error: Error message if failed.
         """
         try:
+            completed_at = datetime.now()
+
+            # Calculate duration
+            start_result = self.db.execute(
+                "SELECT started_at FROM pipeline_runs WHERE run_id = ?",
+                (self.run_id,)
+            )
+            started_at_row = start_result.fetchone()
+            duration_seconds = None
+            if started_at_row:
+                started_at = datetime.fromisoformat(started_at_row[0])
+                duration_seconds = (completed_at - started_at).total_seconds()
+
+            # Calculate total cost and tokens from api_calls
+            cost_result = self.db.execute(
+                """
+                SELECT COALESCE(SUM(cost), 0.0), COALESCE(SUM(total_tokens), 0)
+                FROM api_calls
+                WHERE run_id = ?
+                """,
+                (self.run_id,)
+            )
+            cost_row = cost_result.fetchone()
+            total_cost = cost_row[0] if cost_row else 0.0
+            total_tokens = cost_row[1] if cost_row else 0
+
             query = """
                 UPDATE pipeline_runs
                 SET completed_at = ?,
                     status = ?,
                     collected_count = ?,
                     filtered_count = ?,
+                    scraped_count = ?,
+                    summarized_count = ?,
+                    digested_count = ?,
+                    duration_seconds = ?,
+                    total_cost = ?,
+                    total_tokens = ?,
                     error_message = ?
                 WHERE run_id = ?
             """
 
             params = (
-                datetime.now(),
+                completed_at,
                 "completed" if success else "failed",
                 stats.get("collected", 0),
                 stats.get("filtered", 0),
+                stats.get("scraped", 0),
+                stats.get("summarized", 0),
+                stats.get("digested", 0),
+                duration_seconds,
+                total_cost,
+                total_tokens,
                 error,
                 self.run_id,
             )
