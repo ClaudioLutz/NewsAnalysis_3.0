@@ -66,4 +66,4 @@ class ArticleTopic(str, Enum):
     ECONOMIC_INDICATORS = "economic_indicators"
     MARKET_INTELLIGENCE = "market_intelligence"
     ECOMMERCE_FRAUD = "ecommerce_fraud"
-    OTHER = "other"
+    BUSINESS_SCAMS = "business_scams"

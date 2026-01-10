@@ -364,10 +364,11 @@ def _reset_articles(db: DatabaseConnection, reset_type: str) -> None:
             UPDATE articles
             SET pipeline_stage = 'collected',
                 processing_status = 'pending',
-                classification_decision = NULL,
+                is_match = NULL,
                 classification_reason = NULL,
                 confidence = NULL,
-                classified_at = NULL,
+                topic = NULL,
+                filtered_at = NULL,
                 content = NULL,
                 author = NULL,
                 content_length = NULL,

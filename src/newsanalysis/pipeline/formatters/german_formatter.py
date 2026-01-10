@@ -39,7 +39,7 @@ TOPIC_PRIORITY = [
     "economic_indicators",
     "market_intelligence",
     "ecommerce_fraud",
-    "other",
+    "business_scams",
 ]
 
 # Topic translations (English to German)
@@ -55,9 +55,10 @@ TOPIC_TRANSLATIONS = {
     "company_lifecycle": "Fusionen & Übernahmen",
     "economic_indicators": "Wirtschaftsindikatoren",
     "market_intelligence": "Marktentwicklungen",
-    "ecommerce_fraud": "Betrug & Cyberkriminalität",
-    "other": "Sonstige",
+    "ecommerce_fraud": "Online-Betrug",
+    "business_scams": "Wirtschaftsdelikte",
     # Legacy mappings for backwards compatibility
+    "other": "Sonstige",
     "bankruptcies": "Insolvenzen",
     "financial_distress": "Finanzielle Schwierigkeiten",
     "creditreform_insights": "Creditreform Insights",

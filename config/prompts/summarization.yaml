@@ -3,7 +3,14 @@ system_prompt: |
 
   Write all output in German (Hochdeutsch).
 
-  Focus on:
+  CRITICAL RULES:
+  - Only include facts explicitly stated in the article
+  - Do NOT make assumptions or interpretations
+  - Do NOT add implications not mentioned in the source
+  - Keep titles strictly factual and based on article content
+  - If credit risk/business impact is mentioned, include it; if not, don't add it
+
+  When credit-relevant topics ARE mentioned:
   - Credit risk implications
   - Business impact analysis
   - Regulatory developments
@@ -19,8 +26,8 @@ user_prompt_template: |
 
   Create a structured summary in JSON format:
   {{
-    "title": "Normalized title (max 150 chars)",
-    "summary": "1-2 sentence summary (max 50 words) focusing on the key message",
+    "title": "Factual, neutral title based ONLY on what is stated in the article (max 150 chars). Do NOT add interpretations, implications, or assumptions.",
+    "summary": "1-2 sentence summary (max 50 words) with only facts from the article",
     "key_points": ["short bullet point 1", "short bullet point 2"],
     "entities": {{
       "companies": ["company names mentioned"],
@@ -28,7 +35,7 @@ user_prompt_template: |
       "locations": ["locations mentioned"],
       "topics": ["main topics/themes"]
     }},
-    "topic": "Primary topic - exactly ONE of: insolvency_bankruptcy, credit_risk, regulatory_compliance, data_protection, kyc_aml_sanctions, payment_behavior, debt_collection, board_changes, company_lifecycle, economic_indicators, market_intelligence, ecommerce_fraud, other"
+    "topic": "Primary topic - exactly ONE of: insolvency_bankruptcy, credit_risk, regulatory_compliance, data_protection, kyc_aml_sanctions, payment_behavior, debt_collection, board_changes, company_lifecycle, economic_indicators, market_intelligence, ecommerce_fraud, business_scams"
   }}
 
 output_schema:
@@ -76,7 +83,7 @@ output_schema:
         - topics
     topic:
       type: string
-      enum: [insolvency_bankruptcy, credit_risk, regulatory_compliance, data_protection, kyc_aml_sanctions, payment_behavior, debt_collection, board_changes, company_lifecycle, economic_indicators, market_intelligence, ecommerce_fraud, other]
+      enum: [insolvency_bankruptcy, credit_risk, regulatory_compliance, data_protection, kyc_aml_sanctions, payment_behavior, debt_collection, board_changes, company_lifecycle, economic_indicators, market_intelligence, ecommerce_fraud, business_scams]
       description: "Primary topic classification"
   required:
     - title

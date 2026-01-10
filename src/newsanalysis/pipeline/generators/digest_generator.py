@@ -483,7 +483,7 @@ class DigestGenerator:
                 summary_text += f"\n   Topic: {article.topic}"
 
             if article.entities:
-                companies = article.entities.get("companies", [])
+                companies = article.entities.companies
                 if companies:
                     summary_text += f"\n   Companies: {', '.join(companies[:5])}"
 

@@ -43,7 +43,7 @@ class SummaryResponse(BaseModel):
         description="Extracted entities (companies, people, locations, topics)",
     )
     topic: ArticleTopic = Field(
-        default=ArticleTopic.OTHER,
+        default=ArticleTopic.MARKET_INTELLIGENCE,
         description="Primary topic classification",
     )
 
@@ -126,11 +126,11 @@ class ArticleSummarizer:
                     )
 
                     # Extract topic from entities JSON (backwards compatible)
-                    topic_str = entities_dict.get("topic", "other")
+                    topic_str = entities_dict.get("topic", "market_intelligence")
                     try:
                         topic = ArticleTopic(topic_str)
                     except ValueError:
-                        topic = ArticleTopic.OTHER
+                        topic = ArticleTopic.MARKET_INTELLIGENCE
 
                     return ArticleSummary(
                         summary_title=cached_summary["summary_title"],
@@ -177,12 +177,12 @@ class ArticleSummarizer:
             )
 
             # Parse topic with fallback
-            topic_str = content_dict.get("topic", "other")
+            topic_str = content_dict.get("topic", "market_intelligence")
             try:
                 topic = ArticleTopic(topic_str)
             except ValueError:
                 logger.warning("invalid_topic_fallback", topic=topic_str)
-                topic = ArticleTopic.OTHER
+                topic = ArticleTopic.MARKET_INTELLIGENCE
 
             # Create ArticleSummary
             summary = ArticleSummary(

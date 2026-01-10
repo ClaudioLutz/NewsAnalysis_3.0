@@ -96,7 +96,7 @@ class ArticleSummary(BaseModel):
     summary: str = Field(...)  # Removed length constraints
     key_points: List[str] = Field(...)  # Removed length constraints
     entities: EntityData
-    topic: ArticleTopic = Field(default=ArticleTopic.OTHER)
+    topic: ArticleTopic = Field(default=ArticleTopic.MARKET_INTELLIGENCE)
 
     summarized_at: datetime = Field(default_factory=datetime.now)
 

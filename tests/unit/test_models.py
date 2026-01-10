@@ -178,12 +178,12 @@ class TestArticleTopic:
         """Should create ArticleTopic from valid string values."""
         assert ArticleTopic("insolvency_bankruptcy") == ArticleTopic.INSOLVENCY_BANKRUPTCY
         assert ArticleTopic("credit_risk") == ArticleTopic.CREDIT_RISK
-        assert ArticleTopic("other") == ArticleTopic.OTHER
+        assert ArticleTopic("business_scams") == ArticleTopic.BUSINESS_SCAMS
         assert ArticleTopic("board_changes") == ArticleTopic.BOARD_CHANGES
 
-    def test_article_topic_all_12_values(self):
-        """Should have exactly 12 topic values."""
-        assert len(ArticleTopic) == 12
+    def test_article_topic_all_13_values(self):
+        """Should have exactly 13 topic values."""
+        assert len(ArticleTopic) == 13
 
     def test_article_topic_invalid_value_raises(self):
         """Should raise ValueError for invalid topic string."""
@@ -213,15 +213,15 @@ class TestArticleSummary:
         )
         assert summary.topic == ArticleTopic.INSOLVENCY_BANKRUPTCY
 
-    def test_article_summary_default_topic_is_other(self):
-        """Should default topic to OTHER when not provided."""
+    def test_article_summary_default_topic_is_market_intelligence(self):
+        """Should default topic to MARKET_INTELLIGENCE when not provided."""
         summary = ArticleSummary(
             summary_title="Test Title",
             summary="Test summary text",
             key_points=["Point 1", "Point 2"],
             entities=EntityData(),
         )
-        assert summary.topic == ArticleTopic.OTHER
+        assert summary.topic == ArticleTopic.MARKET_INTELLIGENCE
 
     def test_article_summary_topic_from_string(self):
         """Should accept topic as string value."""
