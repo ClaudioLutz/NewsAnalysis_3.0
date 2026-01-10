@@ -420,8 +420,8 @@ class DigestGenerator:
 
             # Get prompts
             if self.prompt_config:
-                system_prompt = self.prompt_config.get("system_prompt", "")
-                user_template = self.prompt_config.get("user_prompt_template", "")
+                system_prompt = self.prompt_config.system_prompt
+                user_template = self.prompt_config.user_prompt_template
             else:
                 # Fallback prompts
                 system_prompt = "You are a senior analyst creating daily intelligence briefings."
