@@ -55,7 +55,7 @@ feeds:
     priority: 1
     max_age_hours: 168
     rate_limit_seconds: 5.0
-    enabled: true
+    enabled: false  # Disabled: content not scrapeable
 
   - name: "SNB Business Cycle"
     type: "rss"

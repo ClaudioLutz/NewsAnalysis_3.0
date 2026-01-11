@@ -786,7 +786,7 @@ class PipelineOrchestrator:
                     count=digest_data["article_count"],
                 )
             except KeyError:
-                subject = f"Bonitäts-News: {digest_date.strftime('%d.%m.%Y')} - {digest_data['article_count']} relevante Artikel"
+                subject = f"Creditreform News-Digest: {digest_date.strftime('%d.%m.%Y')} - {digest_data['article_count']} relevante Artikel"
 
             # Send email with images
             with OutlookEmailService() as email_service:

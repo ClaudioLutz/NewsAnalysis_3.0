@@ -110,7 +110,7 @@ class Config(BaseSettings):
         default=None,
         description="Comma-separated list of email recipients",
     )
-    email_subject_template: str = "Bonitäts-News: {date} - {count} relevante Artikel"
+    email_subject_template: str = "Creditreform News-Digest: {date} - {count} relevante Artikel"
     email_auto_send: bool = Field(
         default=False,
         description="Automatically send email after digest generation",

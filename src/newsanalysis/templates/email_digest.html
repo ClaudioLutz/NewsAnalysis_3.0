@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bonitäts-News Digest - {{ date }}</title>
+  <title>Creditreform News-Digest - {{ date }}</title>
   <!--[if mso]>
   <style type="text/css">
     table { border-collapse: collapse; }
@@ -11,7 +11,7 @@
   </style>
   <![endif]-->
 </head>
-<body width="100%" style="margin: 0; padding: 0; background-color: #f4f4f4; font-family: Arial, Helvetica, sans-serif; -webkit-font-smoothing: antialiased;" role="article" aria-label="Bonitäts-News Digest">
+<body width="100%" style="margin: 0; padding: 0; background-color: #f4f4f4; font-family: Arial, Helvetica, sans-serif; -webkit-font-smoothing: antialiased;" role="article" aria-label="Creditreform News-Digest">
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f4f4f4;">
     <tr>
       <td align="center" style="padding: 20px 10px;">
@@ -25,7 +25,7 @@
                 <tr>
                   <td>
                     <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: bold;">
-                      Bonit&auml;ts-News
+                      Creditreform News-Digest
                     </h1>
                     <p style="margin: 8px 0 0 0; color: #a8c5e2; font-size: 14px;">
                       {{ date }} &bull; {{ article_count }} relevante Artikel
@@ -35,26 +35,6 @@
               </table>
             </td>
           </tr>
-
-          {% if credit_risk_signals %}
-          <!-- Credit Risk Signals (Priority Section) -->
-          <tr>
-            <td style="padding: 25px 30px; background-color: #fff8e6; border-left: 4px solid #f0ad4e;">
-              <h2 style="margin: 0 0 15px 0; color: #8a6d3b; font-size: 16px; font-weight: bold;">
-                &#9888; Risiko-Signale
-              </h2>
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
-                {% for signal in credit_risk_signals %}
-                <tr>
-                  <td style="padding: 6px 0; color: #333333; font-size: 14px; line-height: 1.5;">
-                    &bull; {{ signal }}
-                  </td>
-                </tr>
-                {% endfor %}
-              </table>
-            </td>
-          </tr>
-          {% endif %}
 
           {% if key_themes %}
           <!-- Key Themes -->

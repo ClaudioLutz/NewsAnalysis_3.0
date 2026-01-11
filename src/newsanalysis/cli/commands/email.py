@@ -139,7 +139,7 @@ def email(
                     f"Warning: Invalid email_subject_template - missing {e}. Using default.",
                     err=True,
                 )
-                subject = f"Bonitäts-News: {target_date.strftime('%d.%m.%Y')} - {digest_data['article_count']} relevante Artikel"
+                subject = f"Creditreform News-Digest: {target_date.strftime('%d.%m.%Y')} - {digest_data['article_count']} relevante Artikel"
 
             # Send or preview
             if preview:

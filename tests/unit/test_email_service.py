@@ -232,7 +232,7 @@ class TestHtmlEmailFormatter:
         html = formatter.format(digest_data)
 
         # Check key elements are present
-        assert "Bonitäts-News" in html or "Bonit&auml;ts-News" in html
+        assert "Creditreform News-Digest" in html
         assert "6. Januar 2026" in html
         assert "5" in html  # article count
         assert "Swiss Banking" in html
