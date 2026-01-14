@@ -55,6 +55,11 @@ from newsanalysis.utils.logging import setup_logging
     default=None,
     help="Reset articles to reprocess: summarization (re-summarize), digest (re-digest), all (full reprocess)",
 )
+@click.option(
+    "--today-only",
+    is_flag=True,
+    help="Only include articles collected today in digest (for testing)",
+)
 def run(
     limit: Optional[int],
     mode: str,
@@ -64,6 +69,7 @@ def run(
     skip_summarization: bool,
     skip_digest: bool,
     reset: Optional[str],
+    today_only: bool,
 ) -> None:
     """Run the news analysis pipeline.
 
@@ -93,6 +99,8 @@ def run(
     click.echo("=" * 50)
     click.echo(f"Mode: {mode}")
     click.echo(f"Limit: {limit or 'No limit'}")
+    if today_only:
+        click.echo("Filter: Today's articles only")
     click.echo(f"Database: {config.db_path}")
     click.echo(f"Output: {config.output_dir}")
     click.echo("=" * 50)
@@ -106,6 +114,7 @@ def run(
         skip_scraping=skip_scraping,
         skip_summarization=skip_summarization,
         skip_digest=skip_digest,
+        today_only=today_only,
     )
 
     # Determine which stages will run

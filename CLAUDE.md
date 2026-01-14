@@ -98,6 +98,7 @@ python -m newsanalysis.cli.main run --reset digest --skip-collection
 | `--reset summarization` | Re-summarize all articles |
 | `--reset all` | Full reprocess from scratch |
 | `--limit N` | Process only N articles (for testing) |
+| `--today-only` | Only include articles collected today in digest (for testing) |
 
 ### Typical Workflows
 
@@ -120,4 +121,9 @@ python -m newsanalysis.cli.main run --reset digest --skip-collection
 **Re-send today's email with updated digest:**
 ```bash
 python -m newsanalysis.cli.main run --reset digest --skip-collection
+```
+
+**Test with only today's articles (smaller digest for layout testing):**
+```bash
+python -m newsanalysis.cli.main run --reset digest --skip-collection --today-only
 ```

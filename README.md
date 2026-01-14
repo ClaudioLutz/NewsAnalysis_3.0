@@ -80,6 +80,9 @@ newsanalysis run
 # Run with limit (for testing)
 newsanalysis run --limit 10
 
+# Filter to today's articles only (for testing)
+newsanalysis run --reset digest --skip-collection --today-only
+
 # Skip specific stages
 newsanalysis run --skip-scraping
 newsanalysis run --skip-summarization

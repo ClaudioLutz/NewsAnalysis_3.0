@@ -143,6 +143,10 @@ class HtmlEmailFormatter:
                 # Filter out empty sources
                 all_sources = [s for s in all_sources if s]
 
+                # Extract company names from entities
+                entities = article.get("entities", {})
+                companies = entities.get("companies", []) if entities else []
+
                 articles_by_topic[topic].append({
                     "id": article.get("id"),  # Add article ID for image lookup
                     "title": article.get("title", "Untitled"),
@@ -154,6 +158,7 @@ class HtmlEmailFormatter:
                     "key_points": article.get("key_points", [])[:2],
                     "topic": topic,
                     "confidence": article.get("confidence", 0),
+                    "companies": companies,  # Company names for display
                 })
 
             # Sort articles within each topic by confidence (descending)

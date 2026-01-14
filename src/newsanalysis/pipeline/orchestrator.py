@@ -658,6 +658,7 @@ class PipelineOrchestrator:
                 digest_date=digest_date,
                 run_id=self.run_id,
                 incremental=False,
+                today_only=self.pipeline_config.today_only,
             )
 
             logger.info(

@@ -8,6 +8,7 @@ import click
 from newsanalysis.core.config import Config
 from newsanalysis.database.connection import DatabaseConnection
 from newsanalysis.database.digest_repository import DigestRepository
+from newsanalysis.database.repository import ArticleRepository
 from newsanalysis.services.digest_formatter import HtmlEmailFormatter
 from newsanalysis.services.email_service import OutlookEmailService
 from newsanalysis.utils.logging import setup_logging
@@ -108,6 +109,7 @@ def email(
         db = DatabaseConnection(config.db_path)
         try:
             repo = DigestRepository(db)
+            article_repo = ArticleRepository(db)
 
             # Get digest for date
             click.echo(f"\nFetching digest for {target_date}...")
@@ -123,10 +125,15 @@ def email(
                 f"{digest_data['article_count']} articles"
             )
 
-            # Format as HTML
-            click.echo("Formatting email...")
-            formatter = HtmlEmailFormatter()
-            html_body = formatter.format(digest_data)
+            # Format as HTML with embedded images
+            click.echo("Formatting email with images...")
+            formatter = HtmlEmailFormatter(article_repository=article_repo)
+            html_body, image_cid_mapping = formatter.format_with_images(
+                digest_data,
+                include_images=True
+            )
+
+            click.echo(f"Prepared {len(image_cid_mapping)} images for embedding")
 
             # Create dynamic subject line with top article title
             top_title = formatter.get_top_article_title(digest_data, max_length=50)
@@ -137,16 +144,17 @@ def email(
                 # Fallback to date-based subject when no articles
                 subject = f"Creditreform News-Digest: {target_date.strftime('%d.%m.%Y')}"
 
-            # Send or preview
+            # Send or preview with images
             if preview:
                 click.echo("\nOpening email in Outlook for preview...")
             else:
                 click.echo("\nSending email...")
 
-            result = email_service.send_html_email(
+            result = email_service.send_html_email_with_images(
                 to=email_recipients,
                 subject=subject,
                 html_body=html_body,
+                image_attachments=image_cid_mapping,
                 preview=preview,
             )
 

@@ -188,6 +188,7 @@ N/A - No debug issues encountered
 - Graceful degradation when no image present (text fills full cell)
 - Tested with pipeline: 72 articles, 58 images successfully rendered
 - Email sent successfully with new layout
+- **Refinement (post-review):** Reverted to single-column layout due to Outlook rendering issues. 2-column layouts with CSS float/table-cell don't render reliably in Outlook's Word-based HTML engine. Single-column with image-left/text-right per article is industry standard (700px width).
 
 ### File List
 

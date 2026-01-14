@@ -39,6 +39,7 @@ class PipelineConfig(BaseModel):
     skip_scraping: bool = False
     skip_summarization: bool = False
     skip_digest: bool = False
+    today_only: bool = False  # Only include articles collected today in digest
 
 
 class PromptConfig(BaseModel):

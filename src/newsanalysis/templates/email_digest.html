@@ -8,7 +8,6 @@
   <style type="text/css">
     table { border-collapse: collapse; }
     td { padding: 0; }
-    .article-row td { vertical-align: top; }
   </style>
   <![endif]-->
 </head>
@@ -16,8 +15,8 @@
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f4f4f4;">
     <tr>
       <td align="center" style="padding: 20px 10px;">
-        <!-- Main Container - 900px for 2-column layout -->
-        <table role="presentation" width="900" cellspacing="0" cellpadding="0" style="background-color: #ffffff; border-radius: 4px;">
+        <!-- Main Container - 700px (industry standard for email) -->
+        <table role="presentation" width="700" cellspacing="0" cellpadding="0" style="background-color: #ffffff; border-radius: 4px;">
 
           <!-- Header -->
           <tr>
@@ -57,259 +56,61 @@
           </tr>
           {% endif %}
 
-          {% if key_themes %}
-          <!-- Key Themes -->
-          <tr>
-            <td style="padding: 25px 30px; border-bottom: 1px solid #e0e0e0;">
-              <h2 style="margin: 0 0 15px 0; color: #003366; font-size: 16px; font-weight: bold;">
-                Wichtige Themen
-              </h2>
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
-                {% for theme in key_themes %}
-                <tr>
-                  <td style="padding: 6px 0; color: #333333; font-size: 14px; line-height: 1.5;">
-                    &bull; {{ theme }}
-                  </td>
-                </tr>
-                {% endfor %}
-              </table>
-            </td>
-          </tr>
-          {% endif %}
-
-          {% if regulatory_updates %}
-          <!-- Regulatory Updates -->
-          <tr>
-            <td style="padding: 25px 30px; border-bottom: 1px solid #e0e0e0;">
-              <h2 style="margin: 0 0 15px 0; color: #003366; font-size: 16px; font-weight: bold;">
-                Regulatorische Updates
-              </h2>
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
-                {% for update in regulatory_updates %}
-                <tr>
-                  <td style="padding: 6px 0; color: #333333; font-size: 14px; line-height: 1.5;">
-                    &bull; {{ update }}
-                  </td>
-                </tr>
-                {% endfor %}
-              </table>
-            </td>
-          </tr>
-          {% endif %}
-
-          {% if market_insights %}
-          <!-- Market Insights -->
-          <tr>
-            <td style="padding: 25px 30px; border-bottom: 1px solid #e0e0e0;">
-              <h2 style="margin: 0 0 15px 0; color: #003366; font-size: 16px; font-weight: bold;">
-                Markt-Einblicke
-              </h2>
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
-                {% for insight in market_insights %}
-                <tr>
-                  <td style="padding: 6px 0; color: #333333; font-size: 14px; line-height: 1.5;">
-                    &bull; {{ insight }}
-                  </td>
-                </tr>
-                {% endfor %}
-              </table>
-            </td>
-          </tr>
-          {% endif %}
-
-          <!-- Articles by Topic - 2-Column Layout -->
+          <!-- Articles by Topic - Single Column Layout (Outlook compatible) -->
           <tr>
             <td style="padding: 20px 30px;">
               {% if articles_by_topic %}
                 {% for topic, topic_articles in articles_by_topic.items() %}
                 <!-- Topic Header -->
-                <h2 style="margin: 20px 0 15px 0; color: #003366; font-size: 16px; font-weight: bold; border-bottom: 2px solid #003366; padding-bottom: 5px;">
-                  {{ topic_translations.get(topic, topic) }}
-                </h2>
-
-                {% if topic_articles|length == 1 %}
-                <!-- Single article in topic - full width -->
-                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-bottom: 15px;">
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse: collapse;">
                   <tr>
-                    <td>
-                      {% set article = topic_articles[0] %}
-                      <!-- Full-width article cell -->
-                      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-left: 3px solid #003366; margin-bottom: 12px;">
+                    <td style="padding: 15px 0 10px 0; border-bottom: 2px solid #003366;">
+                      <h2 style="margin: 0; color: #003366; font-size: 16px; font-weight: bold;">
+                        {{ topic_translations.get(topic, topic) }}
+                      </h2>
+                    </td>
+                  </tr>
+                </table>
+
+                <!-- Articles in single column -->
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse: collapse;">
+                  {% for article in topic_articles %}
+                  <tr>
+                    <td style="padding: 12px 0; border-bottom: 1px solid #e0e0e0;">
+                      <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                         <tr>
                           {% if article.image_cid and images_enabled %}
-                          <!-- Full-width article with image (120px) -->
-                          <td width="132" style="padding: 15px 12px; vertical-align: top;">
-                            <img src="cid:{{ article.image_cid }}" alt="{{ article.title }}" width="120" height="80" style="display: block; border-radius: 3px; object-fit: cover;" />
+                          <td width="100" valign="top" style="padding-right: 12px;">
+                            <img src="cid:{{ article.image_cid }}" alt="" width="90" height="60" style="display: block; border-radius: 3px;" />
                           </td>
-                          <td style="padding: 15px 12px 15px 0; vertical-align: top;">
-                          {% else %}
-                          <!-- Full-width article without image -->
-                          <td style="padding: 15px 12px; vertical-align: top;">
                           {% endif %}
+                          <td valign="top">
                             <p style="margin: 0 0 4px 0; font-size: 14px; font-weight: bold; line-height: 1.3;">
                               {% if article.url %}<a href="{{ article.url }}" style="color: #003366; text-decoration: none;">{{ article.title }}</a>{% else %}{{ article.title }}{% endif %}
                             </p>
+                            {% if article.companies %}
+                            <p style="margin: 0 0 4px 0; color: #cc6600; font-size: 12px; font-weight: bold;">{{ article.companies[:3]|join(", ") }}</p>
+                            {% endif %}
                             {% if article.all_sources and article.all_sources|length > 1 %}
-                            <p style="margin: 0 0 6px 0; color: #888888; font-size: 11px;">Quellen: {{ article.all_sources|join(", ") }}</p>
+                            <p style="margin: 0 0 4px 0; color: #888888; font-size: 11px;">Quellen: {{ article.all_sources|join(", ") }}</p>
                             {% elif article.source %}
-                            <p style="margin: 0 0 6px 0; color: #888888; font-size: 11px;">{{ article.source }}</p>
+                            <p style="margin: 0 0 4px 0; color: #888888; font-size: 11px;">{{ article.source }}</p>
                             {% endif %}
                             {% if article.summary %}
-                            <p style="margin: 0 0 6px 0; color: #555555; font-size: 13px; line-height: 1.4;">{{ article.summary }}</p>
+                            <p style="margin: 0 0 4px 0; color: #555555; font-size: 12px; line-height: 1.4;">{{ article.summary }}</p>
                             {% endif %}
                             {% if article.key_points %}
-                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top: 4px;">
-                              {% for point in article.key_points %}
-                              <tr>
-                                <td style="padding: 2px 0 2px 8px; color: #666666; font-size: 12px; line-height: 1.3;">&bull; {{ point }}</td>
-                              </tr>
-                              {% endfor %}
-                            </table>
+                            {% for point in article.key_points %}
+                            <p style="margin: 0; color: #666666; font-size: 11px; line-height: 1.3;">&bull; {{ point }}</p>
+                            {% endfor %}
                             {% endif %}
                           </td>
                         </tr>
                       </table>
                     </td>
                   </tr>
-                </table>
-
-                {% else %}
-                <!-- Multiple articles - 2-column layout -->
-                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-bottom: 15px;">
-                  {% for i in range(0, topic_articles|length, 2) %}
-                  {% set article1 = topic_articles[i] %}
-                  {% set article2 = topic_articles[i + 1] if i + 1 < topic_articles|length else none %}
-
-                  {% if article2 %}
-                  <!-- Two-column row -->
-                  <tr class="article-row">
-                    <!--[if mso]><td width="430" valign="top"><![endif]-->
-                    <td width="430" style="padding: 0 10px 15px 0; vertical-align: top;">
-                      <!-- Compact article cell (left column) -->
-                      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-left: 3px solid #003366;">
-                        <tr>
-                          {% if article1.image_cid and images_enabled %}
-                          <!-- Compact article with image (100px) -->
-                          <td width="112" style="padding: 12px; vertical-align: top;">
-                            <img src="cid:{{ article1.image_cid }}" alt="{{ article1.title }}" width="100" height="67" style="display: block; border-radius: 3px; object-fit: cover;" />
-                          </td>
-                          <td style="padding: 12px 12px 12px 0; vertical-align: top;">
-                          {% else %}
-                          <!-- Compact article without image -->
-                          <td style="padding: 12px; vertical-align: top;">
-                          {% endif %}
-                            <p style="margin: 0 0 3px 0; font-size: 13px; font-weight: bold; line-height: 1.3;">
-                              {% if article1.url %}<a href="{{ article1.url }}" style="color: #003366; text-decoration: none;">{{ article1.title }}</a>{% else %}{{ article1.title }}{% endif %}
-                            </p>
-                            {% if article1.all_sources and article1.all_sources|length > 1 %}
-                            <p style="margin: 0 0 4px 0; color: #888888; font-size: 11px;">Quellen: {{ article1.all_sources|join(", ") }}</p>
-                            {% elif article1.source %}
-                            <p style="margin: 0 0 4px 0; color: #888888; font-size: 11px;">{{ article1.source }}</p>
-                            {% endif %}
-                            {% if article1.summary %}
-                            <p style="margin: 0 0 4px 0; color: #555555; font-size: 12px; line-height: 1.3;">{{ article1.summary }}</p>
-                            {% endif %}
-                            {% if article1.key_points %}
-                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top: 2px;">
-                              {% for point in article1.key_points %}
-                              <tr>
-                                <td style="padding: 1px 0 1px 8px; color: #666666; font-size: 11px; line-height: 1.3;">&bull; {{ point }}</td>
-                              </tr>
-                              {% endfor %}
-                            </table>
-                            {% endif %}
-                          </td>
-                        </tr>
-                      </table>
-                    </td>
-                    <!--[if mso]></td><td width="430" valign="top"><![endif]-->
-                    <td width="430" style="padding: 0 0 15px 10px; vertical-align: top;">
-                      <!-- Compact article cell (right column) -->
-                      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-left: 3px solid #003366;">
-                        <tr>
-                          {% if article2.image_cid and images_enabled %}
-                          <!-- Compact article with image (100px) -->
-                          <td width="112" style="padding: 12px; vertical-align: top;">
-                            <img src="cid:{{ article2.image_cid }}" alt="{{ article2.title }}" width="100" height="67" style="display: block; border-radius: 3px; object-fit: cover;" />
-                          </td>
-                          <td style="padding: 12px 12px 12px 0; vertical-align: top;">
-                          {% else %}
-                          <!-- Compact article without image -->
-                          <td style="padding: 12px; vertical-align: top;">
-                          {% endif %}
-                            <p style="margin: 0 0 3px 0; font-size: 13px; font-weight: bold; line-height: 1.3;">
-                              {% if article2.url %}<a href="{{ article2.url }}" style="color: #003366; text-decoration: none;">{{ article2.title }}</a>{% else %}{{ article2.title }}{% endif %}
-                            </p>
-                            {% if article2.all_sources and article2.all_sources|length > 1 %}
-                            <p style="margin: 0 0 4px 0; color: #888888; font-size: 11px;">Quellen: {{ article2.all_sources|join(", ") }}</p>
-                            {% elif article2.source %}
-                            <p style="margin: 0 0 4px 0; color: #888888; font-size: 11px;">{{ article2.source }}</p>
-                            {% endif %}
-                            {% if article2.summary %}
-                            <p style="margin: 0 0 4px 0; color: #555555; font-size: 12px; line-height: 1.3;">{{ article2.summary }}</p>
-                            {% endif %}
-                            {% if article2.key_points %}
-                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top: 2px;">
-                              {% for point in article2.key_points %}
-                              <tr>
-                                <td style="padding: 1px 0 1px 8px; color: #666666; font-size: 11px; line-height: 1.3;">&bull; {{ point }}</td>
-                              </tr>
-                              {% endfor %}
-                            </table>
-                            {% endif %}
-                          </td>
-                        </tr>
-                      </table>
-                    </td>
-                    <!--[if mso]></td><![endif]-->
-                  </tr>
-
-                  {% else %}
-                  <!-- Odd article - full width row -->
-                  <tr>
-                    <td colspan="2" style="padding: 0 0 15px 0;">
-                      <!-- Full-width article cell -->
-                      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-left: 3px solid #003366;">
-                        <tr>
-                          {% if article1.image_cid and images_enabled %}
-                          <!-- Full-width article with image (120px) -->
-                          <td width="132" style="padding: 15px 12px; vertical-align: top;">
-                            <img src="cid:{{ article1.image_cid }}" alt="{{ article1.title }}" width="120" height="80" style="display: block; border-radius: 3px; object-fit: cover;" />
-                          </td>
-                          <td style="padding: 15px 12px 15px 0; vertical-align: top;">
-                          {% else %}
-                          <!-- Full-width article without image -->
-                          <td style="padding: 15px 12px; vertical-align: top;">
-                          {% endif %}
-                            <p style="margin: 0 0 4px 0; font-size: 14px; font-weight: bold; line-height: 1.3;">
-                              {% if article1.url %}<a href="{{ article1.url }}" style="color: #003366; text-decoration: none;">{{ article1.title }}</a>{% else %}{{ article1.title }}{% endif %}
-                            </p>
-                            {% if article1.all_sources and article1.all_sources|length > 1 %}
-                            <p style="margin: 0 0 6px 0; color: #888888; font-size: 11px;">Quellen: {{ article1.all_sources|join(", ") }}</p>
-                            {% elif article1.source %}
-                            <p style="margin: 0 0 6px 0; color: #888888; font-size: 11px;">{{ article1.source }}</p>
-                            {% endif %}
-                            {% if article1.summary %}
-                            <p style="margin: 0 0 6px 0; color: #555555; font-size: 13px; line-height: 1.4;">{{ article1.summary }}</p>
-                            {% endif %}
-                            {% if article1.key_points %}
-                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top: 4px;">
-                              {% for point in article1.key_points %}
-                              <tr>
-                                <td style="padding: 2px 0 2px 8px; color: #666666; font-size: 12px; line-height: 1.3;">&bull; {{ point }}</td>
-                              </tr>
-                              {% endfor %}
-                            </table>
-                            {% endif %}
-                          </td>
-                        </tr>
-                      </table>
-                    </td>
-                  </tr>
-                  {% endif %}
                   {% endfor %}
                 </table>
-                {% endif %}
                 {% endfor %}
               {% else %}
                 <p style="color: #666666; font-style: italic;">Keine relevanten Artikel heute.</p>

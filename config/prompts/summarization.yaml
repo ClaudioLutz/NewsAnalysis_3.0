@@ -30,7 +30,7 @@ user_prompt_template: |
     "summary": "1-2 sentence summary (max 50 words) with only facts from the article",
     "key_points": ["short bullet point 1", "short bullet point 2"],
     "entities": {{
-      "companies": ["company names mentioned"],
+      "companies": ["1-3 MAIN companies the article is ABOUT (not all mentioned)"],
       "people": ["key people mentioned"],
       "locations": ["locations mentioned"],
       "topics": ["main topics/themes"]
@@ -64,6 +64,8 @@ output_schema:
           type: array
           items:
             type: string
+          maxItems: 3
+          description: "Only the 1-3 main companies the article is primarily ABOUT, not all mentioned"
         people:
           type: array
           items:

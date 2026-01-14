@@ -51,6 +51,7 @@ class DigestGenerator:
         digest_date: date,
         run_id: str,
         incremental: bool = False,
+        today_only: bool = False,
     ) -> DailyDigest:
         """Generate daily digest with meta-analysis.
 
@@ -58,6 +59,7 @@ class DigestGenerator:
             digest_date: Date for the digest.
             run_id: Pipeline run ID.
             incremental: Whether to create incremental update (version > 1).
+            today_only: Only include articles collected today (for testing).
 
         Returns:
             Daily digest object.
@@ -79,7 +81,7 @@ class DigestGenerator:
 
         try:
             # Get summarized articles for the date
-            articles = await self._get_digest_articles(digest_date)
+            articles = await self._get_digest_articles(digest_date, today_only=today_only)
 
             if not articles:
                 logger.warning("no_articles_for_digest", date=str(digest_date))
@@ -131,30 +133,43 @@ class DigestGenerator:
             logger.error("digest_generation_failed", error=str(e))
             raise PipelineError(f"Digest generation failed: {e}") from e
 
-    async def _get_digest_articles(self, digest_date: date) -> List[Article]:
+    async def _get_digest_articles(self, digest_date: date, today_only: bool = False) -> List[Article]:
         """Get summarized articles for digest, including duplicates grouped together.
 
         Args:
             digest_date: Date to get articles for (used for logging only).
+            today_only: Only include articles collected today (for testing).
 
         Returns:
             List of summarized articles not yet included in a digest.
             Duplicate articles are grouped with their canonical article.
         """
-        # Get all summarized articles not yet in a digest (including duplicates)
-        # Note: We don't filter by published_at date because:
-        # 1. Articles may be published over multiple days
-        # 2. The pipeline may run at midnight causing date mismatches
-        # 3. What matters is: summarized + not yet digested
-        cursor = self.article_repo.db.execute(
+        # Build query with optional date filter
+        if today_only:
+            # Filter to only articles collected today (based on collected_at date)
+            query = """
+                SELECT * FROM articles
+                WHERE pipeline_stage = 'summarized'
+                AND processing_status = 'completed'
+                AND (included_in_digest = FALSE OR included_in_digest IS NULL)
+                AND DATE(collected_at) = DATE('now')
+                ORDER BY feed_priority ASC, confidence DESC, published_at DESC
             """
-            SELECT * FROM articles
-            WHERE pipeline_stage = 'summarized'
-            AND processing_status = 'completed'
-            AND (included_in_digest = FALSE OR included_in_digest IS NULL)
-            ORDER BY feed_priority ASC, confidence DESC, published_at DESC
-            """,
-        )
+            logger.info("filtering_articles_today_only")
+        else:
+            # Get all summarized articles not yet in a digest (including duplicates)
+            # Note: We don't filter by published_at date because:
+            # 1. Articles may be published over multiple days
+            # 2. The pipeline may run at midnight causing date mismatches
+            # 3. What matters is: summarized + not yet digested
+            query = """
+                SELECT * FROM articles
+                WHERE pipeline_stage = 'summarized'
+                AND processing_status = 'completed'
+                AND (included_in_digest = FALSE OR included_in_digest IS NULL)
+                ORDER BY feed_priority ASC, confidence DESC, published_at DESC
+            """
+        cursor = self.article_repo.db.execute(query)
 
         rows = cursor.fetchall()
 
