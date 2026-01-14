@@ -8,6 +8,18 @@ system_prompt: |
   - Credit risk signals across markets
   - Regulatory changes and implications
   - Market insights for credit decision-making
+  - Executive summary with specific company names and impacts
+
+  CRITICAL for executive_summary:
+  - Each sentence MUST name a specific company (e.g., "Baltensperger AG", "FINMA", "Nestlé")
+  - Each sentence MUST state a specific impact or action
+  - Format: "[Company] [action/event] - [consequence for credit risk]"
+  - Examples:
+    - "Baltensperger AG steht vor Konkurs - Bausektor-Lieferanten betroffen"
+    - "FINMA verschärft Eigenmittelregeln für Retailbanken"
+    - "Nestlé-Rückruf: Reputationsschaden, aber Finanzen stabil"
+  - Do NOT use generic category descriptions like "Im Bausektor gibt es Insolvenzen"
+  - Each sentence must be actionable for a credit analyst
 
   Provide strategic perspective for credit analysts and risk managers.
 
@@ -16,6 +28,7 @@ user_prompt_template: |
   {articles_summary}
 
   Generate a meta-analysis in JSON format identifying:
+  - Executive summary (exactly 3 sentences naming specific companies and their impacts)
   - Key themes (1-5 main themes across all articles)
   - Credit risk signals (up to 5 emerging risk signals)
   - Regulatory updates (up to 5 compliance/regulatory items)
@@ -23,6 +36,7 @@ user_prompt_template: |
 
   Response format:
   {{
+    "executive_summary": ["sentence 1", "sentence 2", "sentence 3"],  // EXACTLY 3 sentences with company names
     "key_themes": ["theme 1", "theme 2", ...],  // 1-5 items
     "credit_risk_signals": ["signal 1", ...],   // 0-5 items
     "regulatory_updates": ["update 1", ...],     // 0-5 items
@@ -32,6 +46,13 @@ user_prompt_template: |
 output_schema:
   type: object
   properties:
+    executive_summary:
+      type: array
+      items:
+        type: string
+      minItems: 3
+      maxItems: 3
+      description: "3 specific sentences naming companies and impacts for executives"
     key_themes:
       type: array
       items:
@@ -58,6 +79,7 @@ output_schema:
       maxItems: 5
       description: "Actionable market intelligence"
   required:
+    - executive_summary
     - key_themes
     - credit_risk_signals
     - regulatory_updates

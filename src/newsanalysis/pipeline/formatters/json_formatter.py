@@ -57,6 +57,7 @@ class JSONFormatter:
                 "run_id": digest.run_id,
             },
             "meta_analysis": {
+                "executive_summary": digest.meta_analysis.executive_summary,
                 "key_themes": digest.meta_analysis.key_themes,
                 "credit_risk_signals": digest.meta_analysis.credit_risk_signals,
                 "regulatory_updates": digest.meta_analysis.regulatory_updates,

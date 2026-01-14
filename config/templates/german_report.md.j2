@@ -8,6 +8,16 @@
 
 ---
 
+{% if meta_analysis.executive_summary %}
+## Heute in 30 Sekunden
+
+{% for sentence in meta_analysis.executive_summary %}
+{{ loop.index }}. {{ sentence }}
+{% endfor %}
+
+---
+
+{% endif %}
 ## Zusammenfassung
 
 ### Hauptthemen

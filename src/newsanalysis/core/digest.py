@@ -16,6 +16,13 @@ class MetaAnalysis(BaseModel):
     regulatory_updates: List[str] = Field(default_factory=list, max_length=5)
     market_insights: List[str] = Field(default_factory=list, max_length=5)
 
+    # Executive summary for "Heute in 30 Sekunden" section
+    executive_summary: List[str] = Field(
+        default_factory=list,
+        max_length=3,
+        description="3 specific sentences naming companies and impacts for executives"
+    )
+
 
 class DailyDigest(BaseModel):
     """Daily news digest."""

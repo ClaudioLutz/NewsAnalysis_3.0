@@ -72,6 +72,7 @@ class HtmlEmailFormatter:
         html = template.render(
             date=digest_date,
             article_count=digest_data.get("article_count", 0),
+            executive_summary=meta_analysis.get("executive_summary", []),
             key_themes=meta_analysis.get("key_themes", []),
             credit_risk_signals=meta_analysis.get("credit_risk_signals", []),
             regulatory_updates=meta_analysis.get("regulatory_updates", []),
@@ -236,6 +237,43 @@ class HtmlEmailFormatter:
         except (ValueError, TypeError):
             return date_str
 
+    def get_top_article_title(
+        self, digest_data: Dict[str, Any], max_length: int = 50
+    ) -> Optional[str]:
+        """Extract the top article title for subject line.
+
+        Args:
+            digest_data: Dictionary from DigestRepository.get_digest_by_date().
+            max_length: Maximum title length before truncation.
+
+        Returns:
+            Top article title, truncated if necessary, or None if no articles.
+        """
+        articles_by_topic = self._parse_articles(digest_data.get("json_output"))
+
+        if not articles_by_topic:
+            return None
+
+        # Get first article from first topic (highest priority)
+        for topic_articles in articles_by_topic.values():
+            if topic_articles:
+                title = topic_articles[0].get("title", "")
+
+                if not title:
+                    continue
+
+                # Truncate at word boundary if too long
+                if len(title) > max_length:
+                    truncated = title[:max_length]
+                    last_space = truncated.rfind(" ")
+                    if last_space > max_length // 2:
+                        return truncated[:last_space] + "..."
+                    return truncated + "..."
+
+                return title
+
+        return None
+
     def format_with_images(
         self, digest_data: Dict[str, Any], include_images: bool = True
     ) -> Tuple[str, Dict[str, str]]:
@@ -283,6 +321,7 @@ class HtmlEmailFormatter:
         html = template.render(
             date=digest_date,
             article_count=digest_data.get("article_count", 0),
+            executive_summary=meta_analysis.get("executive_summary", []),
             key_themes=meta_analysis.get("key_themes", []),
             credit_risk_signals=meta_analysis.get("credit_risk_signals", []),
             regulatory_updates=meta_analysis.get("regulatory_updates", []),

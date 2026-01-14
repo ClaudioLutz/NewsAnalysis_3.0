@@ -779,14 +779,14 @@ class PipelineOrchestrator:
                 include_images=True
             )
 
-            # Create subject
-            try:
-                subject = self.config.email_subject_template.format(
-                    date=digest_date.strftime("%d.%m.%Y"),
-                    count=digest_data["article_count"],
-                )
-            except KeyError:
-                subject = f"Creditreform News-Digest: {digest_date.strftime('%d.%m.%Y')} - {digest_data['article_count']} relevante Artikel"
+            # Create dynamic subject line with top article title
+            top_title = formatter.get_top_article_title(digest_data, max_length=50)
+
+            if top_title:
+                subject = f"Creditreform News-Digest: {top_title}"
+            else:
+                # Fallback to date-based subject when no articles
+                subject = f"Creditreform News-Digest: {digest_date.strftime('%d.%m.%Y')}"
 
             # Send email with images
             with OutlookEmailService() as email_service:

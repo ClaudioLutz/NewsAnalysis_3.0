@@ -128,18 +128,14 @@ def email(
             formatter = HtmlEmailFormatter()
             html_body = formatter.format(digest_data)
 
-            # Create subject line
-            try:
-                subject = config.email_subject_template.format(
-                    date=target_date.strftime("%d.%m.%Y"),
-                    count=digest_data["article_count"],
-                )
-            except KeyError as e:
-                click.echo(
-                    f"Warning: Invalid email_subject_template - missing {e}. Using default.",
-                    err=True,
-                )
-                subject = f"Creditreform News-Digest: {target_date.strftime('%d.%m.%Y')} - {digest_data['article_count']} relevante Artikel"
+            # Create dynamic subject line with top article title
+            top_title = formatter.get_top_article_title(digest_data, max_length=50)
+
+            if top_title:
+                subject = f"Creditreform News-Digest: {top_title}"
+            else:
+                # Fallback to date-based subject when no articles
+                subject = f"Creditreform News-Digest: {target_date.strftime('%d.%m.%Y')}"
 
             # Send or preview
             if preview:

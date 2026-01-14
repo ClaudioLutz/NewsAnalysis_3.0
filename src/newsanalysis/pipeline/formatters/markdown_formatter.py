@@ -35,6 +35,13 @@ class MarkdownFormatter:
             lines.append("## Executive Summary")
             lines.append("")
 
+            # Executive summary - 3 key sentences
+            if digest.meta_analysis.executive_summary:
+                lines.append("### Heute in 30 Sekunden")
+                for i, sentence in enumerate(digest.meta_analysis.executive_summary, 1):
+                    lines.append(f"{i}. {sentence}")
+                lines.append("")
+
             if digest.meta_analysis.key_themes:
                 lines.append("### Key Themes")
                 for theme in digest.meta_analysis.key_themes:
