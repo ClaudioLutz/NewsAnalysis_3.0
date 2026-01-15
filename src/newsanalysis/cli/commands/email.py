@@ -1,7 +1,8 @@
 """Email digest command."""
 
+import json
 from datetime import date
-from typing import Optional
+from typing import Any, Dict, Optional
 
 import click
 
@@ -12,6 +13,51 @@ from newsanalysis.database.repository import ArticleRepository
 from newsanalysis.services.digest_formatter import HtmlEmailFormatter
 from newsanalysis.services.email_service import OutlookEmailService
 from newsanalysis.utils.logging import setup_logging
+
+
+def _filter_today_articles(digest_data: Dict[str, Any], target_date: date) -> Dict[str, Any]:
+    """Filter digest articles to only include those published on target date.
+
+    Args:
+        digest_data: The digest data dictionary from the repository.
+        target_date: The date to filter articles by.
+
+    Returns:
+        Modified digest_data with only today's articles.
+    """
+    json_output = digest_data.get("json_output")
+    if not json_output:
+        return digest_data
+
+    try:
+        data = json.loads(json_output)
+    except (json.JSONDecodeError, TypeError):
+        return digest_data
+
+    # Get articles list from the digest structure
+    articles = data.get("articles", [])
+    if not articles:
+        return digest_data
+
+    # Filter articles by published_at date
+    target_str = target_date.isoformat()
+    filtered_articles = []
+
+    for article in articles:
+        published_at = article.get("published_at", "")
+        # Check if published_at starts with target date (handles datetime strings)
+        if published_at and published_at.startswith(target_str):
+            filtered_articles.append(article)
+
+    # Update the articles in the data structure
+    data["articles"] = filtered_articles
+
+    # Update digest data with filtered articles
+    result = dict(digest_data)
+    result["json_output"] = json.dumps(data)
+    result["article_count"] = len(filtered_articles)
+
+    return result
 
 
 @click.command()
@@ -35,10 +81,17 @@ from newsanalysis.utils.logging import setup_logging
     default=None,
     help="Override recipient email address",
 )
+@click.option(
+    "--today-only",
+    is_flag=True,
+    default=False,
+    help="Only include articles published today in the digest",
+)
 def email(
     preview: bool,
     digest_date: Optional[date],
     recipient: Optional[str],
+    today_only: bool,
 ) -> None:
     """Send the news digest email via Outlook.
 
@@ -124,6 +177,13 @@ def email(
                 f"Found digest v{digest_data['version']} with "
                 f"{digest_data['article_count']} articles"
             )
+
+            # Filter to today's articles if requested
+            if today_only:
+                digest_data = _filter_today_articles(digest_data, target_date)
+                click.echo(
+                    f"Filtered to {digest_data['article_count']} articles from today"
+                )
 
             # Format as HTML with embedded images
             click.echo("Formatting email with images...")

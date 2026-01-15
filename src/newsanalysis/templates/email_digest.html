@@ -72,41 +72,34 @@
                   </tr>
                 </table>
 
-                <!-- Articles in single column -->
+                <!-- Articles in single column with text wrap -->
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse: collapse;">
                   {% for article in topic_articles %}
                   <tr>
                     <td style="padding: 12px 0; border-bottom: 1px solid #e0e0e0;">
-                      <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
-                        <tr>
-                          {% if article.image_cid and images_enabled %}
-                          <td width="100" valign="top" style="padding-right: 12px;">
-                            <img src="cid:{{ article.image_cid }}" alt="" width="90" height="60" style="display: block; border-radius: 3px;" />
-                          </td>
-                          {% endif %}
-                          <td valign="top">
-                            <p style="margin: 0 0 4px 0; font-size: 14px; font-weight: bold; line-height: 1.3;">
-                              {% if article.url %}<a href="{{ article.url }}" style="color: #003366; text-decoration: none;">{{ article.title }}</a>{% else %}{{ article.title }}{% endif %}
-                            </p>
-                            {% if article.companies %}
-                            <p style="margin: 0 0 4px 0; color: #cc6600; font-size: 12px; font-weight: bold;">{{ article.companies[:3]|join(", ") }}</p>
-                            {% endif %}
-                            {% if article.all_sources and article.all_sources|length > 1 %}
-                            <p style="margin: 0 0 4px 0; color: #888888; font-size: 11px;">Quellen: {{ article.all_sources|join(", ") }}</p>
-                            {% elif article.source %}
-                            <p style="margin: 0 0 4px 0; color: #888888; font-size: 11px;">{{ article.source }}</p>
-                            {% endif %}
-                            {% if article.summary %}
-                            <p style="margin: 0 0 4px 0; color: #555555; font-size: 12px; line-height: 1.4;">{{ article.summary }}</p>
-                            {% endif %}
-                            {% if article.key_points %}
-                            {% for point in article.key_points %}
-                            <p style="margin: 0; color: #666666; font-size: 11px; line-height: 1.3;">&bull; {{ point }}</p>
-                            {% endfor %}
-                            {% endif %}
-                          </td>
-                        </tr>
-                      </table>
+                      {% if article.image_cid and images_enabled %}
+                      <img src="cid:{{ article.image_cid }}" alt="" width="90" height="60" align="left" style="float: left; margin: 0 12px 8px 0; border-radius: 3px;" />
+                      {% endif %}
+                      <p style="margin: 0 0 4px 0; font-size: 14px; font-weight: bold; line-height: 1.3;">
+                        {% if article.url %}<a href="{{ article.url }}" style="color: #003366; text-decoration: none;">{{ article.title }}</a>{% else %}{{ article.title }}{% endif %}
+                      </p>
+                      {% if article.companies %}
+                      <p style="margin: 0 0 4px 0; color: #cc6600; font-size: 12px; font-weight: bold;">{{ article.companies[:3]|join(", ") }}</p>
+                      {% endif %}
+                      {% if article.all_sources and article.all_sources|length > 1 %}
+                      <p style="margin: 0 0 4px 0; color: #888888; font-size: 11px;">Quellen: {{ article.all_sources|join(", ") }}</p>
+                      {% elif article.source %}
+                      <p style="margin: 0 0 4px 0; color: #888888; font-size: 11px;">{{ article.source }}</p>
+                      {% endif %}
+                      {% if article.summary %}
+                      <p style="margin: 0 0 4px 0; color: #555555; font-size: 12px; line-height: 1.4;">{{ article.summary }}</p>
+                      {% endif %}
+                      {% if article.key_points %}
+                      {% for point in article.key_points %}
+                      <p style="margin: 0; color: #666666; font-size: 11px; line-height: 1.3;">&bull; {{ point }}</p>
+                      {% endfor %}
+                      {% endif %}
+                      <div style="clear: both;"></div>
                     </td>
                   </tr>
                   {% endfor %}
