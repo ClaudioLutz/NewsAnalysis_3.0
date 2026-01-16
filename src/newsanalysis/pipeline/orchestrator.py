@@ -215,7 +215,7 @@ class PipelineOrchestrator:
 
                 # Stage 6: Email Sending (if enabled and digest was generated)
                 if digest_count > 0 and self.config.email_auto_send:
-                    email_sent = await self._run_email_sending()
+                    email_sent = await self._run_email_sending(pipeline_stats=stats)
                     stats["email_sent"] = 1 if email_sent else 0
 
             # Complete pipeline run
@@ -751,8 +751,11 @@ class PipelineOrchestrator:
             logger.error("digest_file_write_failed", error=str(e))
             # Don't raise - files are secondary to database
 
-    async def _run_email_sending(self) -> bool:
+    async def _run_email_sending(self, pipeline_stats: Optional[Dict[str, int]] = None) -> bool:
         """Send digest email to configured recipients.
+
+        Args:
+            pipeline_stats: Optional dict with collected, filtered, rejected, deduplicated counts.
 
         Returns:
             True if email was sent successfully, False otherwise.
@@ -777,7 +780,8 @@ class PipelineOrchestrator:
             formatter = HtmlEmailFormatter(article_repository=self.repository)
             html_body, image_cid_mapping = formatter.format_with_images(
                 digest_data,
-                include_images=True
+                include_images=True,
+                pipeline_stats=pipeline_stats
             )
 
             # Create dynamic subject line with top article title
