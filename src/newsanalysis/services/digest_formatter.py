@@ -13,6 +13,17 @@ from newsanalysis.utils.logging import get_logger
 
 logger = get_logger(__name__)
 
+# High-risk topics that should be visually emphasized
+HIGH_RISK_TOPICS = {
+    "insolvency_bankruptcy",
+    "credit_risk",
+    "business_scams",
+    "ecommerce_fraud",
+}
+
+# Confidence threshold for elevated risk display
+HIGH_CONFIDENCE_THRESHOLD = 0.85
+
 
 class HtmlEmailFormatter:
     """Formats news digests as Outlook-compatible HTML emails.
@@ -147,6 +158,13 @@ class HtmlEmailFormatter:
                 entities = article.get("entities", {})
                 companies = entities.get("companies", []) if entities else []
 
+                # Determine risk level based on topic and confidence
+                confidence = article.get("confidence", 0)
+                risk_level = self._determine_risk_level(topic, confidence)
+
+                # Extract relevance keywords from entities
+                relevance_keywords = self._extract_relevance_keywords(entities, topic)
+
                 articles_by_topic[topic].append({
                     "id": article.get("id"),  # Add article ID for image lookup
                     "title": article.get("title", "Untitled"),
@@ -157,8 +175,10 @@ class HtmlEmailFormatter:
                     "summary": summary,
                     "key_points": article.get("key_points", [])[:2],
                     "topic": topic,
-                    "confidence": article.get("confidence", 0),
+                    "confidence": confidence,
                     "companies": companies,  # Company names for display
+                    "risk_level": risk_level,  # "elevated" or "standard"
+                    "relevance_keywords": relevance_keywords,  # Why this article is relevant
                 })
 
             # Sort articles within each topic by confidence (descending)
@@ -205,6 +225,53 @@ class HtmlEmailFormatter:
         if last_space > max_length // 2:
             return truncated[:last_space] + "..."
         return truncated + "..."
+
+    def _determine_risk_level(self, topic: str, confidence: float) -> str:
+        """Determine visual risk level for an article.
+
+        Args:
+            topic: Article topic classification.
+            confidence: Confidence score of the classification.
+
+        Returns:
+            "elevated" for high-risk articles, "standard" otherwise.
+        """
+        # High-risk topic with high confidence = elevated risk
+        if topic in HIGH_RISK_TOPICS and confidence >= HIGH_CONFIDENCE_THRESHOLD:
+            return "elevated"
+        return "standard"
+
+    def _extract_relevance_keywords(
+        self, entities: Dict[str, Any], topic: str
+    ) -> List[str]:
+        """Extract relevance keywords explaining why an article is relevant.
+
+        Args:
+            entities: Extracted entities from the article.
+            topic: Article topic classification.
+
+        Returns:
+            List of relevance keywords (max 3).
+        """
+        keywords = []
+
+        if not entities:
+            return keywords
+
+        # Add topic keywords (most relevant to why article was selected)
+        entity_topics = entities.get("topics", [])
+        if entity_topics:
+            # Take first 2 topic keywords
+            keywords.extend(entity_topics[:2])
+
+        # Add company names if relevant
+        companies = entities.get("companies", [])
+        if companies and len(keywords) < 3:
+            # Add first company if we have room
+            keywords.append(companies[0])
+
+        # Limit to 3 keywords
+        return keywords[:3]
 
     def _format_date(self, date_str: str | None) -> str:
         """Format date string in German style.

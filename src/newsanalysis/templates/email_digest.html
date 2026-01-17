@@ -98,11 +98,17 @@
                   </tr>
                 </table>
 
-                <!-- Articles in single column -->
+                <!-- Articles in single column with visual hierarchy -->
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse: collapse;">
                   {% for article in topic_articles %}
                   <tr>
-                    <td style="padding: 12px 0; border-bottom: 1px solid #e0e0e0;">
+                    {% if article.risk_level == 'elevated' %}
+                    <!-- Elevated Risk: Red left border, light red background -->
+                    <td style="padding: 12px; margin: 8px 0; border-left: 4px solid #cc0000; background-color: #fff5f5; border-bottom: 1px solid #e0e0e0;">
+                    {% else %}
+                    <!-- Standard: Blue left border -->
+                    <td style="padding: 12px; padding-left: 12px; border-left: 3px solid #003366; border-bottom: 1px solid #e0e0e0;">
+                    {% endif %}
                       <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                         <tr>
                           {% if article.image_cid and images_enabled %}
@@ -111,8 +117,11 @@
                           </td>
                           {% endif %}
                           <td valign="top">
+                            {% if article.risk_level == 'elevated' %}
+                            <p style="margin: 0 0 4px 0; font-size: 10px; font-weight: bold; color: #cc0000; text-transform: uppercase; letter-spacing: 0.5px;">&#9632; Erhöhtes Risiko</p>
+                            {% endif %}
                             <p style="margin: 0 0 4px 0; font-size: 14px; font-weight: bold; line-height: 1.3;">
-                              {% if article.url %}<a href="{{ article.url }}" class="link-primary" style="color: #003366; text-decoration: none;">{{ article.title }}</a>{% else %}<span class="text-body">{{ article.title }}</span>{% endif %}
+                              {% if article.url %}<a href="{{ article.url }}" class="link-primary" style="color: {% if article.risk_level == 'elevated' %}#990000{% else %}#003366{% endif %}; text-decoration: none;">{{ article.title }}</a>{% else %}<span class="text-body">{{ article.title }}</span>{% endif %}
                             </p>
                             {% if article.companies %}
                             <p style="margin: 0 0 4px 0; color: #cc6600; font-size: 12px; font-weight: bold;">{{ article.companies[:3]|join(", ") }}</p>
@@ -129,6 +138,9 @@
                             {% for point in article.key_points %}
                             <p class="text-secondary" style="margin: 0; color: #666666; font-size: 11px; line-height: 1.3;">&bull; {{ point }}</p>
                             {% endfor %}
+                            {% endif %}
+                            {% if article.relevance_keywords %}
+                            <p style="margin: 6px 0 0 0; color: #006699; font-size: 11px; font-style: italic;">&rarr; Relevant: {{ article.relevance_keywords|join(", ") }}</p>
                             {% endif %}
                           </td>
                         </tr>

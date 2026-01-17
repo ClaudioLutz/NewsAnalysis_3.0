@@ -181,6 +181,24 @@ feeds:
     enabled: true
 
   # Tier 3: General News (1-day retention)
+  # 20 Minuten - Popular Swiss news
+  - name: "20 Minuten"
+    type: "rss"
+    url: "https://www.20min.ch/sitemaps/de/news.xml"
+    priority: 3
+    max_age_hours: 24
+    rate_limit_seconds: 2.0
+    enabled: true
+
+  # Blick - Swiss tabloid news
+  - name: "Blick"
+    type: "rss"
+    url: "https://www.blick.ch/rss.xml"
+    priority: 3
+    max_age_hours: 24
+    rate_limit_seconds: 2.0
+    enabled: true
+
   # NZZ - Multiple feeds for comprehensive coverage
   - name: "NZZ Recent"
     type: "rss"
