@@ -146,13 +146,22 @@ class HtmlEmailFormatter:
                 # Smart truncate summary at sentence boundary
                 summary = self._truncate_summary(article.get("summary", ""))
 
-                # Handle duplicate sources (grouped articles)
+                # Handle duplicate sources (grouped articles) with URLs
                 duplicate_sources = article.get("duplicate_sources", [])
-                all_sources = [article.get("source", "")]
+                # Build source objects with name and URL
+                source_links = []
+                main_source = article.get("source", "")
+                main_url = article.get("url", "")
+                if main_source:
+                    source_links.append({"name": main_source, "url": main_url})
                 if duplicate_sources:
-                    all_sources.extend([dup.get("source", "") for dup in duplicate_sources])
-                # Filter out empty sources
-                all_sources = [s for s in all_sources if s]
+                    for dup in duplicate_sources:
+                        dup_source = dup.get("source", "")
+                        dup_url = dup.get("url", "")
+                        if dup_source:
+                            source_links.append({"name": dup_source, "url": dup_url})
+                # Keep flat list for backwards compatibility
+                all_sources = [s["name"] for s in source_links]
 
                 # Extract company names from entities
                 entities = article.get("entities", {})
@@ -171,6 +180,7 @@ class HtmlEmailFormatter:
                     "url": article.get("url", ""),
                     "source": article.get("source", ""),
                     "all_sources": all_sources,  # List of all sources including duplicates
+                    "source_links": source_links,  # List of {name, url} for linked sources
                     "duplicate_sources": duplicate_sources,  # Full duplicate source info
                     "summary": summary,
                     "key_points": article.get("key_points", [])[:2],
