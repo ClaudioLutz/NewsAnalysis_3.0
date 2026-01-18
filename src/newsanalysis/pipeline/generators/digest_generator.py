@@ -157,16 +157,14 @@ class DigestGenerator:
             """
             logger.info("filtering_articles_today_only")
         else:
-            # Get all summarized articles not yet in a digest (including duplicates)
-            # Note: We don't filter by published_at date because:
-            # 1. Articles may be published over multiple days
-            # 2. The pipeline may run at midnight causing date mismatches
-            # 3. What matters is: summarized + not yet digested
+            # Get summarized articles not yet in a digest, collected within last 7 days
+            # This prevents old articles from appearing if they were never properly digested
             query = """
                 SELECT * FROM articles
                 WHERE pipeline_stage = 'summarized'
                 AND processing_status = 'completed'
                 AND (included_in_digest = FALSE OR included_in_digest IS NULL)
+                AND collected_at >= datetime('now', '-7 days')
                 ORDER BY feed_priority ASC, confidence DESC, published_at DESC
             """
         cursor = self.article_repo.db.execute(query)
