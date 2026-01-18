@@ -225,6 +225,33 @@ def _display_pipeline_results(db: DatabaseConnection, run_id: str, stats: dict) 
     if stats.get("digested", 0) > 0:
         click.echo(f"  Digested:      {stats['digested']:>6} digest(s) generated")
 
+    # Feed breakdown (collected today, grouped by source)
+    feed_result = conn.execute(
+        """
+        SELECT
+            source,
+            COUNT(*) as total,
+            SUM(CASE WHEN is_match = 1 THEN 1 ELSE 0 END) as matched,
+            SUM(CASE WHEN is_match = 0 THEN 1 ELSE 0 END) as rejected
+        FROM articles
+        WHERE DATE(collected_at) = DATE('now')
+        GROUP BY source
+        ORDER BY total DESC
+        """
+    )
+    feed_rows = feed_result.fetchall()
+
+    if feed_rows:
+        click.echo("\nBy Feed (Today):")
+        click.echo(f"  {'Source':<30} | {'Total':>5} | {'Match':>5} | {'Reject':>6}")
+        click.echo("  " + "-" * 56)
+        for source, total, matched, rejected in feed_rows:
+            matched = matched or 0
+            rejected = rejected or 0
+            # Truncate long source names
+            source_display = source[:30] if len(source) <= 30 else source[:27] + "..."
+            click.echo(f"  {source_display:<30} | {total:>5} | {matched:>5} | {rejected:>6}")
+
     # API costs and tokens
     click.echo("\nAPI Usage & Costs:")
 
