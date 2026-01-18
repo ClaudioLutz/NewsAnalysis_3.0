@@ -361,6 +361,7 @@ class HtmlEmailFormatter:
         digest_data: Dict[str, Any],
         include_images: bool = True,
         pipeline_stats: Optional[Dict[str, int]] = None,
+        feed_stats: Optional[List[Dict[str, Any]]] = None,
     ) -> Tuple[str, Dict[str, str]]:
         """Format digest data as HTML email with embedded images.
 
@@ -368,6 +369,7 @@ class HtmlEmailFormatter:
             digest_data: Dictionary from DigestRepository.get_digest_by_date().
             include_images: Whether to include article images (default: True).
             pipeline_stats: Optional dict with collected, filtered, rejected, deduplicated counts.
+            feed_stats: Optional list of dicts with source, total, matched, rejected per feed.
 
         Returns:
             Tuple of (html_body, image_attachments) where image_attachments
@@ -418,6 +420,7 @@ class HtmlEmailFormatter:
             generated_at=digest_data.get("generated_at", ""),
             images_enabled=include_images,
             pipeline_stats=pipeline_stats or {},
+            feed_stats=feed_stats or [],
         )
 
         logger.debug(

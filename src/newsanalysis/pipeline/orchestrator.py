@@ -4,7 +4,7 @@ import asyncio
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from newsanalysis.core.config import Config, FeedConfig, PipelineConfig
 from newsanalysis.database.connection import DatabaseConnection
@@ -776,12 +776,16 @@ class PipelineOrchestrator:
                 logger.warning("email_skipped", reason="No digest found for today")
                 return False
 
+            # Query feed stats for today
+            feed_stats = self._get_feed_stats()
+
             # Format as HTML with images
             formatter = HtmlEmailFormatter(article_repository=self.repository)
             html_body, image_cid_mapping = formatter.format_with_images(
                 digest_data,
                 include_images=True,
-                pipeline_stats=pipeline_stats
+                pipeline_stats=pipeline_stats,
+                feed_stats=feed_stats,
             )
 
             # Create dynamic subject line with top article title
@@ -821,6 +825,40 @@ class PipelineOrchestrator:
         except Exception as e:
             logger.error("email_send_failed", error=str(e))
             return False
+
+    def _get_feed_stats(self) -> List[Dict[str, Any]]:
+        """Get article statistics grouped by feed source for today.
+
+        Returns:
+            List of dicts with source, total, matched, rejected counts.
+        """
+        try:
+            query = """
+                SELECT
+                    source,
+                    COUNT(*) as total,
+                    SUM(CASE WHEN is_match = 1 THEN 1 ELSE 0 END) as matched,
+                    SUM(CASE WHEN is_match = 0 THEN 1 ELSE 0 END) as rejected
+                FROM articles
+                WHERE DATE(collected_at) = DATE('now')
+                GROUP BY source
+                ORDER BY total DESC
+            """
+            cursor = self.db.execute(query)
+            rows = cursor.fetchall()
+
+            return [
+                {
+                    "source": row[0] or "Unknown",
+                    "total": row[1] or 0,
+                    "matched": row[2] or 0,
+                    "rejected": row[3] or 0,
+                }
+                for row in rows
+            ]
+        except Exception as e:
+            logger.warning("feed_stats_query_failed", error=str(e))
+            return []
 
     def _generate_run_id(self) -> str:
         """Generate unique run ID.

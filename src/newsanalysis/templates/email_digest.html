@@ -184,6 +184,39 @@
             </td>
           </tr>
 
+          {% if feed_stats %}
+          <!-- Feed Breakdown -->
+          <tr>
+            <td class="section-stats" bgcolor="#f8f9fa" style="background-color: #f8f9fa; padding: 10px 30px 20px 30px;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td class="text-meta" style="color: #666666; font-size: 11px;">
+                    <p style="margin: 0 0 8px 0; font-weight: bold; color: #003366; font-size: 12px;">
+                      Nach Quelle (Heute)
+                    </p>
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="font-size: 11px; font-family: Consolas, Monaco, monospace;">
+                      <tr style="background-color: #e8e8e8;">
+                        <td style="padding: 4px 8px; border: 1px solid #ddd;"><strong>Quelle</strong></td>
+                        <td style="padding: 4px 8px; border: 1px solid #ddd; text-align: right;"><strong>Total</strong></td>
+                        <td style="padding: 4px 8px; border: 1px solid #ddd; text-align: right;"><strong>Match</strong></td>
+                        <td style="padding: 4px 8px; border: 1px solid #ddd; text-align: right;"><strong>Reject</strong></td>
+                      </tr>
+                      {% for feed in feed_stats %}
+                      <tr>
+                        <td style="padding: 3px 8px; border: 1px solid #eee;">{{ feed.source[:28] }}{% if feed.source|length > 28 %}...{% endif %}</td>
+                        <td style="padding: 3px 8px; border: 1px solid #eee; text-align: right;">{{ feed.total }}</td>
+                        <td style="padding: 3px 8px; border: 1px solid #eee; text-align: right; {% if feed.matched > 0 %}color: #006600; font-weight: bold;{% endif %}">{{ feed.matched }}</td>
+                        <td style="padding: 3px 8px; border: 1px solid #eee; text-align: right; color: #999;">{{ feed.rejected }}</td>
+                      </tr>
+                      {% endfor %}
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          {% endif %}
+
           <!-- Footer -->
           <tr>
             <td class="section-footer" bgcolor="#f5f5f5" style="background-color: #f5f5f5; padding: 20px 30px; border-radius: 0 0 4px 4px; border-top: 1px solid #e0e0e0;">
