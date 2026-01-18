@@ -6,6 +6,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, Dict, Any
+from urllib.parse import urlparse
 
 from newsanalysis.utils.logging import get_logger
 
@@ -53,8 +54,10 @@ class ImageCache:
         # Generate unique filename from URL hash
         url_hash = hashlib.md5(image_url.encode()).hexdigest()[:8]
 
-        # Determine file extension from URL
-        ext = Path(image_url).suffix or ".jpg"
+        # Determine file extension from URL (strip query parameters first)
+        parsed_url = urlparse(image_url)
+        url_path = parsed_url.path  # Gets path without query string
+        ext = Path(url_path).suffix or ".jpg"
 
         # Build filename
         featured_tag = "_featured" if is_featured else ""
