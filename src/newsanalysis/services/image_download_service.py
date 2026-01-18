@@ -1,6 +1,7 @@
 """Async image download service with retry logic and error handling."""
 
 import asyncio
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import List, Optional, Dict, Any
 from urllib.parse import urlparse
@@ -14,11 +15,22 @@ from tenacity import (
 )
 from pybreaker import CircuitBreaker, CircuitBreakerError
 
+# Use curl_cffi for TLS fingerprint impersonation (bypasses Akamai/Cloudflare)
+try:
+    from curl_cffi import requests as curl_requests
+    CURL_CFFI_AVAILABLE = True
+except ImportError:
+    CURL_CFFI_AVAILABLE = False
+    curl_requests = None
+
 from newsanalysis.core.article import Article, ArticleImage
 from newsanalysis.services.image_cache import ImageCache
 from newsanalysis.utils.logging import get_logger
 
 logger = get_logger(__name__)
+
+# Thread pool for sync curl_cffi calls
+_executor = ThreadPoolExecutor(max_workers=4)
 
 # Global circuit breaker for image downloads
 # Opens after 5 consecutive failures, stays open for 60 seconds
@@ -176,16 +188,30 @@ class ImageDownloadService:
                     return image
 
                 # Download with retry and circuit breaker
+                content = None
                 try:
                     content = await self._download_with_retry(image.image_url)
                 except CircuitBreakerError:
                     logger.warning(
                         "circuit_breaker_open",
-                        message="Image download circuit breaker is open, skipping download",
+                        message="Image download circuit breaker is open, trying curl_cffi",
                         article_id=article_id,
                         url=image.image_url,
                     )
-                    return None
+                except aiohttp.ClientResponseError as e:
+                    # Try curl_cffi for 403/404 errors (bot protection)
+                    if e.status in (403, 404) and CURL_CFFI_AVAILABLE:
+                        logger.debug(
+                            "aiohttp_blocked_trying_curl_cffi",
+                            url=image.image_url,
+                            status=e.status,
+                        )
+                    else:
+                        raise
+
+                # Fallback to curl_cffi if aiohttp failed or was blocked
+                if content is None and CURL_CFFI_AVAILABLE:
+                    content = await self._download_with_curl_cffi(image.image_url)
 
                 if content:
                     # Save to cache
@@ -288,6 +314,57 @@ class ImageDownloadService:
             raise
         except Exception as e:
             logger.error("download_error", url=url, error=str(e))
+            return None
+
+    async def _download_with_curl_cffi(self, url: str) -> Optional[bytes]:
+        """
+        Download image using curl_cffi with Chrome TLS fingerprint impersonation.
+
+        This bypasses bot protection (Akamai, Cloudflare) that blocks standard HTTP clients.
+
+        Args:
+            url: Image URL
+
+        Returns:
+            Image binary content or None
+        """
+        if not CURL_CFFI_AVAILABLE:
+            return None
+
+        def _sync_download():
+            response = curl_requests.get(
+                url,
+                impersonate="chrome",
+                timeout=self.timeout,
+                allow_redirects=True,
+            )
+            response.raise_for_status()
+
+            # Check content type
+            content_type = response.headers.get("Content-Type", "").lower()
+            if not any(t in content_type for t in ["image/", "application/octet-stream"]):
+                return None
+
+            # Check size
+            content = response.content
+            if len(content) > self.MAX_IMAGE_SIZE:
+                return None
+            if len(content) == 0:
+                return None
+
+            return content
+
+        try:
+            loop = asyncio.get_event_loop()
+            content = await loop.run_in_executor(_executor, _sync_download)
+
+            if content:
+                logger.debug("curl_cffi_image_download_success", url=url, size=len(content))
+                return content
+            return None
+
+        except Exception as e:
+            logger.warning("curl_cffi_image_download_failed", url=url, error=str(e))
             return None
 
     def _validate_image_url(self, url: str) -> bool:
