@@ -74,6 +74,9 @@ python scripts/init_db.py
 ### Basic Commands
 
 ```bash
+#connect to .venv powershell
+.\.venv\Scripts\Activate.ps1
+
 # Run full pipeline
 newsanalysis run
 
