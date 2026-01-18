@@ -1,11 +1,23 @@
 """Trafilatura-based content extractor for fast web scraping."""
 
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from typing import Optional
 
-import httpx
 import trafilatura
 from trafilatura.settings import use_config
+
+# Use curl_cffi for TLS fingerprint impersonation (bypasses Akamai/Cloudflare)
+try:
+    from curl_cffi import requests as curl_requests
+    CURL_CFFI_AVAILABLE = True
+except ImportError:
+    CURL_CFFI_AVAILABLE = False
+    curl_requests = None
+
+# Fallback to httpx if curl_cffi not available
+import httpx
 
 from newsanalysis.core.article import ScrapedContent
 from newsanalysis.core.enums import ExtractionMethod
@@ -13,6 +25,9 @@ from newsanalysis.pipeline.scrapers.base import BaseScraper
 from newsanalysis.utils.logging import get_logger
 
 logger = get_logger(__name__)
+
+# Thread pool for sync curl_cffi calls
+_executor = ThreadPoolExecutor(max_workers=4)
 
 
 class TrafilaturaExtractor(BaseScraper):
@@ -126,12 +141,55 @@ class TrafilaturaExtractor(BaseScraper):
         """
         Fetch HTML content from URL.
 
+        Uses curl_cffi with Chrome TLS fingerprint impersonation to bypass
+        bot protection (Akamai, Cloudflare). Falls back to httpx if unavailable.
+
         Args:
             url: The URL to fetch
 
         Returns:
             HTML string if successful, None if failed
         """
+        # Try curl_cffi first (bypasses TLS fingerprinting)
+        if CURL_CFFI_AVAILABLE:
+            try:
+                html = await self._fetch_with_curl_cffi(url)
+                if html:
+                    return html
+                logger.warning("curl_cffi_failed_trying_httpx", url=url)
+            except Exception as e:
+                logger.warning("curl_cffi_error", url=url, error=str(e))
+
+        # Fall back to httpx
+        return await self._fetch_with_httpx(url)
+
+    async def _fetch_with_curl_cffi(self, url: str) -> Optional[str]:
+        """Fetch HTML using curl_cffi with Chrome impersonation."""
+        def _sync_fetch():
+            response = curl_requests.get(
+                url,
+                impersonate="chrome",
+                timeout=self.timeout,
+                allow_redirects=True,
+            )
+            response.raise_for_status()
+            return response.text
+
+        try:
+            loop = asyncio.get_event_loop()
+            html = await loop.run_in_executor(_executor, _sync_fetch)
+
+            # Basic validation
+            if html and len(html) > 500:
+                return html
+            return None
+
+        except Exception as e:
+            logger.warning("curl_cffi_fetch_error", url=url, error=str(e))
+            return None
+
+    async def _fetch_with_httpx(self, url: str) -> Optional[str]:
+        """Fetch HTML using httpx (fallback method)."""
         try:
             async with httpx.AsyncClient(
                 timeout=self.timeout,

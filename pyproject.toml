@@ -24,6 +24,7 @@ dependencies = [
     "lxml>=5.0.0",
     "requests>=2.28.0",
     "httpx>=0.27.0",
+    "curl_cffi>=0.7.0",  # TLS fingerprint impersonation for bot protection bypass
     "newspaper3k>=0.2.8",
     "tenacity>=8.0.0",
     "aiohttp>=3.9.0",
@@ -110,6 +111,8 @@ module = [
     "trafilatura",
     "structlog",
     "newspaper",
+    "curl_cffi",
+    "curl_cffi.requests",
 ]
 ignore_missing_imports = true
 

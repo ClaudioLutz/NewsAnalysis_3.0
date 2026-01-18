@@ -184,8 +184,58 @@ feeds:
   # 20 Minuten - Popular Swiss news
   - name: "20 Minuten"
     type: "rss"
-    url: "https://www.20min.ch/sitemaps/de/news.xml"
+    url: "https://partner-feeds.20min.ch/rss/20minuten/schweiz"
     priority: 3
+    max_age_hours: 24
+    rate_limit_seconds: 2.0
+    enabled: true
+
+  # 20 Minuten Wirtschaft - Business news (higher relevance)
+  - name: "20 Minuten Wirtschaft"
+    type: "rss"
+    url: "https://partner-feeds.20min.ch/rss/20minuten/wirtschaft"
+    priority: 2
+    max_age_hours: 24
+    rate_limit_seconds: 2.0
+    enabled: true
+
+  # 20 Minuten Regional - Local business news (bankruptcies, closures, expansions)
+  - name: "20 Minuten Zürich"
+    type: "rss"
+    url: "https://partner-feeds.20min.ch/rss/20minuten/regionen/zuerich"
+    priority: 2
+    max_age_hours: 24
+    rate_limit_seconds: 2.0
+    enabled: true
+
+  - name: "20 Minuten Basel"
+    type: "rss"
+    url: "https://partner-feeds.20min.ch/rss/20minuten/regionen/basel"
+    priority: 2
+    max_age_hours: 24
+    rate_limit_seconds: 2.0
+    enabled: true
+
+  - name: "20 Minuten Bern"
+    type: "rss"
+    url: "https://partner-feeds.20min.ch/rss/20minuten/regionen/bern"
+    priority: 2
+    max_age_hours: 24
+    rate_limit_seconds: 2.0
+    enabled: true
+
+  - name: "20 Minuten Ostschweiz"
+    type: "rss"
+    url: "https://partner-feeds.20min.ch/rss/20minuten/regionen/ostschweiz"
+    priority: 2
+    max_age_hours: 24
+    rate_limit_seconds: 2.0
+    enabled: true
+
+  - name: "20 Minuten Zentralschweiz"
+    type: "rss"
+    url: "https://partner-feeds.20min.ch/rss/20minuten/regionen/zentralschweiz"
+    priority: 2
     max_age_hours: 24
     rate_limit_seconds: 2.0
     enabled: true
@@ -195,6 +245,24 @@ feeds:
     type: "rss"
     url: "https://www.blick.ch/rss.xml"
     priority: 3
+    max_age_hours: 24
+    rate_limit_seconds: 2.0
+    enabled: true
+
+  # Blick Wirtschaft - Business news (higher relevance)
+  - name: "Blick Wirtschaft"
+    type: "rss"
+    url: "https://www.blick.ch/wirtschaft/rss.xml"
+    priority: 2
+    max_age_hours: 24
+    rate_limit_seconds: 2.0
+    enabled: true
+
+  # Blick Regional - Local news with business relevance
+  - name: "Blick Zürich"
+    type: "rss"
+    url: "https://www.blick.ch/schweiz/zuerich/rss.xml"
+    priority: 2
     max_age_hours: 24
     rate_limit_seconds: 2.0
     enabled: true

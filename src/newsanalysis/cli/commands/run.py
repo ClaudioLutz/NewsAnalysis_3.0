@@ -60,6 +60,11 @@ from newsanalysis.utils.logging import setup_logging
     is_flag=True,
     help="Only include articles collected today in digest (for testing)",
 )
+@click.option(
+    "--fresh-start-today",
+    is_flag=True,
+    help="Delete all data from today and start fresh (articles, digests, cache, etc.)",
+)
 def run(
     limit: Optional[int],
     mode: str,
@@ -70,6 +75,7 @@ def run(
     skip_digest: bool,
     reset: Optional[str],
     today_only: bool,
+    fresh_start_today: bool,
 ) -> None:
     """Run the news analysis pipeline.
 
@@ -78,6 +84,7 @@ def run(
         newsanalysis run --limit 10             # Process only 10 articles
         newsanalysis run --mode express         # Quick mode
         newsanalysis run --skip-digest          # Skip digest generation
+        newsanalysis run --fresh-start-today    # Clear today's data and run fresh
         newsanalysis run --reset digest         # Re-generate digest
         newsanalysis run --reset summarization  # Re-summarize all articles
         newsanalysis run --reset all            # Full reprocess from scratch
@@ -138,6 +145,10 @@ def run(
 
     # Initialize database connection
     db = DatabaseConnection(config.db_path)
+
+    # Handle fresh start flag (deletes all today's data)
+    if fresh_start_today:
+        _fresh_start_today(db)
 
     # Handle reset flag
     if reset:
@@ -329,20 +340,22 @@ def _reset_articles(db: DatabaseConnection, reset_type: str) -> None:
     conn = db.connect()
 
     if reset_type == "digest":
-        # Reset digested articles to summarized
+        # Reset only TODAY's digested articles to summarized (not historical ones)
+        from datetime import date
+
+        today = date.today().isoformat()
         result = conn.execute(
             """
             UPDATE articles
             SET pipeline_stage = 'summarized',
                 included_in_digest = FALSE,
                 digest_version = NULL
-            WHERE pipeline_stage = 'digested' OR included_in_digest = TRUE
-            """
+            WHERE digest_date = ?
+            """,
+            (today,),
         )
         # Also clear digest records for today
-        from datetime import date
-
-        conn.execute("DELETE FROM digests WHERE digest_date = ?", (date.today().isoformat(),))
+        conn.execute("DELETE FROM digests WHERE digest_date = ?", (today,))
         conn.commit()
         click.echo(f"Reset {result.rowcount} articles for re-digesting")
 
@@ -395,3 +408,91 @@ def _reset_articles(db: DatabaseConnection, reset_type: str) -> None:
         )
         conn.commit()
         click.echo(f"Reset {result.rowcount} articles for full reprocessing")
+
+
+def _fresh_start_today(db: DatabaseConnection) -> None:
+    """Delete all data from today for a fresh start.
+
+    Args:
+        db: Database connection.
+    """
+    from datetime import date
+
+    conn = db.connect()
+    today = date.today().isoformat()
+
+    click.echo("Fresh start: Clearing all data from today...")
+
+    # Get today's article IDs and url_hashes for foreign key cleanup
+    article_cursor = conn.execute(
+        "SELECT id, url_hash FROM articles WHERE DATE(collected_at) = DATE('now')"
+    )
+    today_articles = article_cursor.fetchall()
+    article_ids = [row[0] for row in today_articles]
+    url_hashes = [row[1] for row in today_articles if row[1]]
+
+    # Delete from child tables first (foreign key dependencies)
+    if url_hashes:
+        placeholders = ",".join("?" * len(url_hashes))
+
+        # Delete duplicate_members that reference today's articles
+        try:
+            conn.execute(
+                f"DELETE FROM duplicate_members WHERE duplicate_url_hash IN ({placeholders})",
+                url_hashes,
+            )
+        except Exception:
+            pass  # Table may not exist
+
+        # Delete duplicate_groups where canonical is today's article
+        try:
+            conn.execute(
+                f"DELETE FROM duplicate_groups WHERE canonical_url_hash IN ({placeholders})",
+                url_hashes,
+            )
+        except Exception:
+            pass  # Table may not exist
+
+    if article_ids:
+        placeholders = ",".join("?" * len(article_ids))
+
+        # Delete article_images for today's articles (has CASCADE but be explicit)
+        try:
+            conn.execute(
+                f"DELETE FROM article_images WHERE article_id IN ({placeholders})",
+                article_ids,
+            )
+        except Exception:
+            pass  # Table may not exist
+
+    # Now safe to delete today's articles
+    result = conn.execute(
+        "DELETE FROM articles WHERE DATE(collected_at) = DATE('now')"
+    )
+    articles_deleted = result.rowcount
+
+    # Delete today's digests
+    conn.execute("DELETE FROM digests WHERE digest_date = ?", (today,))
+
+    # Delete today's pipeline runs
+    conn.execute("DELETE FROM pipeline_runs WHERE DATE(started_at) = DATE('now')")
+
+    # Delete today's API calls (check column name)
+    cursor = conn.execute("PRAGMA table_info(api_calls)")
+    columns = [row[1] for row in cursor.fetchall()]
+    if "created_at" in columns:
+        conn.execute("DELETE FROM api_calls WHERE DATE(created_at) = DATE('now')")
+
+    # Delete today's cache stats
+    conn.execute("DELETE FROM cache_stats WHERE date = ?", (today,))
+
+    # Delete today's classification cache
+    try:
+        conn.execute(
+            "DELETE FROM classification_cache WHERE DATE(created_at) = DATE('now')"
+        )
+    except Exception:
+        pass  # Table may not exist
+
+    conn.commit()
+    click.echo(f"Deleted {articles_deleted} articles and related data from today")
