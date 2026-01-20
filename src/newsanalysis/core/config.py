@@ -116,6 +116,10 @@ class Config(BaseSettings):
         default=False,
         description="Automatically send email after digest generation",
     )
+    email_bcc: Optional[str] = Field(
+        default=None,
+        description="Comma-separated list of BCC email recipients",
+    )
 
     @property
     def email_recipient(self) -> Optional[str]:
@@ -130,6 +134,13 @@ class Config(BaseSettings):
         if not self.email_recipients:
             return []
         return [r.strip() for r in self.email_recipients.split(",") if r.strip()]
+
+    @property
+    def email_bcc_list(self) -> list[str]:
+        """Get list of BCC email recipients."""
+        if not self.email_bcc:
+            return []
+        return [r.strip() for r in self.email_bcc.split(",") if r.strip()]
 
     model_config = SettingsConfigDict(
         env_file=".env",

@@ -190,6 +190,7 @@ class OutlookEmailService:
         subject: str,
         html_body: str,
         image_attachments: Optional[Dict[str, str]] = None,
+        bcc: Optional[str | list[str]] = None,
         preview: bool = False,
     ) -> EmailResult:
         """Send an HTML email with embedded images via Outlook.
@@ -228,6 +229,13 @@ class OutlookEmailService:
             mail.To = recipients
             mail.Subject = subject
             mail.HTMLBody = html_body
+
+            # Set BCC recipients if provided
+            if bcc:
+                if isinstance(bcc, list):
+                    mail.BCC = "; ".join(bcc)
+                else:
+                    mail.BCC = bcc
 
             # Attach images with Content-ID if provided
             if image_attachments:

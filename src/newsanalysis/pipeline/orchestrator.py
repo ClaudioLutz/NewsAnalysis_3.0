@@ -808,6 +808,7 @@ class PipelineOrchestrator:
                     subject=subject,
                     html_body=html_body,
                     image_attachments=image_cid_mapping,
+                    bcc=self.config.email_bcc_list,
                     preview=False,
                 )
 
