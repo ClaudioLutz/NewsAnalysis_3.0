@@ -144,10 +144,9 @@ class DigestGenerator:
             List of summarized articles not yet included in a digest.
             Duplicate articles are grouped with their canonical article.
         """
-        # Build query with optional date filter
+        # Step 1: Fetch canonical (summarized) articles
         if today_only:
-            # Filter to only articles collected today (based on collected_at date)
-            query = """
+            canonical_query = """
                 SELECT * FROM articles
                 WHERE pipeline_stage = 'summarized'
                 AND processing_status = 'completed'
@@ -157,9 +156,7 @@ class DigestGenerator:
             """
             logger.info("filtering_articles_today_only")
         else:
-            # Get summarized articles not yet in a digest, collected within last 7 days
-            # This prevents old articles from appearing if they were never properly digested
-            query = """
+            canonical_query = """
                 SELECT * FROM articles
                 WHERE pipeline_stage = 'summarized'
                 AND processing_status = 'completed'
@@ -167,21 +164,57 @@ class DigestGenerator:
                 AND collected_at >= datetime('now', '-7 days')
                 ORDER BY feed_priority ASC, confidence DESC, published_at DESC
             """
-        cursor = self.article_repo.db.execute(query)
 
+        cursor = self.article_repo.db.execute(canonical_query)
         rows = cursor.fetchall()
 
-        # Convert to Article objects
-        all_articles = []
+        # Convert canonical articles to Article objects
+        canonical_articles = []
         for row in rows:
             try:
                 article = self.article_repo._row_to_article(row)
-                all_articles.append(article)
+                canonical_articles.append(article)
             except Exception as e:
                 logger.warning(
                     "article_conversion_failed", article_id=row["id"], error=str(e)
                 )
                 continue
+
+        # Step 2: Fetch duplicate articles that point to these canonicals
+        # Duplicates are not summarized, so they stay at 'scraped' stage with is_duplicate=TRUE
+        duplicate_articles = []
+        canonical_hashes = [a.url_hash for a in canonical_articles if a.url_hash]
+
+        if canonical_hashes:
+            placeholders = ",".join("?" * len(canonical_hashes))
+            duplicate_query = f"""
+                SELECT * FROM articles
+                WHERE is_duplicate = TRUE
+                AND canonical_url_hash IN ({placeholders})
+            """
+            cursor = self.article_repo.db.execute(duplicate_query, canonical_hashes)
+            dup_rows = cursor.fetchall()
+
+            for row in dup_rows:
+                try:
+                    article = self.article_repo._row_to_article(row)
+                    duplicate_articles.append(article)
+                except Exception as e:
+                    logger.warning(
+                        "duplicate_article_conversion_failed",
+                        article_id=row["id"],
+                        error=str(e),
+                    )
+                    continue
+
+            logger.info(
+                "duplicate_articles_fetched",
+                canonical_count=len(canonical_articles),
+                duplicate_count=len(duplicate_articles),
+            )
+
+        # Step 3: Combine canonical and duplicate articles for grouping
+        all_articles = canonical_articles + duplicate_articles
 
         # Group duplicate articles with their canonical versions
         grouped_articles = self._group_duplicate_articles(all_articles)
@@ -192,6 +225,8 @@ class DigestGenerator:
         logger.info(
             "articles_grouped_and_clustered",
             total_articles=len(all_articles),
+            canonical_count=len(canonical_articles),
+            duplicate_count=len(duplicate_articles),
             after_dedup_grouping=len(grouped_articles),
             after_clustering=len(clustered_articles),
         )

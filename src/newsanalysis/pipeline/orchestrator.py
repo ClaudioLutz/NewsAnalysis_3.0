@@ -228,6 +228,9 @@ class PipelineOrchestrator:
             health = self.metrics.check_health()
             logger.info("pipeline_health_check", health_status=health["status"], warnings=health["warnings"], errors=health["errors"])
 
+            # Log detailed run summary (deduplication, scrape failures, image issues)
+            self._log_run_summary()
+
             logger.info("pipeline_completed", run_id=self.run_id, stats=stats)
 
             return stats
@@ -969,3 +972,262 @@ class PipelineOrchestrator:
 
         except Exception as e:
             logger.error("failed_to_record_pipeline_completion", error=str(e))
+
+    def _log_run_summary(self) -> None:
+        """Log detailed summary of what happened to articles in this run.
+
+        Logs information about:
+        - Semantic deduplication (which articles were marked as duplicates)
+        - Scrape failures (which articles failed to scrape and why)
+        - Image extraction issues
+        """
+        try:
+            self._log_deduplication_summary()
+            self._log_scrape_failures_summary()
+            self._log_image_issues_summary()
+        except Exception as e:
+            logger.warning("run_summary_logging_failed", error=str(e))
+
+    def _log_deduplication_summary(self) -> None:
+        """Log detailed summary of deduplicated articles."""
+        try:
+            # Query duplicate groups from this run
+            query = """
+                SELECT
+                    dg.canonical_url_hash,
+                    dg.confidence,
+                    dg.duplicate_count,
+                    ca.title as canonical_title,
+                    ca.source as canonical_source
+                FROM duplicate_groups dg
+                JOIN articles ca ON dg.canonical_url_hash = ca.url_hash
+                WHERE dg.run_id = ?
+                ORDER BY dg.duplicate_count DESC
+            """
+            cursor = self.db.execute(query, (self.run_id,))
+            groups = cursor.fetchall()
+
+            if not groups:
+                logger.info("dedup_summary", message="No semantic duplicates detected in this run")
+                return
+
+            # Log summary header
+            total_duplicates = sum(row[2] for row in groups)
+            logger.info(
+                "dedup_summary",
+                total_groups=len(groups),
+                total_duplicates=total_duplicates,
+                message=f"Found {len(groups)} duplicate groups with {total_duplicates} duplicate articles"
+            )
+
+            # Log each duplicate group with its members
+            for row in groups:
+                canonical_hash, confidence, dup_count, canonical_title, canonical_source = row
+
+                # Get the duplicate articles in this group
+                member_query = """
+                    SELECT
+                        a.title,
+                        a.source,
+                        a.url
+                    FROM duplicate_members dm
+                    JOIN articles a ON dm.duplicate_url_hash = a.url_hash
+                    JOIN duplicate_groups dg ON dm.group_id = dg.id
+                    WHERE dg.canonical_url_hash = ?
+                    ORDER BY a.collected_at
+                """
+                member_cursor = self.db.execute(member_query, (canonical_hash,))
+                members = member_cursor.fetchall()
+
+                # Truncate titles for readability
+                canonical_title_short = (canonical_title[:60] + "...") if len(canonical_title) > 60 else canonical_title
+
+                logger.info(
+                    "dedup_group_detail",
+                    canonical_title=canonical_title_short,
+                    canonical_source=canonical_source,
+                    duplicate_count=dup_count,
+                    confidence=round(confidence, 2),
+                )
+
+                # Log each duplicate in the group
+                for member in members:
+                    member_title, member_source, member_url = member
+                    member_title_short = (member_title[:60] + "...") if len(member_title) > 60 else member_title
+                    logger.info(
+                        "dedup_duplicate_article",
+                        title=member_title_short,
+                        source=member_source,
+                        status="skipped (duplicate of above)",
+                    )
+
+        except Exception as e:
+            logger.warning("dedup_summary_failed", error=str(e))
+
+    def _log_scrape_failures_summary(self) -> None:
+        """Log detailed summary of articles that failed to scrape."""
+        try:
+            # Query articles that failed scraping in this run
+            query = """
+                SELECT
+                    title,
+                    source,
+                    url,
+                    error_message,
+                    error_count
+                FROM articles
+                WHERE run_id = ?
+                  AND processing_status = 'failed'
+                  AND pipeline_stage IN ('filtered', 'scraped')
+                ORDER BY source, title
+            """
+            cursor = self.db.execute(query, (self.run_id,))
+            failures = cursor.fetchall()
+
+            if not failures:
+                logger.info("scrape_failures_summary", message="No scrape failures in this run")
+                return
+
+            # Log summary header
+            logger.info(
+                "scrape_failures_summary",
+                total_failures=len(failures),
+                message=f"{len(failures)} articles failed to scrape"
+            )
+
+            # Log each failure
+            for row in failures:
+                title, source, url, error_message, error_count = row
+                title_short = (title[:60] + "...") if len(title) > 60 else title
+
+                # Extract key error type from message
+                error_type = "Unknown"
+                if error_message:
+                    if "timeout" in error_message.lower():
+                        error_type = "Timeout"
+                    elif "403" in error_message or "forbidden" in error_message.lower():
+                        error_type = "Blocked (403)"
+                    elif "404" in error_message or "not found" in error_message.lower():
+                        error_type = "Not Found (404)"
+                    elif "connection" in error_message.lower():
+                        error_type = "Connection Error"
+                    elif "both methods" in error_message.lower():
+                        error_type = "Content Extraction Failed"
+                    else:
+                        error_type = error_message[:50] if len(error_message) > 50 else error_message
+
+                logger.info(
+                    "scrape_failure_detail",
+                    title=title_short,
+                    source=source,
+                    error_type=error_type,
+                    attempts=error_count,
+                )
+
+        except Exception as e:
+            logger.warning("scrape_failures_summary_failed", error=str(e))
+
+    def _log_image_issues_summary(self) -> None:
+        """Log detailed summary of image extraction issues."""
+        try:
+            # Query articles that were scraped but have no images
+            query_no_images = """
+                SELECT
+                    a.title,
+                    a.source,
+                    a.url
+                FROM articles a
+                LEFT JOIN article_images ai ON a.id = ai.article_id
+                WHERE a.run_id = ?
+                  AND a.pipeline_stage IN ('scraped', 'summarized', 'digested')
+                  AND a.processing_status = 'completed'
+                  AND ai.id IS NULL
+                ORDER BY a.source, a.title
+            """
+            cursor = self.db.execute(query_no_images, (self.run_id,))
+            no_images = cursor.fetchall()
+
+            # Query images that failed to download (have url but no local_path)
+            query_failed_images = """
+                SELECT
+                    a.title,
+                    a.source,
+                    ai.image_url
+                FROM article_images ai
+                JOIN articles a ON ai.article_id = a.id
+                WHERE a.run_id = ?
+                  AND (ai.local_path IS NULL OR ai.local_path = '')
+                ORDER BY a.source, a.title
+            """
+            cursor = self.db.execute(query_failed_images, (self.run_id,))
+            failed_downloads = cursor.fetchall()
+
+            # Query successful image extractions for context
+            query_success = """
+                SELECT COUNT(DISTINCT a.id) as article_count, COUNT(ai.id) as image_count
+                FROM articles a
+                JOIN article_images ai ON a.id = ai.article_id
+                WHERE a.run_id = ?
+                  AND ai.local_path IS NOT NULL
+                  AND ai.local_path != ''
+            """
+            cursor = self.db.execute(query_success, (self.run_id,))
+            success_row = cursor.fetchone()
+            articles_with_images = success_row[0] if success_row else 0
+            total_images = success_row[1] if success_row else 0
+
+            # Log summary
+            logger.info(
+                "image_extraction_summary",
+                articles_with_images=articles_with_images,
+                total_images_downloaded=total_images,
+                articles_without_images=len(no_images),
+                failed_downloads=len(failed_downloads),
+            )
+
+            # Log articles without images (if any)
+            if no_images:
+                logger.info(
+                    "image_issues_no_images",
+                    count=len(no_images),
+                    message=f"{len(no_images)} articles have no images extracted"
+                )
+                for row in no_images[:10]:  # Limit to first 10 to avoid spam
+                    title, source, url = row
+                    title_short = (title[:50] + "...") if len(title) > 50 else title
+                    logger.debug(
+                        "article_no_image",
+                        title=title_short,
+                        source=source,
+                    )
+                if len(no_images) > 10:
+                    logger.info("image_issues_truncated", remaining=len(no_images) - 10)
+
+            # Log failed image downloads (if any)
+            if failed_downloads:
+                logger.info(
+                    "image_issues_failed_downloads",
+                    count=len(failed_downloads),
+                    message=f"{len(failed_downloads)} images failed to download"
+                )
+                for row in failed_downloads[:10]:  # Limit to first 10
+                    title, source, image_url = row
+                    title_short = (title[:40] + "...") if len(title) > 40 else title
+                    # Extract domain from image URL
+                    try:
+                        from urllib.parse import urlparse
+                        image_domain = urlparse(image_url).netloc
+                    except Exception:
+                        image_domain = "unknown"
+
+                    logger.debug(
+                        "image_download_failed",
+                        article_title=title_short,
+                        source=source,
+                        image_domain=image_domain,
+                    )
+                if len(failed_downloads) > 10:
+                    logger.info("image_failures_truncated", remaining=len(failed_downloads) - 10)
+
+        except Exception as e:
+            logger.warning("image_issues_summary_failed", error=str(e))
