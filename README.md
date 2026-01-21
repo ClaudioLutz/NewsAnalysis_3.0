@@ -1,8 +1,4 @@
-<p align="center">
-  <img src="https://raw.githubusercontent.com/ClaudioLutz/NewsAnalysis_3.0/main/docs/assets/logo.svg" alt="NewsAnalysis" width="120" height="120" />
-</p>
-
-<h1 align="center">NewsAnalysis 3.0</h1>
+<h1 align="center">📰 NewsAnalysis 3.0 🇨🇭</h1>
 
 <p align="center">
   <strong>AI-Powered Swiss Business News Intelligence for Credit Risk Analysis</strong>
