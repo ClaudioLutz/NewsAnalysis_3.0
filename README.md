@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/logo.png" alt="NewsAnalysis" width="120" height="120" />
+  <img src="docs/assets/logo.svg" alt="NewsAnalysis" width="120" height="120" />
 </p>
 
 <h1 align="center">NewsAnalysis 3.0</h1>

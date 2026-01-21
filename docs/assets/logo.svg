@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a365d;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2c5282;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="docGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#e2e8f0;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background circle -->
+  <circle cx="60" cy="60" r="56" fill="url(#bgGrad)" stroke="#e53e3e" stroke-width="3"/>
+
+  <!-- Document/News paper -->
+  <rect x="30" y="25" width="45" height="55" rx="3" fill="url(#docGrad)" stroke="#a0aec0" stroke-width="1"/>
+
+  <!-- Document lines (news content) -->
+  <rect x="36" y="32" width="25" height="3" rx="1" fill="#4a5568"/>
+  <rect x="36" y="39" width="33" height="2" rx="1" fill="#a0aec0"/>
+  <rect x="36" y="45" width="30" height="2" rx="1" fill="#a0aec0"/>
+  <rect x="36" y="51" width="33" height="2" rx="1" fill="#a0aec0"/>
+  <rect x="36" y="57" width="28" height="2" rx="1" fill="#a0aec0"/>
+  <rect x="36" y="63" width="33" height="2" rx="1" fill="#a0aec0"/>
+  <rect x="36" y="69" width="20" height="2" rx="1" fill="#a0aec0"/>
+
+  <!-- Magnifying glass (analysis) -->
+  <circle cx="75" cy="70" r="18" fill="none" stroke="#e53e3e" stroke-width="4"/>
+  <circle cx="75" cy="70" r="14" fill="#1a365d" fill-opacity="0.3"/>
+  <line x1="88" y1="83" x2="98" y2="93" stroke="#e53e3e" stroke-width="5" stroke-linecap="round"/>
+
+  <!-- Chart bars inside magnifying glass -->
+  <rect x="66" y="74" width="5" height="8" rx="1" fill="#48bb78"/>
+  <rect x="73" y="68" width="5" height="14" rx="1" fill="#48bb78"/>
+  <rect x="80" y="71" width="5" height="11" rx="1" fill="#48bb78"/>
+
+  <!-- Swiss cross accent (small) -->
+  <rect x="85" y="28" width="12" height="4" rx="1" fill="#e53e3e"/>
+  <rect x="89" y="24" width="4" height="12" rx="1" fill="#e53e3e"/>
+</svg>
