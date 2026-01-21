@@ -1,322 +1,343 @@
-# NewsAnalysis 3.0
+<p align="center">
+  <img src="docs/assets/logo.png" alt="NewsAnalysis" width="120" height="120" />
+</p>
 
-AI-powered Swiss news analysis for credit risk intelligence at Creditreform Switzerland.
+<h1 align="center">NewsAnalysis 3.0</h1>
+
+<p align="center">
+  <strong>AI-Powered Swiss Business News Intelligence for Credit Risk Analysis</strong>
+</p>
+
+<p align="center">
+  <a href="#features">Features</a> •
+  <a href="#quick-start">Quick Start</a> •
+  <a href="#usage">Usage</a> •
+  <a href="#architecture">Architecture</a> •
+  <a href="#documentation">Docs</a>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/python-3.11+-blue.svg" alt="Python 3.11+">
+  <img src="https://img.shields.io/badge/license-MIT-green.svg" alt="MIT License">
+  <img src="https://img.shields.io/badge/coverage-80%25+-brightgreen.svg" alt="Coverage">
+  <img src="https://img.shields.io/badge/cost-~%242.50%2Fmonth-orange.svg" alt="Cost">
+</p>
+
+---
 
 ## Overview
 
-NewsAnalysis 3.0 is a cost-optimized, modular system for automated Swiss business news collection, filtering, and analysis. It transforms high-volume news data into actionable credit risk insights through a 5-stage AI pipeline with multi-provider LLM support.
+NewsAnalysis 3.0 transforms high-volume Swiss business news into actionable credit risk intelligence. Built for **Creditreform Switzerland**, it monitors 30+ news sources, filters relevant articles using AI, and delivers structured daily digests via email.
 
-## Key Features
+**Key Benefits:**
+- **88% cost savings** via multi-provider LLM strategy (DeepSeek + Gemini)
+- **Automated daily delivery** with professional HTML email digests
+- **Swiss-focused intelligence** covering insolvency, regulatory, and market news
+- **Production-ready** with comprehensive logging, monitoring, and error handling
 
-- **Cost-Optimized**: ~$2.50/month for 100 articles/day (88% savings via multi-provider strategy)
-- **Multi-Provider LLM**: DeepSeek for classification, Gemini for summarization, OpenAI fallback
-- **Modular Pipeline**: 5 independent modules with clear interfaces
-- **Local-First**: Runs on a single server with SQLite (scales to PostgreSQL)
-- **German Output**: All summaries and digests generated in Hochdeutsch
-- **Swiss-Focused**: 18+ Swiss news sources (NZZ, SRF, Tamedia, FINMA, etc.)
-- **Production-Ready**: Comprehensive error handling, monitoring, and cost tracking
+---
 
-## Architecture
+## Features
 
-### 5-Stage Pipeline
+### Intelligent Pipeline
 
-1. **NewsCollector**: Aggregates from RSS, sitemaps, and HTML sources
-2. **ContentFilter**: AI classification (title/URL only - 90% cost reduction)
-3. **ContentScraper**: Extracts full content with Trafilatura + Playwright fallback
-4. **ArticleSummarizer**: Generates structured summaries with batch processing
-5. **DigestGenerator**: Creates daily digests with deduplication and meta-analysis
+| Stage | Description | Technology |
+|-------|-------------|------------|
+| **Collection** | Aggregates from 30+ Swiss RSS feeds | Feedparser, aiohttp |
+| **Filtering** | AI classification on title/URL only (90% cost reduction) | DeepSeek |
+| **Scraping** | Full content extraction with bot-protection bypass | Trafilatura, curl_cffi |
+| **Deduplication** | Semantic duplicate detection across sources | LLM-powered clustering |
+| **Summarization** | Structured German summaries with entity extraction | Gemini Flash |
+| **Digest** | Daily email digest with images and meta-analysis | Jinja2, Outlook |
 
-### Technology Stack
+### News Sources
 
-- **Python 3.11+**: Modern type hints and performance (Python 3.13 compatible)
-- **SQLite**: Local deployment with <100K articles
-- **Multi-Provider LLM**:
-  - **DeepSeek**: Cost-effective classification (OpenAI-compatible API)
-  - **Google Gemini**: Quality summarization and digest generation
-  - **OpenAI**: Fallback provider for reliability
-- **Trafilatura**: Fast content extraction
-- **Pydantic**: Data validation and type safety
+**Tier 1 - Government & Regulatory:**
+- FINMA (News, Sanctions)
+- SNB (Monetary Policy, Interest Rates, Press Releases)
+- Federal Administration
+- Bundesgericht (Federal Supreme Court)
 
-## Installation
+**Tier 2 - Financial Media:**
+- Finews, NZZ Business, Handelszeitung
+- FinTech News Switzerland
+
+**Tier 3 - General Swiss Media:**
+- NZZ, Tages-Anzeiger, Der Bund
+- SRF, 20 Minuten, Blick
+- Le Temps, RSI, LaRegione
+
+### Topic Coverage
+
+```
+Credit Risk        │  Insolvency/Bankruptcy  │  Regulatory Compliance
+Payment Behavior   │  Debt Collection        │  KYC/AML/Sanctions
+Economic Indicators│  Company Lifecycle      │  Board Changes
+Data Protection    │  E-Commerce Fraud       │  Market Intelligence
+```
+
+---
+
+## Quick Start
 
 ### Prerequisites
 
-- Python 3.11 or higher (Python 3.13 supported)
-- API keys (at least one required):
-  - DeepSeek API key (recommended for classification)
-  - Google API key (recommended for summarization)
-  - OpenAI API key (fallback provider)
+- Python 3.11+ (3.13 supported)
+- API keys for at least one provider:
+  - [DeepSeek](https://platform.deepseek.com/) (recommended for classification)
+  - [Google AI](https://aistudio.google.com/) (recommended for summarization)
+  - [OpenAI](https://platform.openai.com/) (fallback)
 
-### Setup
+### Installation
 
 ```bash
 # Clone repository
-git clone <repository-url>
-cd news_analysis_3.0
+git clone https://github.com/ClaudioLutz/NewsAnalysis_3.0.git
+cd NewsAnalysis_3.0
 
 # Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+python -m venv .venv
+source .venv/bin/activate  # Windows: .venv\Scripts\Activate.ps1
 
 # Install dependencies
-pip install -e ".[dev]"
+pip install -e ".[dev,email]"
 
 # Configure environment
 cp .env.example .env
 # Edit .env with your API keys
 
 # Initialize database
-python scripts/init_db.py
+python -m newsanalysis.cli.main run --limit 5
 ```
+
+### Environment Variables
+
+```bash
+# Required: At least one LLM provider
+DEEPSEEK_API_KEY=your-deepseek-key      # Classification
+GOOGLE_API_KEY=your-google-key          # Summarization & Digest
+OPENAI_API_KEY=your-openai-key          # Fallback
+
+# Optional: Email delivery
+EMAIL_RECIPIENTS=analyst@company.com
+EMAIL_AUTO_SEND=true
+```
+
+---
 
 ## Usage
 
-### Basic Commands
+### Daily Pipeline
 
 ```bash
-#connect to .venv powershell
-.\.venv\Scripts\Activate.ps1
+# Full pipeline: collect → filter → scrape → summarize → digest → email
+python -m newsanalysis.cli.main run
 
-# Run full pipeline
-newsanalysis run
+# Test with limited articles
+python -m newsanalysis.cli.main run --limit 10
 
-# Run with limit (for testing)
-newsanalysis run --limit 10
+# Skip collection (reprocess existing articles)
+python -m newsanalysis.cli.main run --skip-collection
 
-# Filter to today's articles only (for testing)
-newsanalysis run --reset digest --skip-collection --today-only
-
-# Skip specific stages
-newsanalysis run --skip-scraping
-newsanalysis run --skip-summarization
-
-# Export digest
-newsanalysis export                        # Today's digest (Markdown)
-newsanalysis export --date 2026-01-03      # Specific date
-newsanalysis export --format json          # JSON format
-newsanalysis export --format german        # German report
-
-# Show statistics
-newsanalysis stats                    # Weekly statistics
-newsanalysis stats --period today     # Today only
-newsanalysis stats --period month     # Last 30 days
-newsanalysis stats --detailed         # Detailed breakdown
-
-# Cost report
-newsanalysis cost-report              # Weekly cost report
-newsanalysis cost-report --detailed   # With daily breakdown
-newsanalysis cost-report --cache-only # Cache performance only
-
-# Health check
-newsanalysis health                   # Basic health check
-newsanalysis health --verbose         # Detailed diagnostics
+# Regenerate today's digest
+python -m newsanalysis.cli.main run --reset digest --skip-collection
 ```
 
-### Configuration
+### Pipeline Options
 
-Configuration is managed through:
-- **Environment variables** (`.env`): API keys, paths, thresholds
-- **YAML files** (`config/`): Feeds, topics, prompts
+| Option | Description |
+|--------|-------------|
+| `--limit N` | Process only N articles |
+| `--skip-collection` | Skip RSS collection |
+| `--skip-filtering` | Skip AI classification |
+| `--skip-scraping` | Skip content extraction |
+| `--skip-summarization` | Skip article summarization |
+| `--skip-digest` | Skip digest generation |
+| `--reset digest` | Regenerate digest from existing summaries |
+| `--reset all` | Full reprocess from scratch |
+| `--today-only` | Only include today's articles in digest |
 
-## Project Structure
+### Export & Reports
+
+```bash
+# Export digest
+newsanalysis export                    # Today (Markdown)
+newsanalysis export --format json      # JSON format
+newsanalysis export --date 2026-01-15  # Specific date
+
+# Statistics
+newsanalysis stats                     # Weekly summary
+newsanalysis stats --period today      # Today only
+newsanalysis stats --detailed          # Full breakdown
+
+# Cost report
+newsanalysis cost-report               # API costs
+newsanalysis cost-report --detailed    # Daily breakdown
+
+# Health check
+newsanalysis health --verbose          # System diagnostics
+```
+
+---
+
+## Architecture
+
+### System Overview
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                         NewsAnalysis Pipeline                        │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│   ┌──────────┐   ┌──────────┐   ┌──────────┐   ┌──────────────────┐ │
+│   │   RSS    │   │    AI    │   │ Content  │   │   Deduplication  │ │
+│   │ Collect  │──▶│  Filter  │──▶│  Scrape  │──▶│   (Semantic)     │ │
+│   │ 30+ feeds│   │ DeepSeek │   │Trafilatura│   │   DeepSeek      │ │
+│   └──────────┘   └──────────┘   └──────────┘   └────────┬─────────┘ │
+│                                                          │          │
+│   ┌──────────────────────────────────────────────────────▼────────┐ │
+│   │                                                               │ │
+│   │   ┌──────────────┐   ┌──────────────┐   ┌──────────────────┐ │ │
+│   │   │  Summarize   │──▶│    Digest    │──▶│   Email Digest   │ │ │
+│   │   │   Gemini     │   │  Generation  │   │  HTML + Images   │ │ │
+│   │   └──────────────┘   └──────────────┘   └──────────────────┘ │ │
+│   │                                                               │ │
+│   └───────────────────────────────────────────────────────────────┘ │
+│                                                                      │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Technology Stack
+
+| Component | Technology | Purpose |
+|-----------|------------|---------|
+| **Runtime** | Python 3.11+ | Modern async, type hints |
+| **Database** | SQLite | Local-first, zero config |
+| **LLM - Classification** | DeepSeek | Cost-effective filtering |
+| **LLM - Summarization** | Gemini Flash | Quality German output |
+| **LLM - Fallback** | OpenAI | Reliability guarantee |
+| **Content Extraction** | Trafilatura | Fast, accurate scraping |
+| **Bot Bypass** | curl_cffi | TLS fingerprint impersonation |
+| **Validation** | Pydantic | Type safety, data integrity |
+| **Logging** | structlog | Structured JSON logs |
+| **Email** | Outlook COM | Windows native delivery |
+
+### Project Structure
 
 ```
 newsanalysis/
-├── src/newsanalysis/       # Source code (src layout)
-│   ├── cli/                # Command-line interface
-│   ├── core/               # Domain models (Pydantic)
-│   ├── pipeline/           # Pipeline modules
-│   │   ├── collectors/     # News collection
-│   │   ├── filters/        # AI filtering
-│   │   ├── scrapers/       # Content extraction
-│   │   ├── analyzers/      # Summarization
-│   │   └── digest/         # Digest generation
-│   ├── database/           # Repository layer
-│   ├── integrations/       # External APIs
-│   ├── services/           # Business logic
-│   └── utils/              # Utilities
-├── tests/                  # Test suite
-├── config/                 # Configuration files
-├── scripts/                # Maintenance scripts
-└── out/                    # Output directory
+├── src/newsanalysis/
+│   ├── cli/                 # Command-line interface
+│   ├── core/                # Domain models (Article, Digest, Config)
+│   ├── database/            # SQLite repository layer
+│   ├── integrations/        # LLM providers (DeepSeek, Gemini, OpenAI)
+│   ├── pipeline/
+│   │   ├── collectors/      # RSS, sitemap, HTML collectors
+│   │   ├── filters/         # AI classification
+│   │   ├── scrapers/        # Content extraction
+│   │   ├── dedup/           # Semantic deduplication
+│   │   ├── summarizers/     # Article summarization
+│   │   ├── generators/      # Digest generation
+│   │   ├── formatters/      # Output formatters
+│   │   ├── extractors/      # Image extraction
+│   │   └── orchestrator.py  # Pipeline coordinator
+│   ├── services/            # Email, caching, metrics
+│   ├── templates/           # Email HTML templates
+│   └── utils/               # Logging, exceptions, utilities
+├── config/
+│   ├── feeds.yaml           # RSS feed configuration
+│   ├── topics.yaml          # Classification topics
+│   └── prompts/             # LLM prompt templates
+├── tests/                   # Test suite (>80% coverage)
+├── docs/                    # Documentation
+└── out/                     # Output directory
 ```
+
+---
+
+## Cost Optimization
+
+NewsAnalysis achieves **~$2.50/month** for 100 articles/day through:
+
+| Strategy | Savings | Description |
+|----------|---------|-------------|
+| **Multi-Provider** | 88% | DeepSeek ($0.14/M) + Gemini ($0.075/M) vs OpenAI |
+| **Title-Only Filter** | 90% | Classify on title/URL before scraping |
+| **Batch Processing** | 50% | Reduced API overhead |
+| **Response Caching** | 90% | DeepSeek cache discount on repeated content |
+| **Smart Fallback** | - | OpenAI only when primary providers fail |
+
+---
 
 ## Development
 
 ### Code Quality
 
 ```bash
-# Linting and formatting
+# Linting
 ruff check src/ tests/
+
+# Formatting
 ruff format src/ tests/
 
 # Type checking
 mypy src/newsanalysis
 
-# Testing
-pytest
-pytest --cov=newsanalysis
-```
-
-### Running Tests
-
-```bash
-# All tests
+# Run tests
 pytest
 
-# Unit tests only
-pytest tests/unit
-
-# Integration tests
-pytest tests/integration
-
-# With coverage
+# Coverage report
 pytest --cov=newsanalysis --cov-report=html
 ```
 
-## Performance Targets
+### Testing
 
-- **Cost**: ~$2.50/month for 100 articles/day (multi-provider optimized)
-- **Speed**: <5 minutes for daily pipeline execution
-- **Accuracy**: >85% classification accuracy
-- **Quality**: >80% test coverage
-- **Scalability**: Handle up to 500 articles/day on single server
+```bash
+pytest tests/unit           # Unit tests
+pytest tests/integration    # Integration tests
+pytest -v --tb=short        # Verbose with short tracebacks
+```
 
-## Cost Optimization
-
-1. **Multi-Provider Strategy**: DeepSeek + Gemini = 88% savings vs OpenAI-only
-2. **Title/URL Filtering**: 90% reduction by avoiding content scraping
-3. **Batch Processing**: 50% API cost savings
-4. **DeepSeek Cache Discount**: 90% off cached inputs
-5. **Automatic Fallback**: OpenAI fallback ensures reliability without manual intervention
+---
 
 ## Production Deployment
 
-### Automated Deployment (Linux)
+### Windows Task Scheduler
+
+```powershell
+# Run twice daily (8:30 AM and 1:00 PM)
+$action = New-ScheduledTaskAction -Execute "python" -Argument "-m newsanalysis.cli.main run"
+$trigger1 = New-ScheduledTaskTrigger -Daily -At 8:30AM
+$trigger2 = New-ScheduledTaskTrigger -Daily -At 1:00PM
+Register-ScheduledTask -TaskName "NewsAnalysis" -Action $action -Trigger $trigger1,$trigger2
+```
+
+### Linux Systemd
 
 ```bash
-# Run deployment script (as root)
 sudo bash scripts/deploy.sh
-
-# Start the timer
-sudo systemctl start newsanalysis.timer
-sudo systemctl enable newsanalysis.timer
-
-# Check status
-sudo systemctl status newsanalysis.timer
+sudo systemctl enable --now newsanalysis.timer
 ```
 
-### Manual Deployment
-
-See [docs/USER_GUIDE.md](docs/USER_GUIDE.md) for detailed deployment instructions.
-
-### Maintenance
-
-```bash
-# Database backup
-bash scripts/backup.sh
-
-# Database maintenance (vacuum, analyze, cleanup)
-bash scripts/maintenance.sh
-
-# View logs
-tail -f /opt/newsanalysis/logs/pipeline.log
-```
+---
 
 ## Documentation
 
-### User Guides
+| Document | Description |
+|----------|-------------|
+| [User Guide](docs/USER_GUIDE.md) | Complete setup and usage |
+| [Troubleshooting](docs/TROUBLESHOOTING.md) | Common issues and solutions |
+| [Duplicate Handling](docs/duplicate-handling-analysis.md) | Deduplication strategy |
+| [Implementation Plan](docs/implementation_plan/) | Technical architecture |
 
-- [User Guide](docs/USER_GUIDE.md) - Complete setup and usage guide
-- [Troubleshooting Guide](docs/TROUBLESHOOTING.md) - Common issues and solutions
-
-### Technical Documentation
-
-Comprehensive technical documentation in `docs/implementation_plan/`:
-
-- System Architecture
-- LLM Cost Optimization
-- Modular Pipeline Design
-- Database Design
-- Testing & Quality Assurance
-- Deployment & Operations
-
-### Progress Tracking
-
-- [Phase 1](PROGRESS%20Phase%201.md) - Foundation
-- [Phase 2](PROGRESS%20Phase%202.md) - Pipeline Core
-- [Phase 3](PROGRESS%20Phase%203.md) - Content Processing
-- [Phase 4](PROGRESS%20Phase%204.md) - Digest Generation
-- [Phase 5](PROGRESS%20Phase%205.md) - Optimization
-- [Phase 6](PROGRESS%20Phase%206.md) - Production Readiness
-
-## Testing
-
-### Test Coverage
-
-- **Unit Tests**: Core utilities, models, services (>90% coverage)
-- **Integration Tests**: Database, pipeline, API integration (>80% coverage)
-- **End-to-End Tests**: Complete workflows (>70% coverage)
-- **Overall Coverage**: >80% target achieved
-
-### Running Tests
-
-```bash
-# All tests
-pytest
-
-# Unit tests only
-pytest tests/unit -v
-
-# Integration tests
-pytest tests/integration -v
-
-# End-to-end tests
-pytest tests/test_e2e.py -v
-
-# With coverage report
-pytest --cov=newsanalysis --cov-report=html
-open htmlcov/index.html
-```
-
-## Monitoring
-
-### Health Checks
-
-```bash
-# Quick health check
-newsanalysis health
-
-# Detailed diagnostics
-newsanalysis health --verbose
-```
-
-### Metrics Tracked
-
-- **Pipeline Runs**: Success/failure rates, duration
-- **API Costs**: Daily usage, budget utilization
-- **Cache Performance**: Hit rates, cost savings
-- **Article Processing**: Collected, filtered, scraped, summarized
-- **Database Size**: Growth tracking
-
-## Troubleshooting
-
-### Common Issues
-
-1. **High API costs**: Check cache hit rates, optimize prompts
-2. **Low classification accuracy**: Review golden dataset, adjust threshold
-3. **Slow performance**: Enable caching, optimize batch sizes
-4. **Database size**: Run maintenance script
-
-See [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) for detailed solutions.
+---
 
 ## License
 
 MIT License - Copyright (c) 2026 Creditreform Switzerland
 
-## Support
+---
 
-For questions or issues:
-1. Check [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
-2. Review [docs/USER_GUIDE.md](docs/USER_GUIDE.md)
-3. Consult technical documentation in `docs/implementation_plan/`
+<p align="center">
+  Built with precision for Swiss business intelligence
+</p>
