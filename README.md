@@ -41,7 +41,7 @@ NewsAnalysis 3.0 transforms high-volume Swiss business news into actionable cred
 |-------|-------------|------------|
 | **Collection** | Aggregates from 30+ Swiss RSS feeds | Feedparser, aiohttp |
 | **Filtering** | AI classification on title/URL only (90% cost reduction) | DeepSeek |
-| **Scraping** | Full content extraction with bot-protection bypass | Trafilatura, curl_cffi |
+| **Scraping** | Full content extraction with bot-protection bypass | Trafilatura, Playwright, curl_cffi |
 | **Deduplication** | Semantic duplicate detection across sources | LLM-powered clustering |
 | **Summarization** | Structured German summaries with entity extraction | Gemini Flash |
 | **Digest** | Daily email digest with images and meta-analysis | Jinja2, Outlook |
@@ -96,7 +96,10 @@ python -m venv .venv
 source .venv/bin/activate  # Windows: .venv\Scripts\Activate.ps1
 
 # Install dependencies
-pip install -e ".[dev,email]"
+pip install -e ".[dev,email,playwright]"
+
+# Install Playwright browsers (required for JavaScript-heavy sites like Blick)
+playwright install chromium
 
 # Configure environment
 cp .env.example .env
@@ -213,10 +216,40 @@ newsanalysis health --verbose          # System diagnostics
 | **LLM - Summarization** | Gemini Flash | Quality German output |
 | **LLM - Fallback** | OpenAI | Reliability guarantee |
 | **Content Extraction** | Trafilatura | Fast, accurate scraping |
+| **JS Rendering** | Playwright | Fallback for JavaScript sites (Blick, etc.) |
 | **Bot Bypass** | curl_cffi | TLS fingerprint impersonation |
+| **Consent Handling** | OneTrust | Auto-accepts GDPR popups |
 | **Validation** | Pydantic | Type safety, data integrity |
 | **Logging** | structlog | Structured JSON logs |
 | **Email** | Outlook COM | Windows native delivery |
+
+### Content Extraction Strategy
+
+The pipeline uses a **two-tier scraping approach** to handle diverse Swiss news sources:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     Content Extraction                          │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   Tier 1: Trafilatura (Fast)                                   │
+│   ├── curl_cffi with Chrome TLS fingerprint (bot bypass)       │
+│   ├── Falls back to httpx if curl_cffi unavailable             │
+│   └── Works for 90%+ of Swiss news sites                       │
+│                          │                                      │
+│                          ▼ (if content < 100 chars)            │
+│   Tier 2: Playwright (JavaScript Rendering)                    │
+│   ├── Full Chromium browser in headless mode                   │
+│   ├── OneTrust cookie consent auto-accept                      │
+│   ├── Waits for dynamic content to load                        │
+│   └── Required for: Blick, Next.js sites                       │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Sites requiring Playwright:**
+- `blick.ch` - Next.js with client-side rendering
+- Other JavaScript-heavy news sites
 
 ### Project Structure
 
@@ -300,12 +333,28 @@ pytest -v --tb=short        # Verbose with short tracebacks
 
 ### Windows Task Scheduler
 
+Use the provided `run_daily.bat` script which activates the venv:
+
+```batch
+@echo off
+cd /d "c:\Lokal_Code\NewsAnalysis_3.0"
+call venv\Scripts\activate.bat
+python -m newsanalysis.cli.main run
+```
+
+**Setup via PowerShell (as Admin):**
+
 ```powershell
-# Run twice daily (8:30 AM and 1:00 PM)
-$action = New-ScheduledTaskAction -Execute "python" -Argument "-m newsanalysis.cli.main run"
-$trigger1 = New-ScheduledTaskTrigger -Daily -At 8:30AM
-$trigger2 = New-ScheduledTaskTrigger -Daily -At 1:00PM
-Register-ScheduledTask -TaskName "NewsAnalysis" -Action $action -Trigger $trigger1,$trigger2
+$action = New-ScheduledTaskAction -Execute "c:\Lokal_Code\NewsAnalysis_3.0\run_daily.bat" -WorkingDirectory "c:\Lokal_Code\NewsAnalysis_3.0"
+$trigger = New-ScheduledTaskTrigger -Daily -At 8:30AM
+$settings = New-ScheduledTaskSettingsSet -WakeToRun
+Register-ScheduledTask -TaskName "NewsAnalysis Daily Run" -Action $action -Trigger $trigger -Settings $settings
+```
+
+**Required venv packages** (ensure these are installed):
+```bash
+pip install playwright curl_cffi trafilatura pywin32
+playwright install chromium
 ```
 
 ### Linux Systemd
@@ -313,6 +362,46 @@ Register-ScheduledTask -TaskName "NewsAnalysis" -Action $action -Trigger $trigge
 ```bash
 sudo bash scripts/deploy.sh
 sudo systemctl enable --now newsanalysis.timer
+```
+
+---
+
+## Troubleshooting
+
+### Content Extraction Failed
+
+If articles from specific sources (e.g., Blick) fail with "Content extraction failed":
+
+1. **Verify Playwright is installed:**
+   ```bash
+   pip install playwright
+   playwright install chromium
+   ```
+
+2. **Check curl_cffi is available:**
+   ```bash
+   pip install curl_cffi
+   ```
+
+3. **Test extraction manually:**
+   ```python
+   from newsanalysis.pipeline.scrapers.playwright_scraper import PlaywrightExtractor
+   import asyncio
+
+   async def test():
+       e = PlaywrightExtractor()
+       result = await e.extract("https://www.blick.ch/wirtschaft/...")
+       print(f"Extracted: {result.content_length if result else 0} chars")
+
+   asyncio.run(test())
+   ```
+
+### Missing Images in Digest
+
+Run the retroactive image extraction script:
+```bash
+python scripts/extract_missing_images.py
+python -m newsanalysis.cli.main run --reset digest --skip-collection
 ```
 
 ---

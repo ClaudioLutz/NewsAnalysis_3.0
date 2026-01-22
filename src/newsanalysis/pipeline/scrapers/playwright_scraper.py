@@ -180,8 +180,18 @@ class PlaywrightExtractor(BaseScraper):
                             timeout=self.timeout * 1000,
                         )
 
-                    # Wait a bit for dynamic content
-                    await page.wait_for_timeout(1000)
+                    # Handle OneTrust cookie consent popup (common on Swiss news sites)
+                    try:
+                        accept_btn = page.locator("#onetrust-accept-btn-handler")
+                        if await accept_btn.is_visible(timeout=2000):
+                            await accept_btn.click()
+                            await page.wait_for_timeout(500)  # Wait for popup to close
+                            logger.debug("cookie_consent_accepted", url=url)
+                    except Exception:
+                        pass  # No consent popup or already accepted
+
+                    # Wait for dynamic content to load
+                    await page.wait_for_timeout(2000)
 
                     # Get rendered HTML
                     html = await page.content()
