@@ -81,16 +81,7 @@ feeds:
     max_age_hours: 168
     rate_limit_seconds: 5.0
     enabled: true
-
-  # Bundesgericht - Federal Supreme Court
-  - name: "Bundesgericht Published Decisions"
-    type: "rss"
-    url: "http://relevancy.bger.ch/feeds/aza_de_pub.rss"
-    priority: 1
-    max_age_hours: 168  # 7 days
-    rate_limit_seconds: 5.0
-    enabled: true
-
+    
   # Tier 2: Financial Sources (3-day retention)
   - name: "Finews"
     type: "rss"
