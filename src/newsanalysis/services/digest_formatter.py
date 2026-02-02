@@ -13,6 +13,10 @@ from newsanalysis.utils.logging import get_logger
 
 logger = get_logger(__name__)
 
+# Logo paths (relative to project root)
+SWISS_FLAG_PATH = Path(__file__).parent.parent.parent.parent / "docs" / "assets" / "swiss-flag.png"
+SWISS_FLAG_CID = "swiss_flag"
+
 # High-risk topics that should be visually emphasized
 HIGH_RISK_TOPICS = {
     "insolvency_bankruptcy",
@@ -401,6 +405,15 @@ class HtmlEmailFormatter:
         if include_images and self.article_repository:
             image_cid_mapping = self._prepare_article_images(articles_by_topic)
 
+        # Add Swiss flag logo to image attachments
+        swiss_flag_cid = None
+        if SWISS_FLAG_PATH.exists():
+            image_cid_mapping[SWISS_FLAG_CID] = str(SWISS_FLAG_PATH)
+            swiss_flag_cid = SWISS_FLAG_CID
+            logger.debug("swiss_flag_attached", path=str(SWISS_FLAG_PATH))
+        else:
+            logger.warning("swiss_flag_not_found", path=str(SWISS_FLAG_PATH))
+
         # Format date in German style
         digest_date = self._format_date(digest_data.get("digest_date"))
 
@@ -421,6 +434,7 @@ class HtmlEmailFormatter:
             images_enabled=include_images,
             pipeline_stats=pipeline_stats or {},
             feed_stats=feed_stats or [],
+            swiss_flag_cid=swiss_flag_cid,
         )
 
         logger.debug(

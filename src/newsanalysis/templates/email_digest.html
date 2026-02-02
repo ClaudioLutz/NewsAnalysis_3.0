@@ -34,26 +34,32 @@
         <!-- Main Container - 700px (industry standard for email) -->
         <table role="presentation" width="700" cellspacing="0" cellpadding="0" class="content-container" style="background-color: #ffffff; border-radius: 4px;">
 
-          <!-- Header -->
+          <!-- Header with Swiss flag and text -->
           <tr>
-            <td style="background-color: #003366; padding: 30px; border-radius: 4px 4px 0 0;">
+            <td style="background-color: #003366; padding: 24px 30px; border-radius: 4px 4px 0 0;">
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                 <tr>
-                  <td>
-                    <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: bold; letter-spacing: -0.5px;">
+                  <!-- Swiss Flag Icon -->
+                  <td width="50" valign="middle" style="padding-right: 15px;">
+                    {% if swiss_flag_cid %}
+                    <img src="cid:{{ swiss_flag_cid }}" width="40" height="40" alt="" style="display: block;" />
+                    {% endif %}
+                  </td>
+                  <!-- Brand Text -->
+                  <td valign="middle">
+                    <h1 style="margin: 0; color: #ffffff; font-size: 26px; font-weight: bold; letter-spacing: -0.5px;">
                       Creditreform
                     </h1>
-                    <p style="margin: 4px 0 0 0; color: #a8c5e2; font-size: 14px; font-weight: normal; letter-spacing: 0.5px;">
+                    <p style="margin: 3px 0 0 0; color: #a8c5e2; font-size: 13px; font-weight: normal; letter-spacing: 0.5px;">
                       Swiss Credit Risk Intelligence
                     </p>
                   </td>
-                </tr>
-                <tr>
-                  <td style="padding-top: 16px; border-top: 1px solid #1a4d80;">
-                    <p style="margin: 0; color: #ffffff; font-size: 16px; font-weight: bold;">
+                  <!-- Right side: News-Digest info -->
+                  <td valign="middle" align="right">
+                    <p style="margin: 0; color: #ffffff; font-size: 15px; font-weight: bold;">
                       News-Digest
                     </p>
-                    <p style="margin: 4px 0 0 0; color: #a8c5e2; font-size: 14px;">
+                    <p style="margin: 3px 0 0 0; color: #a8c5e2; font-size: 13px;">
                       {{ date }} &bull; {{ article_count }} relevante Artikel
                     </p>
                   </td>
