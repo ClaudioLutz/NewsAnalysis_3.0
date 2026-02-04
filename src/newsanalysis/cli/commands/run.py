@@ -51,9 +51,14 @@ from newsanalysis.utils.logging import setup_logging
 )
 @click.option(
     "--reset",
-    type=click.Choice(["summarization", "digest", "all"]),
+    type=click.Choice(["summarization", "summarization-today", "digest", "all", "all-today"]),
     default=None,
-    help="Reset articles to reprocess: summarization (re-summarize), digest (re-digest), all (full reprocess)",
+    help="Reset articles to reprocess: digest (today's digest), summarization/all (ALL articles - dangerous!), summarization-today/all-today (today only - safe)",
+)
+@click.option(
+    "--yes", "-y",
+    is_flag=True,
+    help="Skip confirmation prompts (for automation)",
 )
 @click.option(
     "--today-only",
@@ -74,20 +79,23 @@ def run(
     skip_summarization: bool,
     skip_digest: bool,
     reset: Optional[str],
+    yes: bool,
     today_only: bool,
     fresh_start_today: bool,
 ) -> None:
     """Run the news analysis pipeline.
 
     Examples:
-        newsanalysis run                        # Run full pipeline
-        newsanalysis run --limit 10             # Process only 10 articles
-        newsanalysis run --mode express         # Quick mode
-        newsanalysis run --skip-digest          # Skip digest generation
-        newsanalysis run --fresh-start-today    # Clear today's data and run fresh
-        newsanalysis run --reset digest         # Re-generate digest
-        newsanalysis run --reset summarization  # Re-summarize all articles
-        newsanalysis run --reset all            # Full reprocess from scratch
+        newsanalysis run                            # Run full pipeline
+        newsanalysis run --limit 10                 # Process only 10 articles
+        newsanalysis run --mode express             # Quick mode
+        newsanalysis run --skip-digest              # Skip digest generation
+        newsanalysis run --fresh-start-today        # Clear today's data and run fresh
+        newsanalysis run --reset digest             # Re-generate today's digest
+        newsanalysis run --reset summarization-today  # Re-summarize today's articles (SAFE)
+        newsanalysis run --reset all-today          # Full reprocess today only (SAFE)
+        newsanalysis run --reset summarization -y   # Re-summarize ALL articles (DANGEROUS)
+        newsanalysis run --reset all -y             # Full reprocess ALL articles (DANGEROUS)
     """
     # Load configuration
     try:
@@ -152,7 +160,7 @@ def run(
 
     # Handle reset flag
     if reset:
-        _reset_articles(db, reset)
+        _reset_articles(db, reset, skip_confirm=yes)
 
     try:
         # Create and run pipeline orchestrator
@@ -357,20 +365,21 @@ def _display_pipeline_results(db: DatabaseConnection, run_id: str, stats: dict) 
     click.echo("=" * 70)
 
 
-def _reset_articles(db: DatabaseConnection, reset_type: str) -> None:
+def _reset_articles(db: DatabaseConnection, reset_type: str, skip_confirm: bool = False) -> None:
     """Reset articles to allow reprocessing.
 
     Args:
         db: Database connection.
-        reset_type: Type of reset (summarization, digest, all).
+        reset_type: Type of reset (summarization, summarization-today, digest, all, all-today).
+        skip_confirm: Skip confirmation prompt (for automation with -y flag).
     """
+    from datetime import date
+
     conn = db.connect()
+    today = date.today().isoformat()
 
     if reset_type == "digest":
         # Reset only TODAY's digested articles to summarized (not historical ones)
-        from datetime import date
-
-        today = date.today().isoformat()
         result = conn.execute(
             """
             UPDATE articles
@@ -386,8 +395,55 @@ def _reset_articles(db: DatabaseConnection, reset_type: str) -> None:
         conn.commit()
         click.echo(f"Reset {result.rowcount} articles for re-digesting")
 
+    elif reset_type == "summarization-today":
+        # Reset only TODAY's summarized/digested articles back to scraped (SAFE)
+        count_result = conn.execute(
+            """
+            SELECT COUNT(*) FROM articles
+            WHERE pipeline_stage IN ('summarized', 'digested')
+            AND DATE(collected_at) = DATE('now')
+            """
+        )
+        count = count_result.fetchone()[0]
+        click.echo(f"Will reset {count} articles from today for re-summarization")
+
+        result = conn.execute(
+            """
+            UPDATE articles
+            SET pipeline_stage = 'scraped',
+                processing_status = 'completed',
+                summary = NULL,
+                summary_title = NULL,
+                key_points = NULL,
+                entities = NULL,
+                summarized_at = NULL,
+                included_in_digest = FALSE,
+                digest_version = NULL
+            WHERE pipeline_stage IN ('summarized', 'digested')
+            AND DATE(collected_at) = DATE('now')
+            """
+        )
+        conn.commit()
+        click.echo(f"Reset {result.rowcount} articles for re-summarization")
+
     elif reset_type == "summarization":
-        # Reset summarized/digested articles back to scraped
+        # Reset ALL summarized/digested articles back to scraped (DANGEROUS - requires confirmation)
+        count_result = conn.execute(
+            """
+            SELECT COUNT(*) FROM articles
+            WHERE pipeline_stage IN ('summarized', 'digested')
+            """
+        )
+        count = count_result.fetchone()[0]
+
+        if not skip_confirm:
+            click.echo(click.style(f"\n⚠️  WARNING: This will reset ALL {count} summarized articles!", fg="yellow", bold=True))
+            click.echo("All summaries will be deleted and need to be regenerated (costs API credits).")
+            click.echo("Use --reset summarization-today for a safer option.\n")
+            if not click.confirm("Are you sure you want to continue?"):
+                click.echo("Aborted.")
+                raise click.Abort()
+
         result = conn.execute(
             """
             UPDATE articles
@@ -406,8 +462,60 @@ def _reset_articles(db: DatabaseConnection, reset_type: str) -> None:
         conn.commit()
         click.echo(f"Reset {result.rowcount} articles for re-summarization")
 
+    elif reset_type == "all-today":
+        # Reset only TODAY's articles to collected stage (SAFE)
+        count_result = conn.execute(
+            """
+            SELECT COUNT(*) FROM articles
+            WHERE DATE(collected_at) = DATE('now')
+            """
+        )
+        count = count_result.fetchone()[0]
+        click.echo(f"Will reset {count} articles from today for full reprocessing")
+
+        result = conn.execute(
+            """
+            UPDATE articles
+            SET pipeline_stage = 'collected',
+                processing_status = 'pending',
+                is_match = NULL,
+                classification_reason = NULL,
+                confidence = NULL,
+                topic = NULL,
+                filtered_at = NULL,
+                content = NULL,
+                author = NULL,
+                content_length = NULL,
+                extraction_method = NULL,
+                extraction_quality = NULL,
+                scraped_at = NULL,
+                summary = NULL,
+                summary_title = NULL,
+                key_points = NULL,
+                entities = NULL,
+                summarized_at = NULL,
+                included_in_digest = FALSE,
+                digest_version = NULL
+            WHERE DATE(collected_at) = DATE('now')
+            """
+        )
+        conn.commit()
+        click.echo(f"Reset {result.rowcount} articles for full reprocessing")
+
     elif reset_type == "all":
-        # Reset all articles to collected stage
+        # Reset ALL articles to collected stage (DANGEROUS - requires confirmation)
+        count_result = conn.execute("SELECT COUNT(*) FROM articles")
+        count = count_result.fetchone()[0]
+
+        if not skip_confirm:
+            click.echo(click.style(f"\n⚠️  WARNING: This will reset ALL {count} articles in the database!", fg="red", bold=True))
+            click.echo("All content, summaries, and processing data will be deleted.")
+            click.echo("This will require re-scraping and re-summarizing everything (significant API costs).")
+            click.echo("Use --reset all-today for a safer option.\n")
+            if not click.confirm("Are you sure you want to continue?"):
+                click.echo("Aborted.")
+                raise click.Abort()
+
         result = conn.execute(
             """
             UPDATE articles

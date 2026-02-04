@@ -68,12 +68,24 @@ Re-creates the digest from existing summarized articles and sends email:
 python -m newsanalysis.cli.main run --reset digest --skip-collection
 ```
 
-#### Reprocess All Articles
-Completely reprocesses all articles through filtering, scraping, summarization, and digest:
+#### Reprocess Today's Articles (SAFE)
+Reprocesses only today's articles through filtering, scraping, summarization, and digest:
+```bash
+python -m newsanalysis.cli.main run --reset all-today --skip-collection
+```
+
+#### Re-summarize Today's Articles (SAFE)
+Re-summarizes only today's articles:
+```bash
+python -m newsanalysis.cli.main run --reset summarization-today --skip-collection
+```
+
+#### Reprocess ALL Articles (DANGEROUS)
+Completely reprocesses ALL articles in the database. Requires confirmation or `-y` flag:
 ```bash
 python -m newsanalysis.cli.main run --reset all --skip-collection
 ```
-**Note:** This may fail with schema errors on older databases. Use with caution.
+**Warning:** This resets ALL articles, not just today's. Will prompt for confirmation.
 
 #### Extract Missing Images
 If articles don't have images extracted, run the retroactive image extraction script:
@@ -94,9 +106,12 @@ python -m newsanalysis.cli.main run --reset digest --skip-collection
 | `--skip-scraping` | Skip content scraping stage |
 | `--skip-summarization` | Skip article summarization stage |
 | `--skip-digest` | Skip digest generation stage |
-| `--reset digest` | Re-generate digest from existing summaries |
-| `--reset summarization` | Re-summarize all articles |
-| `--reset all` | Full reprocess from scratch |
+| `--reset digest` | Re-generate today's digest from existing summaries |
+| `--reset summarization-today` | Re-summarize today's articles only (SAFE) |
+| `--reset all-today` | Full reprocess today's articles only (SAFE) |
+| `--reset summarization` | Re-summarize ALL articles (DANGEROUS - prompts for confirmation) |
+| `--reset all` | Full reprocess ALL articles (DANGEROUS - prompts for confirmation) |
+| `--yes`, `-y` | Skip confirmation prompts (for automation) |
 | `--limit N` | Process only N articles (for testing) |
 | `--today-only` | Only include articles collected today in digest (for testing) |
 
@@ -126,4 +141,9 @@ python -m newsanalysis.cli.main run --reset digest --skip-collection
 **Test with only today's articles (smaller digest for layout testing):**
 ```bash
 python -m newsanalysis.cli.main run --reset digest --skip-collection --today-only
+```
+
+**Re-run today's failed pipeline (e.g., after API balance recharged):**
+```bash
+python -m newsanalysis.cli.main run --reset all-today --skip-collection
 ```
