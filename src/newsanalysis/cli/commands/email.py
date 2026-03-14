@@ -204,11 +204,11 @@ def email(
                 # Fallback to date-based subject when no articles
                 subject = f"Creditreform News-Digest: {target_date.strftime('%d.%m.%Y')}"
 
-            # Send or preview with images
+            # Email 1: Official recipients (TO list)
             if preview:
-                click.echo("\nOpening email in Outlook for preview...")
+                click.echo("\nOpening official email in Outlook for preview...")
             else:
-                click.echo("\nSending email...")
+                click.echo("\nSending official email...")
 
             result = email_service.send_html_email_with_images(
                 to=email_recipients,
@@ -223,6 +223,36 @@ def email(
             else:
                 click.echo(f"\nError: {result.message}", err=True)
                 raise click.Abort()
+
+            # Email 2: BCC recipients (separate email)
+            bcc_recipients = config.email_bcc_list
+            if bcc_recipients and not recipient:
+                sender = config.email_sender
+                if not sender:
+                    click.echo(
+                        "\nWarning: BCC recipients configured but no EMAIL_SENDER set. "
+                        "Skipping BCC email.",
+                        err=True,
+                    )
+                else:
+                    if preview:
+                        click.echo("\nOpening BCC email in Outlook for preview...")
+                    else:
+                        click.echo(f"\nSending BCC email to {len(bcc_recipients)} recipients...")
+
+                    bcc_result = email_service.send_html_email_with_images(
+                        to=sender,
+                        subject=subject,
+                        html_body=html_body,
+                        image_attachments=image_cid_mapping,
+                        bcc=bcc_recipients,
+                        preview=preview,
+                    )
+
+                    if bcc_result.success:
+                        click.echo(f"{bcc_result.message}")
+                    else:
+                        click.echo(f"\nWarning: BCC email failed: {bcc_result.message}", err=True)
 
         finally:
             db.close()

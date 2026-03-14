@@ -800,31 +800,63 @@ class PipelineOrchestrator:
                 # Fallback to date-based subject when no articles
                 subject = f"Creditreform News-Digest: {digest_date.strftime('%d.%m.%Y')}"
 
-            # Send email with images
+            # Send emails
             with OutlookEmailService() as email_service:
                 if not email_service.is_available():
                     logger.warning("email_skipped", reason="Outlook not available")
                     return False
 
+                # Email 1: Official recipients (TO list)
                 result = email_service.send_html_email_with_images(
                     to=recipients,
                     subject=subject,
                     html_body=html_body,
                     image_attachments=image_cid_mapping,
-                    bcc=self.config.email_bcc_list,
                     preview=False,
                 )
 
                 if result.success:
                     logger.info(
-                        "stage_email_sending_complete",
+                        "email_official_sent",
                         recipients=", ".join(recipients),
                         images_attached=len(image_cid_mapping),
                     )
-                    return True
                 else:
-                    logger.error("email_send_failed", error=result.message)
+                    logger.error("email_official_send_failed", error=result.message)
                     return False
+
+                # Email 2: BCC recipients (separate email)
+                bcc_recipients = self.config.email_bcc_list
+                if bcc_recipients:
+                    sender = self.config.email_sender
+                    if not sender:
+                        logger.warning(
+                            "email_bcc_skipped",
+                            reason="No EMAIL_SENDER configured for BCC email",
+                        )
+                    else:
+                        bcc_result = email_service.send_html_email_with_images(
+                            to=sender,
+                            subject=subject,
+                            html_body=html_body,
+                            image_attachments=image_cid_mapping,
+                            bcc=bcc_recipients,
+                            preview=False,
+                        )
+
+                        if bcc_result.success:
+                            logger.info(
+                                "email_bcc_sent",
+                                bcc_count=len(bcc_recipients),
+                                images_attached=len(image_cid_mapping),
+                            )
+                        else:
+                            logger.error(
+                                "email_bcc_send_failed", error=bcc_result.message
+                            )
+
+                logger.info("stage_email_sending_complete")
+                return True
 
         except Exception as e:
             logger.error("email_send_failed", error=str(e))

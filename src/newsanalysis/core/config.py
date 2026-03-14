@@ -119,6 +119,10 @@ class Config(BaseSettings):
         default=None,
         description="Comma-separated list of BCC email recipients",
     )
+    email_sender: Optional[str] = Field(
+        default=None,
+        description="Sender email address (used as TO for BCC-only email)",
+    )
 
     @property
     def email_recipient(self) -> Optional[str]:
