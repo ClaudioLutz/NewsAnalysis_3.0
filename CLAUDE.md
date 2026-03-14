@@ -156,6 +156,16 @@ Exact commands and/or manual steps to validate.
 
 What could go wrong, and how to revert/mitigate.
 
+### Documentation updates (required)
+
+In addition to the story file, **every behavioral change must also update**:
+
+* **`CLAUDE.md`** — if the change affects pipeline behavior, configuration, CLI options, key features, or development workflows
+* **`README.md`** — if the change affects user-facing features, setup instructions, environment variables, or architecture
+* **`.env.example`** — if new environment variables are added
+
+These updates must be in the **same commit** as the code change. Do not defer documentation to a separate PR.
+
 ### When a story is NOT required
 
 * Pure formatting (whitespace), typo fixes in comments/docs, or non-functional refactors that do not change behavior.
