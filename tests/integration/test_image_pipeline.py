@@ -114,11 +114,11 @@ class TestImagePipeline:
             is_featured=True,
         )
 
-        # Save image
+        # Save image (returns actual path, or None on failure)
         content = b"test image content"
-        success = temp_cache.save_image(path, content)
-        assert success is True
-        assert path.exists()
+        saved_path = temp_cache.save_image(path, content)
+        assert saved_path is not None
+        assert saved_path.exists()
 
         # Retrieve image
         retrieved = temp_cache.get_image(path)

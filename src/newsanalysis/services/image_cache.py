@@ -1,12 +1,14 @@
 """Filesystem cache manager for article images."""
 
 import hashlib
-import shutil
+import io
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
 from urllib.parse import urlparse
+
+from PIL import Image
 
 from newsanalysis.utils.logging import get_logger
 
@@ -65,18 +67,86 @@ class ImageCache:
 
         return year_month_dir / filename
 
-    def save_image(self, image_path: Path, content: bytes) -> bool:
+    # Outlook-compatible image formats
+    _OUTLOOK_COMPATIBLE_FORMATS = {"JPEG", "PNG", "GIF", "BMP"}
+
+    def _convert_for_outlook(
+        self, content: bytes, image_path: Path
+    ) -> tuple[bytes, Path]:
+        """Convert non-Outlook-compatible images (AVIF, WebP) to JPEG.
+
+        Some CDNs (e.g. 20min.ch with ?auto=format) return AVIF despite the URL
+        having a .jpg/.png extension. Outlook cannot display AVIF or WebP, so we
+        detect the actual format from the binary content and convert if needed.
+
+        Args:
+            content: Raw image bytes.
+            image_path: Intended save path (extension may be wrong).
+
+        Returns:
+            Tuple of (possibly converted content, possibly updated path).
+        """
+        try:
+            img = Image.open(io.BytesIO(content))
+        except Exception:
+            # Not a valid image or unrecognised format — save as-is
+            return content, image_path
+
+        if img.format in self._OUTLOOK_COMPATIBLE_FORMATS:
+            return content, image_path
+
+        logger.info(
+            "converting_image_for_outlook",
+            original_format=img.format,
+            path=str(image_path),
+        )
+
+        # Convert to JPEG (RGB required — AVIF/WebP may have alpha)
+        if img.mode in ("RGBA", "LA", "P", "PA"):
+            background = Image.new("RGB", img.size, (255, 255, 255))
+            if img.mode == "P":
+                img = img.convert("RGBA")
+            background.paste(img, mask=img.split()[-1])
+            img = background
+        elif img.mode != "RGB":
+            img = img.convert("RGB")
+
+        buf = io.BytesIO()
+        img.save(buf, format="JPEG", quality=90)
+        converted = buf.getvalue()
+
+        # Update file extension to .jpg
+        new_path = image_path.with_suffix(".jpg")
+
+        logger.info(
+            "image_converted_to_jpeg",
+            original_format=img.format,
+            original_size=len(content),
+            converted_size=len(converted),
+            new_path=str(new_path),
+        )
+
+        return converted, new_path
+
+    def save_image(self, image_path: Path, content: bytes) -> Optional[Path]:
         """
         Save image content to filesystem.
+
+        Automatically converts non-Outlook-compatible formats (AVIF, WebP)
+        to JPEG before saving. The returned path may differ from the input
+        if the format was converted (e.g. ``.avif`` -> ``.jpg``).
 
         Args:
             image_path: Path where image should be saved
             content: Image binary content
 
         Returns:
-            True if successful, False otherwise
+            Actual path the image was saved to, or None on failure.
         """
         try:
+            # Convert AVIF/WebP to JPEG for Outlook compatibility
+            content, image_path = self._convert_for_outlook(content, image_path)
+
             # Ensure parent directory exists
             image_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -85,11 +155,11 @@ class ImageCache:
                 f.write(content)
 
             logger.info("image_saved", path=str(image_path), size=len(content))
-            return True
+            return image_path
 
         except Exception as e:
             logger.error("image_save_failed", path=str(image_path), error=str(e))
-            return False
+            return None
 
     def get_image(self, image_path: Path) -> Optional[bytes]:
         """

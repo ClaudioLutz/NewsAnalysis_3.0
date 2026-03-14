@@ -1,3 +1,108 @@
+# NewsAnalysis 3.0
+
+AI-powered Swiss news analysis pipeline for credit risk intelligence (Creditreform Switzerland).
+Collects articles from 30+ RSS feeds, classifies them via LLM, scrapes content, deduplicates, summarizes in German, and delivers a daily HTML email digest via Outlook.
+
+---
+
+## Tech Stack
+
+- **Python** >= 3.11 (target 3.11 in tooling)
+- **CLI**: Click
+- **Models**: Pydantic v2
+- **Database**: SQLAlchemy 2.0 + SQLite (`news.db`)
+- **LLM Providers**: DeepSeek (classification), Gemini (summarization/digest), OpenAI (fallback)
+- **Scraping**: Trafilatura + Playwright (JS-heavy sites with OneTrust consent)
+- **Email**: Outlook COM via pywin32 (Windows only)
+- **Logging**: structlog (structured JSON)
+- **Templating**: Jinja2
+
+---
+
+## Development Setup
+
+```bash
+# Install all dependencies (including dev tools)
+pip install -e ".[dev,playwright,email]"
+
+# Install Playwright browsers (needed for JS-heavy sites)
+playwright install chromium
+```
+
+Environment variables are in `.env` (see `.env.example` for template).
+
+---
+
+## Code Quality
+
+All settings are in `pyproject.toml`.
+
+```bash
+# Linting (ruff)
+ruff check src/
+
+# Auto-fix lint issues
+ruff check src/ --fix
+
+# Formatting (ruff, double quotes, 100 char line length)
+ruff format src/
+
+# Type checking (mypy, strict mode)
+mypy src/
+```
+
+### Conventions
+
+- **Line length**: 100 characters
+- **Quotes**: double quotes
+- **Indent**: spaces (not tabs)
+- **Type hints**: required on all function signatures (`disallow_untyped_defs = true`)
+- **Imports**: sorted by isort rules (via ruff `I` rule)
+
+---
+
+## Testing
+
+```bash
+# Run all tests with coverage
+pytest
+
+# Run only unit tests
+pytest -m unit
+
+# Run only integration tests
+pytest -m integration
+
+# Run a specific test file
+pytest tests/unit/test_models.py
+```
+
+- Tests live in `tests/` (unit, integration, e2e)
+- Coverage target: 80%+
+- Coverage report: `htmlcov/index.html` (generated automatically)
+- Markers: `unit`, `integration`, `slow`
+
+---
+
+## Project Structure
+
+```
+src/newsanalysis/
+  cli/            # Click CLI commands (run, export, stats, cost-report, health, email)
+  core/           # Domain models (Article, Config, Digest, Enums)
+  database/       # SQLite connection, repositories, migrations
+  integrations/   # LLM provider clients (DeepSeek, Gemini, OpenAI)
+  pipeline/       # Processing stages: collectors, filters, scrapers, dedup,
+                  #   summarizers, generators, extractors, formatters, orchestrator
+  services/       # Email, digest formatting, image cache, metrics tracking
+  templates/      # Jinja2 email template
+  utils/          # Logging, exceptions, date/text utilities
+config/           # YAML configs: feeds.yaml, topics.yaml, prompts/
+docs/stories/     # Change documentation (see below)
+scripts/          # Utility scripts (backup, deploy, image extraction, etc.)
+tests/            # pytest test suite
+```
+
 ---
 
 ## Change Documentation (required)
@@ -17,13 +122,13 @@ Examples:
 * `docs/stories/20251228143005-fix-dedup-merge-logic.md`
 * `docs/stories/20251228160219-add-address-normalization-step.md`
 
-### Minimum required contents
+### Required sections
 
 Each story file must include these sections:
 
 #### Summary
 
-1–3 sentences describing the change.
+1-3 sentences describing the change.
 
 #### Context / Problem
 
@@ -146,4 +251,20 @@ python -m newsanalysis.cli.main run --reset digest --skip-collection --today-onl
 **Re-run today's failed pipeline (e.g., after API balance recharged):**
 ```bash
 python -m newsanalysis.cli.main run --reset all-today --skip-collection
+```
+
+### Other CLI Commands
+
+```bash
+# Export articles to JSON/Markdown
+python -m newsanalysis.cli.main export
+
+# Show pipeline statistics
+python -m newsanalysis.cli.main stats
+
+# Show API cost report
+python -m newsanalysis.cli.main cost-report
+
+# Health check
+python -m newsanalysis.cli.main health
 ```

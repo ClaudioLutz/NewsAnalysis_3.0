@@ -89,13 +89,13 @@ class TestImageCache:
         test_content = b"fake image content"
         image_path = image_cache.cache_root / "test_image.jpg"
 
-        # Save image
-        success = image_cache.save_image(image_path, test_content)
-        assert success is True
-        assert image_path.exists()
+        # Save image (returns the actual path, or None on failure)
+        saved_path = image_cache.save_image(image_path, test_content)
+        assert saved_path is not None
+        assert saved_path.exists()
 
         # Retrieve image
-        retrieved_content = image_cache.get_image(image_path)
+        retrieved_content = image_cache.get_image(saved_path)
         assert retrieved_content == test_content
 
     def test_get_image_nonexistent(self, image_cache):

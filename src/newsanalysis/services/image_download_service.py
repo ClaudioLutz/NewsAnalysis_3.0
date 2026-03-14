@@ -180,11 +180,14 @@ class ImageDownloadService:
                     is_featured=image.is_featured,
                 )
 
-                # Check if already cached
-                if cache_path.exists():
-                    logger.debug("image_already_cached", path=str(cache_path))
-                    image.local_path = str(cache_path)
-                    image.file_size = cache_path.stat().st_size
+                # Check if already cached (also check .jpg variant from format conversion)
+                cached_path = cache_path
+                if not cached_path.exists() and cache_path.suffix.lower() != ".jpg":
+                    cached_path = cache_path.with_suffix(".jpg")
+                if cached_path.exists():
+                    logger.debug("image_already_cached", path=str(cached_path))
+                    image.local_path = str(cached_path)
+                    image.file_size = cached_path.stat().st_size
                     return image
 
                 # Download with retry and circuit breaker
@@ -214,19 +217,20 @@ class ImageDownloadService:
                     content = await self._download_with_curl_cffi(image.image_url)
 
                 if content:
-                    # Save to cache
-                    if self.image_cache.save_image(cache_path, content):
-                        # Update image metadata
-                        image.local_path = str(cache_path)
-                        image.file_size = len(content)
-                        image.format = self._get_image_format(cache_path)
+                    # Save to cache (may convert AVIF/WebP to JPEG)
+                    saved_path = self.image_cache.save_image(cache_path, content)
+                    if saved_path:
+                        # Update image metadata with actual saved path
+                        image.local_path = str(saved_path)
+                        image.file_size = saved_path.stat().st_size
+                        image.format = self._get_image_format(saved_path)
 
                         logger.info(
                             "image_downloaded",
                             article_id=article_id,
                             url=image.image_url,
-                            size=len(content),
-                            path=str(cache_path),
+                            size=image.file_size,
+                            path=str(saved_path),
                         )
                         return image
                     else:

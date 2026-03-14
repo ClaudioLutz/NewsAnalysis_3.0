@@ -1,47 +1,44 @@
-"""Logging setup and configuration."""
+"""Logging setup and configuration.
+
+Dual-output logging strategy (structlog best practice):
+  - Terminal (stdout): human-readable, colorized via ConsoleRenderer
+  - File (logs/): machine-readable JSON via JSONRenderer, daily rotation
+"""
 
 import logging
 import sys
 from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
-from typing import Literal, Optional
+from typing import Optional
 
 import structlog
 
 
 def setup_logging(
     log_level: str = "INFO",
-    log_format: Literal["json", "console"] = "json",
     log_dir: Optional[Path] = None,
 ) -> None:
     """Configure structured logging with structlog.
 
+    Terminal output is always human-readable with colors.
+    File output is always machine-readable JSON (one JSON object per line).
+
     Args:
         log_level: Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
-        log_format: Output format ("json" or "console")
         log_dir: Directory for log files. If provided, logs will be written
             to files with daily rotation and 30-day retention.
     """
-    # Shared processors for both formats
-    shared_processors = [
+    # Shared processors for both outputs
+    shared_processors: list[structlog.types.Processor] = [
         structlog.contextvars.merge_contextvars,
         structlog.stdlib.add_logger_name,
         structlog.stdlib.add_log_level,
         structlog.stdlib.PositionalArgumentsFormatter(),
-        structlog.processors.TimeStamper(fmt="iso"),
+        structlog.processors.TimeStamper(fmt="iso", utc=True),
         structlog.processors.StackInfoRenderer(),
         structlog.processors.format_exc_info,
         structlog.processors.UnicodeDecoder(),
     ]
-
-    # Configure processors based on format
-    if log_format == "json":
-        formatter_processor = structlog.processors.JSONRenderer()
-    else:  # console format
-        formatter_processor = structlog.dev.ConsoleRenderer(colors=True)
-
-    # Console formatter for file output (human-readable, no colors for text files)
-    file_formatter_processor = structlog.dev.ConsoleRenderer(colors=False)
 
     # Configure structlog
     structlog.configure(
@@ -54,11 +51,11 @@ def setup_logging(
         cache_logger_on_first_use=True,
     )
 
-    # Console handler
+    # Console handler — human-readable, colorized
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setFormatter(
         structlog.stdlib.ProcessorFormatter(
-            processor=formatter_processor,
+            processor=structlog.dev.ConsoleRenderer(colors=True),
             foreign_pre_chain=shared_processors,
         )
     )
@@ -68,7 +65,7 @@ def setup_logging(
     root_logger.addHandler(console_handler)
     root_logger.setLevel(getattr(logging, log_level.upper()))
 
-    # File handler with daily rotation and 30-day retention
+    # File handler — machine-readable JSON, daily rotation, 30-day retention
     if log_dir:
         log_dir = Path(log_dir)
         log_dir.mkdir(parents=True, exist_ok=True)
@@ -83,7 +80,7 @@ def setup_logging(
         )
         file_handler.setFormatter(
             structlog.stdlib.ProcessorFormatter(
-                processor=file_formatter_processor,
+                processor=structlog.processors.JSONRenderer(),
                 foreign_pre_chain=shared_processors,
             )
         )

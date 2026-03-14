@@ -52,7 +52,6 @@ NewsAnalysis 3.0 transforms high-volume Swiss business news into actionable cred
 - FINMA (News, Sanctions)
 - SNB (Monetary Policy, Interest Rates, Press Releases)
 - Federal Administration
-- Bundesgericht (Federal Supreme Court)
 
 **Tier 2 - Financial Media:**
 - Finews, NZZ Business, Handelszeitung
@@ -153,7 +152,11 @@ python -m newsanalysis.cli.main run --reset digest --skip-collection
 | `--skip-summarization` | Skip article summarization |
 | `--skip-digest` | Skip digest generation |
 | `--reset digest` | Regenerate digest from existing summaries |
-| `--reset all` | Full reprocess from scratch |
+| `--reset summarization-today` | Re-summarize today's articles only (safe) |
+| `--reset all-today` | Full reprocess today's articles only (safe) |
+| `--reset summarization` | Re-summarize ALL articles (dangerous, prompts) |
+| `--reset all` | Full reprocess ALL articles (dangerous, prompts) |
+| `--yes`, `-y` | Skip confirmation prompts (for automation) |
 | `--today-only` | Only include today's articles in digest |
 
 ### Export & Reports
@@ -220,7 +223,7 @@ newsanalysis health --verbose          # System diagnostics
 | **Bot Bypass** | curl_cffi | TLS fingerprint impersonation |
 | **Consent Handling** | OneTrust | Auto-accepts GDPR popups |
 | **Validation** | Pydantic | Type safety, data integrity |
-| **Logging** | structlog | Structured JSON logs |
+| **Logging** | structlog | Dual output: colorized console + JSON log files |
 | **Email** | Outlook COM | Windows native delivery |
 
 ### Content Extraction Strategy

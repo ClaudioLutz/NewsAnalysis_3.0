@@ -91,7 +91,6 @@ class Config(BaseSettings):
 
     # Logging
     log_level: str = "INFO"
-    log_format: str = "json"
     log_dir: Path = Path("./logs")
 
     # Output
