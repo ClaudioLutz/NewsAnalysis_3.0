@@ -104,9 +104,9 @@ class ArticleSummary(BaseModel):
     @field_validator("key_points")
     @classmethod
     def validate_key_points(cls, v: List[str]) -> List[str]:
-        """Ensure at least 2 key points."""
-        if len(v) < 2:
-            raise ValueError("At least 2 key points required")
+        """Validate key points (0-4 allowed)."""
+        if len(v) > 4:
+            return v[:4]
         return v
 
 

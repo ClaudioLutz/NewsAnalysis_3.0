@@ -236,7 +236,7 @@ class HtmlEmailFormatter:
             logger.warning("json_output_parse_failed", error=str(e))
             return {}
 
-    def _truncate_summary(self, summary: str, max_length: int = 200) -> str:
+    def _truncate_summary(self, summary: str, max_length: int = 300) -> str:
         """Smart truncate summary at sentence boundary.
 
         Args:

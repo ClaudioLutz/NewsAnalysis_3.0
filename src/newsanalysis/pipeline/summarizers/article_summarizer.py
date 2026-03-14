@@ -32,11 +32,11 @@ class SummaryResponse(BaseModel):
     title: str = Field(..., description="Normalized article title")
     summary: str = Field(
         ...,
-        description="Brief summary (1-2 sentences, max 50 words)",
+        description="Stakes-first summary: impact on creditworthiness, then what happened. 1-2 sentences.",
     )
     key_points: List[str] = Field(
-        ...,
-        description="Concise key bullet points (2-3 items)",
+        default_factory=list,
+        description="0-4 key points with ONLY new facts not in the summary. Telegraphic style.",
     )
     entities: EntityList = Field(
         default_factory=EntityList,
