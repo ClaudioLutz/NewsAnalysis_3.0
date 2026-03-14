@@ -183,15 +183,23 @@
                       {{ pipeline_stats.get('duplicates_found', 0) }} Duplikate entfernt
                     </p>
                     {% endif %}
-                    <p style="margin: 0;">
+                    <p style="margin: 0 0 4px 0;">
                       <strong>Digest:</strong> {{ article_count }} Artikel
-                      {% if articles_by_topic %}
+                      {% if credit_impact_counts %}
                       &nbsp;&bull;&nbsp;
+                      <span style="color: #dc2626;">&#9660; {{ credit_impact_counts.negative }} negativ</span>,
+                      {{ credit_impact_counts.neutral }} neutral,
+                      <span style="color: #16a34a;">&#9650; {{ credit_impact_counts.positive }} positiv</span>
+                      {% endif %}
+                    </p>
+                    {% if articles_by_topic %}
+                    <p style="margin: 0;">
+                      <strong>Themen:</strong>
                       {% for topic, topic_articles in articles_by_topic.items() %}
                       {{ topic_translations.get(topic, topic) }}: {{ topic_articles|length }}{% if not loop.last %}, {% endif %}
                       {% endfor %}
-                      {% endif %}
                     </p>
+                    {% endif %}
                   </td>
                 </tr>
               </table>

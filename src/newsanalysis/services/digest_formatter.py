@@ -82,6 +82,9 @@ class HtmlEmailFormatter:
         # Format date in German style
         digest_date = self._format_date(digest_data.get("digest_date"))
 
+        # Count credit impact distribution
+        credit_impact_counts = self._count_credit_impacts(articles_by_topic)
+
         # Get template and render
         template = self.env.get_template("email_digest.html")
         html = template.render(
@@ -94,6 +97,7 @@ class HtmlEmailFormatter:
             market_insights=meta_analysis.get("market_insights", []),
             articles_by_topic=articles_by_topic,
             topic_translations=TOPIC_TRANSLATIONS,
+            credit_impact_counts=credit_impact_counts,
             version=digest_data.get("version", 1),
             generated_at=digest_data.get("generated_at", ""),
         )
@@ -304,6 +308,28 @@ class HtmlEmailFormatter:
         # Limit to 3 keywords
         return keywords[:3]
 
+    @staticmethod
+    def _count_credit_impacts(
+        articles_by_topic: Dict[str, List[Dict[str, Any]]],
+    ) -> Dict[str, int]:
+        """Count articles by credit impact level.
+
+        Args:
+            articles_by_topic: Dictionary mapping topic to article dicts.
+
+        Returns:
+            Dictionary with negative, neutral, positive counts.
+        """
+        counts = {"negative": 0, "neutral": 0, "positive": 0}
+        for articles in articles_by_topic.values():
+            for article in articles:
+                impact = article.get("credit_impact", "neutral")
+                if impact in counts:
+                    counts[impact] += 1
+                else:
+                    counts["neutral"] += 1
+        return counts
+
     def _format_date(self, date_str: str | None) -> str:
         """Format date string in German style.
 
@@ -434,6 +460,9 @@ class HtmlEmailFormatter:
         # Format date in German style
         digest_date = self._format_date(digest_data.get("digest_date"))
 
+        # Count credit impact distribution
+        credit_impact_counts = self._count_credit_impacts(articles_by_topic)
+
         # Get template and render
         template = self.env.get_template("email_digest.html")
         html = template.render(
@@ -446,6 +475,7 @@ class HtmlEmailFormatter:
             market_insights=meta_analysis.get("market_insights", []),
             articles_by_topic=articles_by_topic,
             topic_translations=TOPIC_TRANSLATIONS,
+            credit_impact_counts=credit_impact_counts,
             version=digest_data.get("version", 1),
             generated_at=digest_data.get("generated_at", ""),
             images_enabled=include_images,
