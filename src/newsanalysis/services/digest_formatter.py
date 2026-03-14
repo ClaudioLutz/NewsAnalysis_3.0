@@ -223,12 +223,17 @@ class HtmlEmailFormatter:
                     ),
                 )
 
-            # Order topics by priority, filter empty topics
-            sorted_by_topic = {
-                t: articles_by_topic[t]
-                for t in TOPIC_PRIORITY
-                if t in articles_by_topic and articles_by_topic[t]
-            }
+            # Order topics by average relevance score (highest first)
+            def _avg_confidence(topic_articles: List[Dict[str, Any]]) -> float:
+                scores = [a.get("confidence", 0) for a in topic_articles]
+                return sum(scores) / len(scores) if scores else 0
+
+            sorted_topics = sorted(
+                [t for t in articles_by_topic if articles_by_topic[t]],
+                key=lambda t: _avg_confidence(articles_by_topic[t]),
+                reverse=True,
+            )
+            sorted_by_topic = {t: articles_by_topic[t] for t in sorted_topics}
 
             return sorted_by_topic
 
