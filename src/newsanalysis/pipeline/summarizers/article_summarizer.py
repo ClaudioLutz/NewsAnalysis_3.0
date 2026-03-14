@@ -9,7 +9,7 @@ from typing import Dict, List, Optional
 from pydantic import BaseModel, Field
 
 from newsanalysis.core.article import ArticleSummary, EntityData
-from newsanalysis.core.enums import ArticleTopic
+from newsanalysis.core.enums import ArticleTopic, CreditImpact
 from newsanalysis.integrations.provider_factory import LLMClient
 from newsanalysis.services.cache_service import CacheService
 from newsanalysis.services.config_loader import load_yaml
@@ -45,6 +45,10 @@ class SummaryResponse(BaseModel):
     topic: ArticleTopic = Field(
         default=ArticleTopic.MARKET_INTELLIGENCE,
         description="Primary topic classification",
+    )
+    credit_impact: CreditImpact = Field(
+        default=CreditImpact.NEUTRAL,
+        description="Impact on creditworthiness of affected companies",
     )
 
 
@@ -132,12 +136,23 @@ class ArticleSummarizer:
                     except ValueError:
                         topic = ArticleTopic.MARKET_INTELLIGENCE
 
+                    # Extract credit_impact from entities JSON (backwards compatible)
+                    credit_impact_str = entities_dict.get("credit_impact", "neutral")
+                    # Normalize old elevated_risk to negative
+                    if credit_impact_str == "elevated_risk":
+                        credit_impact_str = "negative"
+                    try:
+                        credit_impact = CreditImpact(credit_impact_str)
+                    except ValueError:
+                        credit_impact = CreditImpact.NEUTRAL
+
                     return ArticleSummary(
                         summary_title=cached_summary["summary_title"],
                         summary=cached_summary["summary"],
                         key_points=json.loads(cached_summary["key_points"]),
                         entities=entities,
                         topic=topic,
+                        credit_impact=credit_impact,
                         summarized_at=datetime.now(),
                     )
 
@@ -184,6 +199,21 @@ class ArticleSummarizer:
                 logger.warning("invalid_topic_fallback", topic=topic_str)
                 topic = ArticleTopic.MARKET_INTELLIGENCE
 
+            # Parse credit_impact with fallback
+            credit_impact_str = content_dict.get("credit_impact", "")
+            # Normalize old elevated_risk to negative
+            if credit_impact_str == "elevated_risk":
+                credit_impact_str = "negative"
+            try:
+                credit_impact = CreditImpact(credit_impact_str) if credit_impact_str else None
+            except ValueError:
+                logger.warning("invalid_credit_impact_fallback", credit_impact=credit_impact_str)
+                credit_impact = None
+
+            # Apply rule-based fallback if LLM didn't return credit_impact
+            if credit_impact is None:
+                credit_impact = self._fallback_credit_impact(topic_str, content_dict.get("confidence", 0))
+
             # Create ArticleSummary
             summary = ArticleSummary(
                 summary_title=content_dict["title"],
@@ -191,6 +221,7 @@ class ArticleSummarizer:
                 key_points=content_dict["key_points"],
                 entities=entities,
                 topic=topic,
+                credit_impact=credit_impact,
                 summarized_at=datetime.now(),
             )
 
@@ -207,6 +238,7 @@ class ArticleSummarizer:
                         "locations": entities.locations,
                         "topics": entities.topics,
                         "topic": summary.topic.value,
+                        "credit_impact": summary.credit_impact.value,
                     }),
                 )
 
@@ -218,6 +250,7 @@ class ArticleSummarizer:
                 num_key_points=len(summary.key_points),
                 num_companies=len(entities.companies),
                 topic=summary.topic.value,
+                credit_impact=summary.credit_impact.value,
             )
 
             return summary
@@ -228,6 +261,27 @@ class ArticleSummarizer:
                 exc_info=True,
             )
             return None
+
+    @staticmethod
+    def _fallback_credit_impact(topic: str, confidence: float = 0) -> CreditImpact:
+        """Rule-based fallback when LLM doesn't return credit_impact.
+
+        Args:
+            topic: Article topic classification.
+            confidence: Classification confidence score.
+
+        Returns:
+            CreditImpact based on topic heuristic.
+        """
+        negative_topics = {
+            "insolvency_bankruptcy",
+            "credit_risk",
+            "business_scams",
+            "ecommerce_fraud",
+        }
+        if topic in negative_topics and confidence >= 0.85:
+            return CreditImpact.NEGATIVE
+        return CreditImpact.NEUTRAL
 
     async def summarize_batch(
         self,

@@ -35,7 +35,8 @@ user_prompt_template: |
       "locations": ["locations mentioned"],
       "topics": ["main topics/themes"]
     }},
-    "topic": "Primary topic - exactly ONE of: insolvency_bankruptcy, credit_risk, regulatory_compliance, data_protection, kyc_aml_sanctions, payment_behavior, debt_collection, board_changes, company_lifecycle, economic_indicators, market_intelligence, ecommerce_fraud, business_scams"
+    "topic": "Primary topic - exactly ONE of: insolvency_bankruptcy, credit_risk, regulatory_compliance, data_protection, kyc_aml_sanctions, payment_behavior, debt_collection, board_changes, company_lifecycle, economic_indicators, market_intelligence, ecommerce_fraud, business_scams",
+    "credit_impact": "Assess impact on creditworthiness of affected companies - exactly ONE of: negative (risk or deterioration: bankruptcy, insolvency, debt enforcement, revenue decline, layoffs, rating downgrade, regulatory warning, criminal proceedings, license revocation), neutral (no impact: industry news, personnel changes without impact, general market reports), positive (improvement: revenue growth, new investment, rating upgrade, regulatory relief)"
   }}
 
 output_schema:
@@ -87,10 +88,15 @@ output_schema:
       type: string
       enum: [insolvency_bankruptcy, credit_risk, regulatory_compliance, data_protection, kyc_aml_sanctions, payment_behavior, debt_collection, board_changes, company_lifecycle, economic_indicators, market_intelligence, ecommerce_fraud, business_scams]
       description: "Primary topic classification"
+    credit_impact:
+      type: string
+      enum: [negative, neutral, positive]
+      description: "Impact on creditworthiness of affected companies"
   required:
     - title
     - summary
     - key_points
     - entities
     - topic
+    - credit_impact
   additionalProperties: false

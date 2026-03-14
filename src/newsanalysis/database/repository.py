@@ -12,6 +12,7 @@ from newsanalysis.core.article import (
     ClassificationResult,
     ScrapedContent,
 )
+from newsanalysis.core.enums import CreditImpact
 from newsanalysis.pipeline.dedup.duplicate_detector import DuplicateGroup
 from newsanalysis.database.connection import DatabaseConnection
 from newsanalysis.utils.exceptions import DatabaseError
@@ -253,6 +254,7 @@ class ArticleRepository:
                     key_points = ?,
                     entities = ?,
                     topic = ?,
+                    credit_impact = ?,
                     summarized_at = ?,
                     pipeline_stage = 'summarized',
                     processing_status = 'completed',
@@ -266,6 +268,7 @@ class ArticleRepository:
                 key_points_json,
                 entities_json,
                 summary.topic.value,
+                summary.credit_impact.value if summary.credit_impact else None,
                 summary.summarized_at,
                 datetime.now(),
                 url_hash,
@@ -519,6 +522,7 @@ class ArticleRepository:
             summary=row["summary"],
             key_points=key_points,
             entities=entities,
+            credit_impact=CreditImpact(row["credit_impact"] if row["credit_impact"] != "elevated_risk" else "negative") if row["credit_impact"] else None,
             summarized_at=_parse_datetime(row["summarized_at"]),
             pipeline_stage=row["pipeline_stage"],
             processing_status=row["processing_status"],

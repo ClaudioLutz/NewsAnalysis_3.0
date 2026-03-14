@@ -64,6 +64,7 @@ CREATE TABLE IF NOT EXISTS articles (
     summary TEXT,
     key_points TEXT,  -- JSON array
     entities TEXT,  -- JSON object: {companies, people, locations, topics}
+    credit_impact TEXT,  -- elevated_risk, negative, neutral, positive
     summarized_at TIMESTAMP,
 
     -- Pipeline State

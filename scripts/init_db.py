@@ -32,6 +32,10 @@ def main() -> None:
         db = init_database(config.db_path)
         print(f"✓ Database initialized successfully at {config.db_path}")
 
+        # Run migrations for existing databases
+        _migrate_credit_impact(db)
+
+
         # Verify tables were created
         cursor = db.execute(
             "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
@@ -48,6 +52,21 @@ def main() -> None:
     except Exception as e:
         print(f"✗ Error initializing database: {e}")
         sys.exit(1)
+
+
+def _migrate_credit_impact(db) -> None:
+    """Add credit_impact column to articles table if it doesn't exist."""
+    try:
+        cursor = db.execute("PRAGMA table_info(articles)")
+        columns = {row["name"] for row in cursor.fetchall()}
+        if "credit_impact" not in columns:
+            db.execute("ALTER TABLE articles ADD COLUMN credit_impact TEXT")
+            db.commit()
+            print("  ✓ Migration: added credit_impact column to articles table")
+        else:
+            print("  ✓ credit_impact column already exists")
+    except Exception as e:
+        print(f"  ⚠ Migration warning: {e}")
 
 
 if __name__ == "__main__":

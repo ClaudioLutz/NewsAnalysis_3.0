@@ -1,388 +1,355 @@
 ---
-stepsCompleted: [1]
+stepsCompleted: [step-01-validate, step-02-design-epics, step-03-create-stories]
 inputDocuments:
-  - '_bmad-output/analysis/brainstorming-session-20260114.md'
+  - 'docs/planning-artefacts/prd.md'
   - 'docs/project-documentation/architecture.md'
-constraints:
-  - 'SQL Server company data enrichment uses mock data (no connection available)'
+  - 'docs/project-documentation/data-models.md'
+  - '_bmad-output/analysis/brainstorming-session-20260314.md'
 ---
 
-# Creditreform News-Digest Enhancement - Epic Breakdown
+# Credit Impact Classification — Epic Breakdown
 
 ## Overview
 
-This document provides the complete epic and story breakdown for enhancing the Creditreform News-Digest, transforming it from a "news aggregator" into a "credit intelligence product" for CEO demo.
-
-**The Vision:** "This automatically monitors 35 Swiss news sources, filters for credit-relevant signals, and enriches each article with our own company data."
+This document provides the complete epic and story breakdown for the Credit Impact Classification feature, decomposing the PRD requirements into implementable stories. This is a brownfield feature addition to NewsAnalysis 3.0.
 
 ## Requirements Inventory
 
 ### Functional Requirements
 
 ```
-FR1: Display articles in 2-column newspaper layout (900px container, ~430px columns)
-FR2: Show odd articles in full-width format for visual variety
-FR3: Generate "Heute in 30 Sekunden" summary with 3 concrete sentences naming specific companies and impacts
-FR4: Dynamic email subject line featuring the top story headline
-FR5: Enrich articles with Creditreform company data (credit score, payment behavior, watchlist status)
-FR6: Display company data chip showing Score, trend arrow, payment days, and CHE UID
-FR7: Group articles by company entity when company is identified
-FR8: Show "Früher berichtet" links to previous articles about the same company
-FR9: Bold company names within summary text using existing entities.companies data
-FR10: Add visual hierarchy (colored borders/backgrounds) for high-stakes articles based on severity
-FR11: Make source links clickable with "→ Originalartikel" format
-FR12: Order topics dynamically by article severity (critical first)
-FR13: Hide empty topic categories instead of showing "keine Artikel"
-FR14: Show relevance reasoning line ("→ Relevant: Konkursrisiko, Bausektor-Lieferkette")
-FR15: Implement cross-day deduplication to avoid duplicate stories across consecutive days
-FR16: Normalize company names during summarization for reliable matching
-FR17: Support multiple companies per article with compact inline chips (top 3 + "+N more")
+FR-1.1: The system can classify each summarized article with a credit_impact value of elevated_risk, negative, neutral, or positive based on the article's impact on the creditworthiness of affected companies.
+FR-1.2: The system can include credit_impact as a field in the LLM summarization prompt's JSON output schema with clear category definitions and examples.
+FR-1.3: The system can fall back to rule-based credit impact determination when the LLM does not return a credit_impact value.
+FR-1.4: The system can cache credit_impact alongside other summary fields in the content fingerprint cache.
+FR-2.1: The system can store credit_impact as a column on the articles table in the database.
+FR-2.2: The system can read and write credit_impact through the ArticleRepository.
+FR-2.3: The system can represent credit_impact as a Python enum (CreditImpact) in the domain model.
+FR-2.4: The system can include credit_impact in the digest JSON output for downstream consumption.
+FR-3.1: The system can render each article in the email digest with a visual style (border color, background color, icon, label) corresponding to its credit_impact value.
+FR-3.2: The system can display all four credit impact categories with distinct, Outlook-compatible visual styling using BMP Unicode icons.
+FR-3.3: The system can sort articles within each topic group by credit_impact priority (elevated_risk first) before sorting by confidence.
+FR-4.1: The system can display a Risiko-Radar section at the top of the email digest listing all articles classified as elevated_risk.
+FR-4.2: Each Risiko-Radar entry can show the company name(s), a short description, and the topic category.
+FR-4.3: The system can hide the Risiko-Radar section or display an appropriate message when no elevated_risk articles exist.
+FR-5.1: The system can process articles that were summarized before credit_impact was introduced (treating missing values as neutral or applying fallback logic).
+FR-5.2: The system can maintain existing pipeline behavior for all stages not directly modified by this feature.
 ```
 
 ### Non-Functional Requirements
 
 ```
-NFR1: Email must render correctly in Outlook (B2B desktop audience)
-NFR2: Mobile responsiveness is NOT required (desktop-only audience)
-NFR3: Container width: 900px (increased from 600px)
-NFR4: Maintain existing pipeline performance (<5 min total processing)
-NFR5: Company data enrichment must gracefully handle missing/unavailable data
-NFR6: All text output in German (Hochdeutsch)
-NFR7: Mock data implementation must be easily replaceable with real SQL Server integration
+NFR-1: Adding credit_impact to the summarization prompt must not increase pipeline execution time by more than 5%.
+NFR-2: The email digest generation time must not increase noticeably (< 1 second additional).
+NFR-3: The email template must render correctly in Outlook Desktop (Word rendering engine), Outlook Web (OWA), and Outlook Mobile.
+NFR-4: All Unicode icons used must be from the Basic Multilingual Plane (BMP) to ensure cross-client compatibility.
+NFR-5: The feature must support dark mode rendering via existing @media (prefers-color-scheme: dark) styles.
+NFR-6: The credit impact category definitions must be configurable in the summarization YAML prompt file, not hardcoded in Python.
+NFR-7: The fallback logic must be clearly separated from the LLM-based classification logic.
+NFR-8: Existing articles without credit_impact must not cause errors in digest generation or email rendering.
+NFR-9: The credit_impact field must be nullable in the database to support backward compatibility.
 ```
 
-### Additional Requirements (from Architecture)
+### Additional Requirements (from Architecture & Codebase)
 
 ```
-AR1: Email template uses Jinja2 - modifications go to templates/ folder
-AR2: Digest generation in Stage 5 (DigestGenerator) - logic changes go there
-AR3: Summarization in Stage 4 uses Gemini - prompt changes for entity normalization
-AR4: Existing entities.companies field available for company identification
-AR5: Classification caching (30-day TTL) must not be broken
-AR6: Multi-provider LLM strategy (DeepSeek/Gemini) must be preserved
+AR-1: Summarization uses Gemini 2.0 Flash — prompt changes go to config/prompts/summarization.yaml
+AR-2: Article model uses Pydantic v2 — new fields added to src/newsanalysis/core/article.py
+AR-3: Database uses SQLAlchemy 2.0 + SQLite — schema changes in schema.sql, migration in init_db.py
+AR-4: Email template uses Jinja2 with table-based layout for Outlook — modifications to email_digest.html
+AR-5: Content fingerprint cache must include credit_impact to avoid re-classification on cache hits
+AR-6: Existing _determine_risk_level() in digest_formatter.py becomes the fallback mechanism
+AR-7: Digest JSON output in json_formatter.py must include credit_impact for downstream consumption
 ```
 
-### Cleanup Requirements (Technical Debt)
-
-```
-CR1: Remove FTS5 full-text search (dead code with corruption warnings)
-CR2: Eliminate express mode (redundant with --skip-X flags)
-CR3: Improve summary prompt structure: "Sentence 1: What happened. Sentence 2: Why it matters for credit risk."
-```
-
-## FR Coverage Map
+### FR Coverage Map
 
 | FR | Epic | Story |
 |----|------|-------|
-| FR1, FR2 | Epic 1 | Story 1.1 |
-| FR3 | Epic 1 | Story 1.2 |
-| FR4 | Epic 1 | Story 1.3 |
-| FR5, FR6, FR16, FR17 | Epic 2 | Story 2.1 |
-| FR7, FR8 | Epic 2 | Story 2.2 |
-| FR9 | Epic 3 | Story 3.1 |
-| FR10, FR12, FR13 | Epic 3 | Story 3.2 |
-| FR11 | Epic 3 | Story 3.3 |
-| FR14 | Epic 3 | Story 3.4 |
-| FR15 | Epic 3 | Story 3.5 |
-| CR1, CR2, CR3 | Epic 3 | Story 3.6 |
+| FR-1.1, FR-1.2, FR-1.3, FR-1.4 | Epic 1 | Story 1.1 |
+| FR-2.1, FR-2.2, FR-2.3 | Epic 1 | Story 1.2 |
+| FR-2.4, FR-5.1, FR-5.2 | Epic 1 | Story 1.3 |
+| FR-3.1, FR-3.2 | Epic 2 | Story 2.1 |
+| FR-3.3 | Epic 2 | Story 2.2 |
+| FR-4.1, FR-4.2, FR-4.3 | Epic 2 | Story 2.3 |
 
 ## Epic List
 
-1. **Epic 1: Look Impressive** - Visual transformation for CEO demo (Hours)
-2. **Epic 2: Be Impressive** - Company intelligence integration (Days, mock data)
-3. **Epic 3: Polish & Cleanup** - Refinements and technical debt (Hours)
+1. **Epic 1: Credit Impact Intelligence** — Analysts receive articles with LLM-assessed creditworthiness impact, stored and cached for all downstream use
+2. **Epic 2: Visual Credit Risk Communication** — Analysts see credit impact at a glance through color-coded articles, smart sorting, and a Risiko-Radar overview
 
 ---
 
-## Epic 1: Look Impressive
+## Epic 1: Credit Impact Intelligence
 
-**Goal:** Transform the digest from "notification feed" into "professional publication" through visual improvements that create immediate "wow" factor for CEO demo.
+**Goal:** Enable the system to classify each article's creditworthiness impact using the LLM during summarization, store it persistently, and make it available throughout the pipeline. After this epic, every new article has a `credit_impact` value — the foundation for all visual and analytical features.
 
-**Priority:** Highest - This week
-**Effort:** Hours
+**FRs covered:** FR-1.1, FR-1.2, FR-1.3, FR-1.4, FR-2.1, FR-2.2, FR-2.3, FR-2.4, FR-5.1, FR-5.2
+**Priority:** Highest — Must be completed first
+**Effort:** Small-Medium
 
-### Story 1.1: 2-Column Newspaper Layout
+---
 
-As a **digest reader**,
-I want **articles displayed in a professional 2-column newspaper layout**,
-So that **I can scan more content efficiently and the digest feels like a curated publication rather than a feed**.
+### Story 1.1: LLM Credit Impact Classification
+
+As a **system operator**,
+I want **the summarization LLM to classify each article's impact on creditworthiness**,
+So that **every article receives an accurate, content-based credit impact assessment**.
 
 **Acceptance Criteria:**
 
-**Given** a daily digest with multiple articles
-**When** the email is rendered in Outlook
-**Then** articles display in 2-column layout (900px container, ~430px columns)
-**And** odd-numbered articles within a category span full width
-**And** images display as 100px thumbnails in 2-col, 120px in full-width
-**And** the layout degrades gracefully if images are missing
+**Given** an article with scraped content is sent to the summarization LLM
+**When** the summarization prompt is executed
+**Then** the LLM response includes a `credit_impact` field with one of: `elevated_risk`, `negative`, `neutral`, `positive`
+**And** the prompt contains clear definitions and examples for each category:
+  - `elevated_risk`: Acute threat to solvency (bankruptcy, debt enforcement, license revocation, criminal proceedings)
+  - `negative`: Deterioration of creditworthiness (revenue decline, layoffs, rating downgrade, regulatory warning)
+  - `neutral`: No impact on creditworthiness (industry news, personnel changes without impact)
+  - `positive`: Improvement of creditworthiness (revenue growth, new investment, rating upgrade, regulatory relief)
+
+**Given** the LLM does not return a `credit_impact` value (malformed response, timeout)
+**When** the summarization result is processed
+**Then** the system applies rule-based fallback logic:
+  - Topic in `{insolvency_bankruptcy, credit_risk, business_scams, ecommerce_fraud}` AND confidence ≥ 0.85 → `elevated_risk`
+  - Otherwise → `neutral`
+**And** the fallback logic is clearly separated from the LLM classification code
+
+**Given** an article's content matches a cached content fingerprint
+**When** the cache is retrieved
+**Then** the cached `credit_impact` value is returned along with the cached summary
+**And** no additional LLM call is made
 
 **Technical Notes:**
-- Modify Jinja2 email template
-- Container: 900px (up from 600px)
-- Use HTML tables for Outlook compatibility
-- Test in Outlook desktop client
+- Modify `config/prompts/summarization.yaml` — add `credit_impact` to JSON output schema with enum values and descriptions
+- Modify `src/newsanalysis/pipeline/summarizers/article_summarizer.py` — parse `credit_impact` from LLM response, apply fallback
+- Modify `src/newsanalysis/services/cache_service.py` — include `credit_impact` in content fingerprint cache read/write
+- Add `CreditImpact` enum to `src/newsanalysis/core/enums.py`
+- Add `credit_impact` field to `SummaryResponse` Pydantic model
+
+**Files:**
+- `config/prompts/summarization.yaml`
+- `src/newsanalysis/core/enums.py`
+- `src/newsanalysis/pipeline/summarizers/article_summarizer.py`
+- `src/newsanalysis/services/cache_service.py`
 
 ---
 
-### Story 1.2: Executive Summary - "Heute in 30 Sekunden"
+### Story 1.2: Credit Impact Data Persistence
 
-As an **executive reader**,
-I want **a 3-sentence summary at the top naming specific companies and impacts**,
-So that **I can decide in 5 seconds whether to read further**.
+As a **system operator**,
+I want **the credit impact classification to be stored in the database**,
+So that **the value is available for digest generation, statistics, and future analytics**.
 
 **Acceptance Criteria:**
 
-**Given** a daily digest with summarized articles
-**When** the digest is generated
-**Then** a "Heute in 30 Sekunden" section appears at the top
-**And** it contains exactly 3 concrete sentences
-**And** each sentence names a specific company and specific impact
-**And** sentences are actionable (not generic category descriptions)
+**Given** the database schema
+**When** the migration is applied
+**Then** the `articles` table has a new nullable `credit_impact` TEXT column
+**And** existing articles without `credit_impact` have NULL values (no errors)
 
-**Example:**
-```
-Heute in 30 Sekunden:
-1. Baltensperger AG steht vor Konkurs - Bausektor-Lieferanten betroffen
-2. FINMA verschärft Eigenmittelregeln für Retailbanken
-3. Nestlé-Rückruf: Reputationsschaden, aber Finanzen stabil
-```
+**Given** an article is summarized with a `credit_impact` value
+**When** the summary is saved via `ArticleRepository.update_summary()`
+**Then** the `credit_impact` value is persisted to the database
+**And** the value can be read back via `ArticleRepository` queries
+
+**Given** the Article Pydantic model
+**When** an article is loaded from the database
+**Then** the `credit_impact` field is populated (or None for legacy articles)
+**And** the field uses the `CreditImpact` enum type
 
 **Technical Notes:**
-- Modify DigestGenerator (Stage 5)
-- Update meta-analysis prompt to generate specific sentences
-- Update email template to display new section
+- Add `credit_impact TEXT` column to `articles` table in `schema.sql`
+- Add migration logic in `scripts/init_db.py` for existing databases
+- Add `credit_impact: Optional[CreditImpact]` to Article model in `article.py`
+- Update `ArticleRepository.update_summary()` to write `credit_impact`
+- Update `ArticleRepository._row_to_article()` to read `credit_impact`
+
+**Files:**
+- `src/newsanalysis/database/schema.sql`
+- `scripts/init_db.py`
+- `src/newsanalysis/core/article.py`
+- `src/newsanalysis/database/repository.py`
 
 ---
 
-### Story 1.3: Dynamic Subject Line
+### Story 1.3: Credit Impact in Digest Pipeline
 
-As a **digest recipient**,
-I want **the email subject line to feature the top story headline**,
-So that **the email stands out in my inbox and I immediately see the most important news**.
+As a **system operator**,
+I want **credit impact to flow through the digest generation pipeline**,
+So that **the email formatter and any export format can access the classification**.
 
 **Acceptance Criteria:**
 
-**Given** a daily digest with ranked articles
-**When** the email is sent
-**Then** the subject line includes the top story headline
-**And** format is: "Creditreform News-Digest: [Top Story Headline]"
-**And** subject line is truncated appropriately for email clients (~60 chars)
+**Given** articles are loaded for digest generation
+**When** the digest JSON output is created
+**Then** each article object includes a `credit_impact` field
+**And** articles without `credit_impact` (legacy) default to `null` in JSON output
+
+**Given** the digest formatter processes articles
+**When** an article has `credit_impact = null` (legacy article)
+**Then** the system treats it as `neutral` for display purposes
+**And** no errors occur during formatting or rendering
 
 **Technical Notes:**
-- Modify email generation logic
-- Extract top article title from digest
-- Truncate intelligently (don't cut mid-word)
+- Update `src/newsanalysis/pipeline/formatters/json_formatter.py` — include `credit_impact` in article serialization
+- Update `src/newsanalysis/services/digest_formatter.py` — replace `_determine_risk_level()` usage with `credit_impact` (keeping old logic as fallback)
+- Handle null/missing `credit_impact` gracefully throughout
+
+**Files:**
+- `src/newsanalysis/pipeline/formatters/json_formatter.py`
+- `src/newsanalysis/services/digest_formatter.py`
 
 ---
 
-## Epic 2: Be Impressive
+## Epic 2: Visual Credit Risk Communication
 
-**Goal:** Integrate Creditreform company intelligence to create unique value proposition - "Our data + news = nobody else has this."
+**Goal:** Enable analysts to instantly see the credit risk landscape in the daily email digest through color-coded articles, directional icons, smart sorting, and a Risiko-Radar overview of acute risks. After this epic, the email digest is a visual credit intelligence tool.
 
-**Priority:** High - Next sprint
-**Effort:** Days
-**Constraint:** SQL Server uses mock data for this implementation
+**FRs covered:** FR-3.1, FR-3.2, FR-3.3, FR-4.1, FR-4.2, FR-4.3
+**Priority:** High — Immediately after Epic 1
+**Effort:** Medium
+**Dependency:** Epic 1 (credit_impact values must be available)
 
-### Story 2.1: Company Data Enrichment (Mock Implementation)
+---
+
+### Story 2.1: 4-Level Visual Article Styling
 
 As a **credit analyst**,
-I want **each article enriched with Creditreform company data**,
-So that **I can immediately see the credit risk context without manual lookup**.
+I want **each article in the email digest to be visually styled according to its credit impact**,
+So that **I can instantly distinguish between acute risks, negative signals, neutral news, and positive developments**.
 
 **Acceptance Criteria:**
 
-**Given** an article mentioning a company in entities.companies
-**When** the digest is generated
-**Then** a company data chip displays: Score, trend arrow (↑↓), payment days, CHE UID
-**And** watchlist flag (⚠) displays if applicable
-**And** if company data unavailable, chip shows "Keine Daten" gracefully
-**And** multiple companies display as compact chips (top 3 + "+N more" if 4+)
+**Given** an article with `credit_impact = elevated_risk`
+**When** the email is rendered
+**Then** the article displays with:
+  - Left border: 4px solid `#cc0000` (red)
+  - Background: `#fff5f5` (light red)
+  - Label: `&#9888; ERHÖHTES RISIKO` in `#cc0000`
+  - Title link color: `#990000`
 
-**Mock Data Structure:**
-```python
-{
-    "company_name": "Baltensperger AG",
-    "che_uid": "CHE-123.456.789",
-    "credit_score": 284,
-    "score_trend": -12,  # negative = down
-    "payment_days": 67,
-    "watchlist": True
-}
-```
+**Given** an article with `credit_impact = negative`
+**When** the email is rendered
+**Then** the article displays with:
+  - Left border: 4px solid `#e67e00` (orange)
+  - Background: `#fff8f0` (light orange)
+  - Label: `&#9660; Negativ` in `#e67e00`
+
+**Given** an article with `credit_impact = neutral`
+**When** the email is rendered
+**Then** the article displays with:
+  - Left border: 3px solid `#888888` (grey)
+  - Background: `#ffffff` (white)
+  - Label: `&#9679; Neutral` in `#888888`
+  - Only 1 key point displayed (instead of 2)
+
+**Given** an article with `credit_impact = positive`
+**When** the email is rendered
+**Then** the article displays with:
+  - Left border: 4px solid `#2e7d32` (green)
+  - Background: `#f0f8f0` (light green)
+  - Label: `&#9650; Positiv` in `#2e7d32`
+
+**Given** the email is viewed in Outlook Desktop (Word rendering engine)
+**When** Unicode icons are rendered
+**Then** all icons (⚠ ▼ ● ▲) display correctly as BMP characters
+**And** colors render through inline CSS styles
 
 **Technical Notes:**
-- Create mock company data service with ~10 sample companies
-- Add company lookup during digest generation
-- Design service interface for easy replacement with real SQL Server
-- Normalize company names using existing entities.companies + fuzzy matching
+- Modify `email_digest.html` — expand `{% if article.risk_level %}` from 2 to 4 cases using `article.credit_impact`
+- Replace `risk_level` property with `credit_impact` in template variables
+- Update `digest_formatter.py` `_parse_articles()` to pass `credit_impact` instead of `risk_level`
+- Limit key_points to 1 for neutral articles: `article.key_points[:1]` vs `[:2]`
+- Add dark mode support for new background colors in `<style>` block
+
+**Files:**
+- `src/newsanalysis/templates/email_digest.html`
+- `src/newsanalysis/services/digest_formatter.py`
 
 ---
 
-### Story 2.2: Company-Centric Grouping with History
+### Story 2.2: Credit Impact Sorting
 
 As a **credit analyst**,
-I want **articles grouped by company with links to previous coverage**,
-So that **I can see developing stories rather than isolated news events**.
+I want **articles within each topic sorted by credit impact severity**,
+So that **the most critical articles always appear first**.
 
 **Acceptance Criteria:**
 
-**Given** an article about a company with previous coverage
-**When** the digest is rendered
-**Then** articles are grouped under company header (if company identified)
-**And** "Früher berichtet" section shows previous article headlines with dates
-**And** links navigate to previous digest entries (if available)
-**And** articles without identified companies display in current format
+**Given** a topic group with articles of mixed credit impact levels
+**When** the digest is generated
+**Then** articles are sorted by:
+  1. `credit_impact` priority: `elevated_risk` → `negative` → `neutral` → `positive`
+  2. Then by `confidence` descending (existing behavior)
+**And** an `elevated_risk` article with 0.75 confidence appears before a `neutral` article with 0.95 confidence
 
 **Technical Notes:**
-- Query historical articles by company name
-- Group articles by primary company in digest generation
-- Store company associations for historical lookup
-- Limit history to last 30 days / 5 articles
+- Modify `digest_formatter.py` `_parse_articles()` — change sort key to use credit_impact priority map, then confidence
+- Define priority map: `{"elevated_risk": 0, "negative": 1, "neutral": 2, "positive": 3}`
+
+**Files:**
+- `src/newsanalysis/services/digest_formatter.py`
 
 ---
 
-## Epic 3: Polish & Cleanup
+### Story 2.3: Risiko-Radar Section
 
-**Goal:** Refine the digest with smaller improvements and eliminate technical debt.
-
-**Priority:** Medium - Future sprint
-**Effort:** Hours per story
-
-### Story 3.1: Bold Company Names in Summaries
-
-As a **digest reader**,
-I want **company names bolded within summary text**,
-So that **I can quickly scan for companies I recognize**.
+As a **credit analyst**,
+I want **a Risiko-Radar section at the top of the email listing all elevated-risk articles**,
+So that **I can see the most critical credit risk signals within 5 seconds of opening the email**.
 
 **Acceptance Criteria:**
 
-**Given** a summary containing company names from entities.companies
+**Given** a daily digest with 2 or more articles classified as `elevated_risk`
 **When** the email is rendered
-**Then** each company name is wrapped in `<strong>` tags
-**And** company names match the normalized form (not original text variations)
+**Then** a "⚠ Erhöhte Risiken" section appears between the Executive Summary and the topic-grouped articles
+**And** each entry shows: ⚠ icon + company name(s) + short description (summary_title) + topic category in parentheses
+**And** entries link to the full article URL
 
-**Technical Notes:**
-- Post-process summaries in template or digest generation
-- Use entities.companies list for matching
-- Handle case variations
-
----
-
-### Story 3.2: Visual Hierarchy for High-Stakes Articles
-
-As a **digest reader**,
-I want **critical articles to visually stand out**,
-So that **I notice elevated risks immediately**.
-
-**Acceptance Criteria:**
-
-**Given** an article with high severity (bankruptcy, major lawsuit, etc.)
-**When** the digest is rendered
-**Then** the article displays with visual emphasis (red border, "ELEVATED RISK" label)
-**And** high-severity articles float to top of their category
-**And** topics with high-severity articles appear before topics without
-
-**Technical Notes:**
-- Use confidence score + sentiment from summarization
-- Add severity field to article model
-- Update template for conditional styling
-
----
-
-### Story 3.3: Clickable Source Links
-
-As a **digest reader**,
-I want **source links to be clickable**,
-So that **I can easily access the original article**.
-
-**Acceptance Criteria:**
-
-**Given** an article in the digest
+**Given** a daily digest with exactly 1 article classified as `elevated_risk`
 **When** the email is rendered
-**Then** source displays as: "NZZ → [Originalartikel](link)"
-**And** link opens in new tab/window
+**Then** the Risiko-Radar section still appears with the single entry
 
-**Technical Notes:**
-- Template change only
-- Ensure link is the original article URL
-
----
-
-### Story 3.4: Relevance Reasoning Line
-
-As a **digest reader**,
-I want **to see why each article was included**,
-So that **I understand the filtering logic and trust the selection**.
-
-**Acceptance Criteria:**
-
-**Given** an article in the digest
+**Given** a daily digest with no articles classified as `elevated_risk`
 **When** the email is rendered
-**Then** a "→ Relevant:" line shows the classification reasoning
-**And** reasoning lists 2-3 keywords (e.g., "Konkursrisiko, Bausektor-Lieferkette")
+**Then** the Risiko-Radar section is not displayed (hidden, not "empty")
+
+**Given** an elevated risk article about a company with entities.companies populated
+**When** the Risiko-Radar entry is rendered
+**Then** the company name(s) appear prominently before the description
+**And** format is: `⚠ [Company] — [Summary Title] (Topic)`
 
 **Technical Notes:**
-- Classification result already includes topic/reasoning
-- Expose this in digest model
-- Update template to display
+- Modify `digest_formatter.py` — extract `elevated_risk` articles into a separate list for the template
+- Pass `risiko_radar_articles` to template context in `format_with_images()`
+- Add new template section in `email_digest.html` between Executive Summary and topic articles
+- Style consistently with the elevated_risk article styling (red theme)
+- Use `{% if risiko_radar_articles %}` to conditionally show/hide
 
----
-
-### Story 3.5: Cross-Day Deduplication
-
-As a **digest reader**,
-I want **duplicate stories filtered across consecutive days**,
-So that **I don't see the same story from different sources on multiple days**.
-
-**Acceptance Criteria:**
-
-**Given** a story covered yesterday from Source A
-**When** Source B publishes the same story today
-**Then** Source B's article is marked as duplicate
-**And** only genuinely new developments pass through
-
-**Technical Notes:**
-- Extend deduplication window beyond single run
-- Query recent articles before dedup stage
-- May require title similarity check across days
-
----
-
-### Story 3.6: Technical Debt Cleanup
-
-As a **developer**,
-I want **dead code removed and prompts improved**,
-So that **the codebase is maintainable and outputs are higher quality**.
-
-**Acceptance Criteria:**
-
-**Given** the current codebase
-**When** cleanup is complete
-**Then** FTS5 full-text search tables and triggers are removed
-**And** express mode is eliminated (--skip-X flags remain)
-**And** summary prompt is structured: "Sentence 1: What happened. Sentence 2: Why it matters."
-
-**Technical Notes:**
-- Schema migration to drop FTS5
-- Remove express mode from CLI
-- Update summarization.yaml prompt
+**Files:**
+- `src/newsanalysis/templates/email_digest.html`
+- `src/newsanalysis/services/digest_formatter.py`
 
 ---
 
 ## Implementation Order
 
-### Phase 1: Look Impressive (CEO Demo - This Week)
-1. Story 1.1: 2-Column Newspaper Layout
-2. Story 1.3: Dynamic Subject Line
-3. Story 1.2: Executive Summary
+### Phase 1: Intelligence Layer (Epic 1)
 
-### Phase 2: Be Impressive (Next Sprint)
-4. Story 2.1: Company Data Enrichment (Mock)
-5. Story 2.2: Company-Centric Grouping
+1. **Story 1.1:** LLM Credit Impact Classification (enum, prompt, parser, cache)
+2. **Story 1.2:** Credit Impact Data Persistence (DB, model, repository)
+3. **Story 1.3:** Credit Impact in Digest Pipeline (JSON output, formatter integration)
 
-### Phase 3: Polish (Future)
-6. Story 3.1 - 3.6 (prioritize as needed)
+**Validation:** Run pipeline with `--limit 5`, verify `credit_impact` values in DB and digest JSON.
+
+### Phase 2: Visual Layer (Epic 2)
+
+4. **Story 2.1:** 4-Level Visual Article Styling (template, 4 color schemes)
+5. **Story 2.2:** Credit Impact Sorting (sort priority change)
+6. **Story 2.3:** Risiko-Radar Section (new template section, data extraction)
+
+**Validation:** Run `--reset digest --skip-collection`, send test email, verify Outlook rendering.
 
 ---
 
-*Generated via BMAD Create Epics & Stories Workflow*
+*Generated via BMAD Create Epics & Stories Workflow — 2026-03-14*

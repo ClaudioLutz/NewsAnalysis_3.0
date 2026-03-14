@@ -171,12 +171,22 @@ class HtmlEmailFormatter:
                 entities = article.get("entities", {})
                 companies = entities.get("companies", []) if entities else []
 
-                # Determine risk level based on topic and confidence
+                # Determine credit impact (LLM value or rule-based fallback)
                 confidence = article.get("confidence", 0)
-                risk_level = self._determine_risk_level(topic, confidence)
+                credit_impact = article.get("credit_impact") or self._determine_risk_level(
+                    topic, confidence
+                )
+                # Normalize old values to 3-level enum
+                if credit_impact in ("elevated", "elevated_risk"):
+                    credit_impact = "negative"
+                elif credit_impact == "standard":
+                    credit_impact = "neutral"
 
                 # Extract relevance keywords from entities
                 relevance_keywords = self._extract_relevance_keywords(entities, topic)
+
+                # Neutral articles show 1 key point, others show 2
+                max_key_points = 1 if credit_impact == "neutral" else 2
 
                 articles_by_topic[topic].append({
                     "id": article.get("id"),  # Add article ID for image lookup
@@ -187,19 +197,26 @@ class HtmlEmailFormatter:
                     "source_links": source_links,  # List of {name, url} for linked sources
                     "duplicate_sources": duplicate_sources,  # Full duplicate source info
                     "summary": summary,
-                    "key_points": article.get("key_points", [])[:2],
+                    "key_points": article.get("key_points", [])[:max_key_points],
                     "topic": topic,
                     "confidence": confidence,
                     "companies": companies,  # Company names for display
-                    "risk_level": risk_level,  # "elevated" or "standard"
+                    "credit_impact": credit_impact,  # negative, neutral, positive
                     "relevance_keywords": relevance_keywords,  # Why this article is relevant
                 })
 
-            # Sort articles within each topic by confidence (descending)
+            # Sort articles within each topic by credit_impact priority, then confidence
+            credit_impact_priority = {
+                "negative": 0,
+                "neutral": 1,
+                "positive": 2,
+            }
             for topic in articles_by_topic:
                 articles_by_topic[topic].sort(
-                    key=lambda a: a.get("confidence", 0),
-                    reverse=True
+                    key=lambda a: (
+                        credit_impact_priority.get(a.get("credit_impact", "neutral"), 2),
+                        -a.get("confidence", 0),
+                    ),
                 )
 
             # Order topics by priority, filter empty topics

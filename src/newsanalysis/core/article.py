@@ -5,7 +5,7 @@ from typing import List, Optional
 
 from pydantic import BaseModel, Field, HttpUrl, field_validator
 
-from newsanalysis.core.enums import ArticleTopic, ExtractionMethod
+from newsanalysis.core.enums import ArticleTopic, CreditImpact, ExtractionMethod
 
 
 class ArticleMetadata(BaseModel):
@@ -97,6 +97,7 @@ class ArticleSummary(BaseModel):
     key_points: List[str] = Field(...)  # Removed length constraints
     entities: EntityData
     topic: ArticleTopic = Field(default=ArticleTopic.MARKET_INTELLIGENCE)
+    credit_impact: CreditImpact = Field(default=CreditImpact.NEUTRAL)
 
     summarized_at: datetime = Field(default_factory=datetime.now)
 
@@ -173,6 +174,7 @@ class Article(BaseModel):
     summary: Optional[str] = None
     key_points: Optional[List[str]] = None
     entities: Optional[EntityData] = None
+    credit_impact: Optional[CreditImpact] = None
     summarized_at: Optional[datetime] = None
 
     # Pipeline State

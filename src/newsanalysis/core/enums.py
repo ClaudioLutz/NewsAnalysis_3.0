@@ -47,6 +47,18 @@ class PipelineMode(str, Enum):
     EXPORT = "export"
 
 
+class CreditImpact(str, Enum):
+    """Credit impact classification for articles.
+
+    Assesses the article's impact on the creditworthiness of affected companies.
+    3-level: negative (risk/deterioration), neutral (no impact), positive (improvement).
+    """
+
+    NEGATIVE = "negative"
+    NEUTRAL = "neutral"
+    POSITIVE = "positive"
+
+
 class ArticleTopic(str, Enum):
     """Article topic classification for digest grouping.
 

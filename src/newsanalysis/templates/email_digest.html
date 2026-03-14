@@ -23,6 +23,9 @@
       .text-meta { color: #999999 !important; }
       .link-primary { color: #6699cc !important; }
       .border-section { border-color: #444444 !important; }
+      /* Credit impact: no tinted background in dark mode, border-left is enough */
+      .ci-negative { background-color: #2d2d2d !important; }
+      .ci-positive { background-color: #2d2d2d !important; }
     }
   </style>
   <!--<![endif]-->
@@ -104,26 +107,31 @@
                   </tr>
                 </table>
 
-                <!-- Articles in single column with visual hierarchy -->
+                <!-- Articles in single column with credit impact visual hierarchy -->
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse: collapse;">
                   {% for article in topic_articles %}
                   <tr>
-                    {% if article.risk_level == 'elevated' %}
-                    <!-- Elevated Risk: Red left border, light red background -->
-                    <td style="padding: 12px; margin: 8px 0; border-left: 4px solid #cc0000; background-color: #fff5f5; border-bottom: 1px solid #e0e0e0;">
+                    {% if article.credit_impact == 'negative' %}
+                    <!-- Negative: Red -->
+                    <td class="ci-negative" style="padding: 12px; border-left: 4px solid #dc2626; background-color: #fef2f2; border-bottom: 1px solid #e0e0e0;">
+                    {% elif article.credit_impact == 'positive' %}
+                    <!-- Positive: Green -->
+                    <td class="ci-positive" style="padding: 12px; border-left: 4px solid #16a34a; background-color: #f0fdf4; border-bottom: 1px solid #e0e0e0;">
                     {% else %}
-                    <!-- Standard: Blue left border -->
-                    <td style="padding: 12px; padding-left: 12px; border-left: 3px solid #003366; border-bottom: 1px solid #e0e0e0;">
+                    <!-- Neutral: No marking -->
+                    <td style="padding: 12px; border-bottom: 1px solid #e0e0e0;">
                     {% endif %}
                       <!-- Image with text wrap (Outlook-compatible align="left") -->
                       {% if article.image_cid and images_enabled %}
                       <img src="cid:{{ article.image_cid }}" alt="" width="90" height="60" align="left" hspace="10" vspace="4" style="display: block; border-radius: 3px;" />
                       {% endif %}
-                      {% if article.risk_level == 'elevated' %}
-                      <p style="margin: 0 0 4px 0; font-size: 10px; font-weight: bold; color: #cc0000; text-transform: uppercase; letter-spacing: 0.5px;">&#9632; Erhöhtes Risiko</p>
+                      {% if article.credit_impact == 'negative' %}
+                      <p style="margin: 0 0 4px 0; font-size: 10px; font-weight: bold; color: #dc2626; letter-spacing: 0.5px;">&#9660; Negativ</p>
+                      {% elif article.credit_impact == 'positive' %}
+                      <p style="margin: 0 0 4px 0; font-size: 10px; font-weight: bold; color: #16a34a; letter-spacing: 0.5px;">&#9650; Positiv</p>
                       {% endif %}
                       <p style="margin: 0 0 4px 0; font-size: 14px; font-weight: bold; line-height: 1.3;">
-                        {% if article.url %}<a href="{{ article.url }}" class="link-primary" style="color: {% if article.risk_level == 'elevated' %}#990000{% else %}#003366{% endif %}; text-decoration: none;">{{ article.title }}</a>{% else %}<span class="text-body">{{ article.title }}</span>{% endif %}
+                        {% if article.url %}<a href="{{ article.url }}" class="link-primary" style="color: {% if article.credit_impact == 'negative' %}#dc2626{% elif article.credit_impact == 'positive' %}#16a34a{% else %}#003366{% endif %}; text-decoration: none;">{{ article.title }}</a>{% else %}<span class="text-body">{{ article.title }}</span>{% endif %}
                       </p>
                       {% if article.companies %}
                       <p style="margin: 0 0 4px 0; color: #cc6600; font-size: 12px; font-weight: bold;">{{ article.companies[:3]|join(", ") }}</p>

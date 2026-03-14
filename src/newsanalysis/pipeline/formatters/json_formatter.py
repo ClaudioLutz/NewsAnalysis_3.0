@@ -93,6 +93,7 @@ class JSONFormatter:
             }
             if article.entities
             else {"companies": [], "people": [], "locations": [], "topics": []},
+            "credit_impact": article.credit_impact.value if article.credit_impact else None,
             "metadata": {
                 "feed_priority": article.feed_priority,
                 "extraction_method": article.extraction_method.value if article.extraction_method else None,
