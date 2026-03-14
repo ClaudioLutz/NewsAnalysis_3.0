@@ -8,7 +8,11 @@ from typing import Any, Dict, List, Optional, Tuple
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from newsanalysis.database.repository import ArticleRepository
-from newsanalysis.pipeline.formatters.german_formatter import TOPIC_PRIORITY, TOPIC_TRANSLATIONS
+from newsanalysis.pipeline.formatters.german_formatter import (
+    TOPIC_ICONS,
+    TOPIC_PRIORITY,
+    TOPIC_TRANSLATIONS,
+)
 from newsanalysis.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -97,6 +101,7 @@ class HtmlEmailFormatter:
             market_insights=meta_analysis.get("market_insights", []),
             articles_by_topic=articles_by_topic,
             topic_translations=TOPIC_TRANSLATIONS,
+            topic_icons=TOPIC_ICONS,
             credit_impact_counts=credit_impact_counts,
             version=digest_data.get("version", 1),
             generated_at=digest_data.get("generated_at", ""),
@@ -480,6 +485,7 @@ class HtmlEmailFormatter:
             market_insights=meta_analysis.get("market_insights", []),
             articles_by_topic=articles_by_topic,
             topic_translations=TOPIC_TRANSLATIONS,
+            topic_icons=TOPIC_ICONS,
             credit_impact_counts=credit_impact_counts,
             version=digest_data.get("version", 1),
             generated_at=digest_data.get("generated_at", ""),

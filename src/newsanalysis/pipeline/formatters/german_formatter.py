@@ -72,6 +72,23 @@ TOPIC_TRANSLATIONS = {
     "Sonstige": "Sonstige",
 }
 
+# Topic icons (BMP Unicode, Outlook-desktop safe)
+TOPIC_ICONS = {
+    "insolvency_bankruptcy": "&#9888;",
+    "credit_risk": "&#9878;",
+    "regulatory_compliance": "&sect;",
+    "data_protection": "&#9993;",
+    "kyc_aml_sanctions": "&#9940;",
+    "payment_behavior": "&#10004;",
+    "debt_collection": "&#10006;",
+    "board_changes": "&#9745;",
+    "company_lifecycle": "&#8962;",
+    "economic_indicators": "&#8721;",
+    "market_intelligence": "&#8645;",
+    "ecommerce_fraud": "&#9746;",
+    "business_scams": "&#9876;",
+}
+
 
 class GermanReportFormatter:
     """Format digest as German rating report (Bonitäts-Tagesanalyse)."""

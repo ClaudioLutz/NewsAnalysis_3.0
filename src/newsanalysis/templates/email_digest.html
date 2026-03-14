@@ -101,7 +101,7 @@
                   <tr>
                     <td style="padding: 15px 0 10px 0; border-bottom: 2px solid #003366;">
                       <h2 style="margin: 0; color: #003366; font-size: 16px; font-weight: bold;">
-                        {{ topic_translations.get(topic, topic) }}
+                        {% if topic_icons.get(topic) %}{{ topic_icons.get(topic)|safe }} {% endif %}{{ topic_translations.get(topic, topic) }}
                       </h2>
                     </td>
                   </tr>
