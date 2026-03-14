@@ -52,7 +52,7 @@ TOPIC_TRANSLATIONS = {
     "payment_behavior": "Zahlungsverhalten",
     "debt_collection": "Inkasso",
     "board_changes": "Mutationen Gremien",
-    "company_lifecycle": "Fusionen & Übernahmen",
+    "company_lifecycle": "Unternehmensentwicklung",
     "economic_indicators": "Wirtschaftsindikatoren",
     "market_intelligence": "Marktentwicklungen",
     "ecommerce_fraud": "Online-Betrug",
