@@ -3,6 +3,16 @@
 AI-powered Swiss news analysis pipeline for credit risk intelligence (Creditreform Switzerland).
 Collects articles from 30+ RSS feeds, classifies them via LLM, scrapes content, deduplicates, summarizes in German, and delivers a daily HTML email digest via Outlook.
 
+### Key Features
+
+- **3-level credit impact classification**: negative (specific company affected), neutral (default), positive (specific company benefits)
+- **Stakes-first summarization**: Summaries lead with creditworthiness impact, then state what happened (Bloomberg/Reuters style)
+- **Non-redundant key points**: 0-4 variable key points per article containing only new facts not in the summary
+- **Topic icons**: Each topic category has a BMP Unicode icon (Outlook-safe) in the email header
+- **Relevance-based topic ordering**: Email topics sorted by average article relevance score (highest first)
+- **Split email delivery**: Official recipients via TO, BCC recipients as separate email
+- **Content fingerprint cache**: SHA-256 based summary cache with 90-day TTL (must be cleared to force re-summarization)
+
 ---
 
 ## Tech Stack
@@ -183,6 +193,12 @@ python -m newsanalysis.cli.main run --reset all-today --skip-collection
 Re-summarizes only today's articles:
 ```bash
 python -m newsanalysis.cli.main run --reset summarization-today --skip-collection
+```
+
+**Note:** If articles have unchanged content, the content fingerprint cache will return old summaries.
+To force re-summarization with a new prompt, clear today's cache first:
+```bash
+python -c "import sqlite3; c=sqlite3.connect('news.db'); c.execute(\"DELETE FROM content_fingerprints WHERE created_at >= 'YYYY-MM-DD'\"); c.commit()"
 ```
 
 #### Reprocess ALL Articles (DANGEROUS)

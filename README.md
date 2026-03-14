@@ -43,8 +43,8 @@ NewsAnalysis 3.0 transforms high-volume Swiss business news into actionable cred
 | **Filtering** | AI classification on title/URL only (90% cost reduction) | DeepSeek |
 | **Scraping** | Full content extraction with bot-protection bypass | Trafilatura, Playwright, curl_cffi |
 | **Deduplication** | Semantic duplicate detection across sources | LLM-powered clustering |
-| **Summarization** | Structured German summaries with entity extraction | Gemini Flash |
-| **Digest** | Daily email digest with images and meta-analysis | Jinja2, Outlook |
+| **Summarization** | Stakes-first German summaries with 3-level credit impact (negative/neutral/positive), 0-4 variable key points, entity extraction | Gemini Flash |
+| **Digest** | Daily email digest with images, topic icons, relevance-sorted sections, credit impact indicators | Jinja2, Outlook |
 
 ### News Sources
 
@@ -64,12 +64,25 @@ NewsAnalysis 3.0 transforms high-volume Swiss business news into actionable cred
 
 ### Topic Coverage
 
+Each topic has a BMP Unicode icon for visual identification in the email digest:
+
 ```
-Credit Risk        │  Insolvency/Bankruptcy  │  Regulatory Compliance
-Payment Behavior   │  Debt Collection        │  KYC/AML/Sanctions
-Economic Indicators│  Company Lifecycle      │  Board Changes
-Data Protection    │  E-Commerce Fraud       │  Market Intelligence
+⚠ Insolvency/Bankruptcy  │  ⚖ Credit Risk           │  § Regulatory Compliance
+✉ Data Protection        │  ⛔ KYC/AML/Sanctions     │  ✔ Payment Behavior
+✖ Debt Collection        │  ☑ Board Changes          │  ⌂ Company Lifecycle
+∑ Economic Indicators    │  ⇅ Market Intelligence    │  ☒ E-Commerce Fraud
+⚔ Business Scams
 ```
+
+### Credit Impact Classification
+
+Articles are classified by their concrete impact on specific companies' creditworthiness:
+
+| Level | Indicator | When |
+|-------|-----------|------|
+| **Negative** | ▼ Red border | A named company is directly affected (bankruptcy, revenue decline, rating downgrade) |
+| **Neutral** | No marking | No specific company impacted (market trends, political debates, general news) |
+| **Positive** | ▲ Green border | A named company directly benefits (revenue growth, new investment, rating upgrade) |
 
 ---
 
@@ -117,8 +130,10 @@ GOOGLE_API_KEY=your-google-key          # Summarization & Digest
 OPENAI_API_KEY=your-openai-key          # Fallback
 
 # Optional: Email delivery
-EMAIL_RECIPIENTS=analyst@company.com
+EMAIL_RECIPIENTS=analyst@company.com    # Official TO recipients
 EMAIL_AUTO_SEND=true
+EMAIL_BCC=other@company.com             # Separate BCC email (requires EMAIL_SENDER)
+EMAIL_SENDER=sender@company.com         # Used as TO address for BCC email
 ```
 
 ---
