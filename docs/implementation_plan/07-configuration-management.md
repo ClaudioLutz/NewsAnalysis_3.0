@@ -33,8 +33,7 @@ SKIP_ROBOTS_TXT=false
 
 # Logging
 LOG_LEVEL=INFO
-LOG_FORMAT=json
-LOG_FILE=./logs/newsanalysis.log
+LOG_DIR=./logs
 
 # Deployment
 ENVIRONMENT=production  # development, staging, production
@@ -219,7 +218,7 @@ class Config:
 
     # Logging
     log_level: str = field(default_factory=lambda: os.getenv("LOG_LEVEL", "INFO"))
-    log_format: str = field(default_factory=lambda: os.getenv("LOG_FORMAT", "json"))
+    log_dir: Path = field(default_factory=lambda: Path(os.getenv("LOG_DIR", "./logs")))
 
     # Environment
     environment: str = field(default_factory=lambda: os.getenv("ENVIRONMENT", "development"))
@@ -328,7 +327,7 @@ ENABLE_BATCH_API=true
 
 # Logging
 LOG_LEVEL=INFO
-LOG_FORMAT=json
+LOG_DIR=./logs
 
 # Environment
 ENVIRONMENT=development

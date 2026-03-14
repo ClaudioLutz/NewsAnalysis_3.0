@@ -14,7 +14,7 @@ Collects articles from 30+ RSS feeds, classifies them via LLM, scrapes content, 
 - **LLM Providers**: DeepSeek (classification), Gemini (summarization/digest), OpenAI (fallback)
 - **Scraping**: Trafilatura + Playwright (JS-heavy sites with OneTrust consent)
 - **Email**: Outlook COM via pywin32 (Windows only)
-- **Logging**: structlog (structured JSON)
+- **Logging**: structlog (dual output: colorized console + JSON log files)
 - **Templating**: Jinja2
 
 ---

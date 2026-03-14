@@ -440,7 +440,7 @@ REQUEST_TIMEOUT_SEC=12
 
 # Logging
 LOG_LEVEL=INFO
-LOG_FORMAT=json
+LOG_DIR=./logs
 ```
 
 ### Configuration Loading
@@ -664,7 +664,11 @@ class DigestError(PipelineError):
 
 ## Logging
 
-### Structured Logging with Structlog
+### Structured Logging with Structlog (Dual Output)
+
+Logging uses a dual-output strategy:
+- **Terminal (stdout):** Human-readable, colorized via `ConsoleRenderer`
+- **File (logs/):** Machine-readable JSON via `JSONRenderer`, daily rotation, 30-day retention
 
 ```python
 """Logging setup."""
@@ -672,40 +676,64 @@ class DigestError(PipelineError):
 import structlog
 import logging
 import sys
+from logging.handlers import TimedRotatingFileHandler
+from pathlib import Path
 
-def setup_logging(log_level: str = "INFO", log_format: str = "json"):
-    """Configure structured logging."""
+def setup_logging(log_level: str = "INFO", log_dir: Path = None):
+    """Configure dual-output structured logging."""
 
-    if log_format == "json":
-        processors = [
-            structlog.stdlib.add_log_level,
-            structlog.stdlib.add_logger_name,
-            structlog.processors.TimeStamper(fmt="iso"),
-            structlog.processors.JSONRenderer()
-        ]
-    else:
-        processors = [
-            structlog.stdlib.add_log_level,
-            structlog.dev.ConsoleRenderer()
-        ]
+    shared_processors = [
+        structlog.contextvars.merge_contextvars,
+        structlog.stdlib.add_logger_name,
+        structlog.stdlib.add_log_level,
+        structlog.processors.TimeStamper(fmt="iso", utc=True),
+        structlog.processors.format_exc_info,
+        structlog.processors.UnicodeDecoder(),
+    ]
 
     structlog.configure(
-        processors=processors,
+        processors=shared_processors + [
+            structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
+        ],
         wrapper_class=structlog.stdlib.BoundLogger,
         context_class=dict,
         logger_factory=structlog.stdlib.LoggerFactory(),
         cache_logger_on_first_use=True,
     )
 
-    logging.basicConfig(
-        format="%(message)s",
-        stream=sys.stdout,
-        level=getattr(logging, log_level.upper()),
+    # Console: human-readable, colorized
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setFormatter(
+        structlog.stdlib.ProcessorFormatter(
+            processor=structlog.dev.ConsoleRenderer(colors=True),
+            foreign_pre_chain=shared_processors,
+        )
     )
+
+    root_logger = logging.getLogger()
+    root_logger.addHandler(console_handler)
+    root_logger.setLevel(getattr(logging, log_level.upper()))
+
+    # File: machine-readable JSON, daily rotation
+    if log_dir:
+        log_dir.mkdir(parents=True, exist_ok=True)
+        file_handler = TimedRotatingFileHandler(
+            filename=log_dir / "newsanalysis.log",
+            when="midnight", interval=1, backupCount=30, encoding="utf-8",
+        )
+        file_handler.setFormatter(
+            structlog.stdlib.ProcessorFormatter(
+                processor=structlog.processors.JSONRenderer(),
+                foreign_pre_chain=shared_processors,
+            )
+        )
+        root_logger.addHandler(file_handler)
 
 # Usage
 logger = structlog.get_logger(__name__)
 logger.info("pipeline_started", run_id="abc123", mode="full")
+# Terminal: 2026-03-14T10:53:06Z [info] pipeline_started [__main__] run_id=abc123 mode=full
+# File:    {"run_id":"abc123","mode":"full","event":"pipeline_started","level":"info","timestamp":"2026-03-14T10:53:06Z"}
 ```
 
 ## Best Practices Summary

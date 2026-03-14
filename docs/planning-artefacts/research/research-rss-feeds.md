@@ -62,24 +62,9 @@ The Swiss Federal Administration's press release system uses a centralized RSS i
 
 ---
 
-## Bundesgericht feeds require subscription activation
+## ~~Bundesgericht~~ (removed)
 
-The Swiss Federal Supreme Court provides RSS through its Eurospider-powered database, but exact feed URLs are **not publicly displayed** without user interaction.
-
-**Official RSS subscription page:** `https://search.bger.ch/home/juridiction/feed-rss.html`
-
-**Three feed categories documented:**
-- **AZA Feed** — All decisions (unpublished since 2000, all since 2007)
-- **BGE Feed** — Leading decisions/Leitentscheide (official collection since 1954)
-- **EMRK Feed** — European Court of Human Rights decisions
-
-**Relevant case prefixes for debt/bankruptcy:**
-- `5A_xxx/yyyy` — Debt enforcement (SchKG), family law, civil matters
-- `4A_xxx/yyyy` — Commercial law, contract disputes
-
-**Alternative data sources:** The third-party service **bger-update.ch** provides daily automated decision updates (updated 13:00 daily) with categorical filtering. For bulk research, the Swiss Federal Supreme Court Dataset on Zenodo (DOI: 10.5281/zenodo.14867950) contains **127,477 cases** from 2007-2024 in CSV/Parquet formats.
-
-**Priority:** 1 (judicial authority) | **Limitation:** Manual subscription required
+> **Note:** Bundesgericht RSS feeds were evaluated and temporarily added but subsequently removed from the pipeline (see commit `441b9b3`). The feeds required manual subscription activation and did not provide sufficient credit-risk-relevant content to justify the maintenance overhead.
 
 ---
 
@@ -189,7 +174,7 @@ FintechNews Switzerland provides a full WordPress RSS 2.0 implementation with ca
 | **1** | FINMA News | `finma.ch/en/rss/news/` | Several/week |
 | **1** | FINMA Sanctions | `finma.ch/en/rss/sanktionen/` | As announced |
 | **1** | news.admin.ch | `news.admin.ch/NSBSubscriber/feeds/rss` | Multiple/day |
-| **1** | Bundesgericht | Subscription at search.bger.ch | Daily |
+| ~~1~~ | ~~Bundesgericht~~ | ~~Subscription at search.bger.ch~~ | ~~Removed~~ |
 | **2** | FintechNews.ch | `fintechnews.ch/feed/` | 3-7 articles/day |
 | **2** | SwissBanking | ❌ Newsletter only | Quarterly |
 | **3** | Le Temps Économie | `letemps.ch/economie.rss` | Multiple/day |
