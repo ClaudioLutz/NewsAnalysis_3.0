@@ -130,10 +130,10 @@ GOOGLE_API_KEY=your-google-key          # Summarization & Digest
 OPENAI_API_KEY=your-openai-key          # Fallback
 
 # Optional: Email delivery
-EMAIL_RECIPIENTS=analyst@company.com    # Official TO recipients
+EMAIL_RECIPIENTS=vip1@company.com,vip2@company.com  # VIP group (shared TO, see each other)
+EMAIL_BCC=other1@company.com,other2@company.com     # Individual emails (each gets own email, see no one)
+EMAIL_SENDER=sender@company.com                     # Sender address
 EMAIL_AUTO_SEND=true
-EMAIL_BCC=other@company.com             # Separate BCC email (requires EMAIL_SENDER)
-EMAIL_SENDER=sender@company.com         # Used as TO address for BCC email
 ```
 
 ---

@@ -10,7 +10,7 @@ Collects articles from 30+ RSS feeds, classifies them via LLM, scrapes content, 
 - **Non-redundant key points**: 0-4 variable key points per article containing only new facts not in the summary
 - **Topic icons**: Each topic category has a BMP Unicode icon (Outlook-safe) in the email header
 - **Relevance-based topic ordering**: Email topics sorted by average article relevance score (highest first)
-- **Split email delivery**: Official recipients via TO, BCC recipients as separate email
+- **Multi-email delivery**: VIP group receives one shared email (all in TO, see each other); remaining recipients each get an individual email (cannot see anyone else)
 - **Content fingerprint cache**: SHA-256 based summary cache with 90-day TTL (must be cleared to force re-summarization)
 
 ---
