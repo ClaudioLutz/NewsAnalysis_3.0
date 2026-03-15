@@ -204,11 +204,11 @@ def email(
                 # Fallback to date-based subject when no articles
                 subject = f"Creditreform News-Digest: {target_date.strftime('%d.%m.%Y')}"
 
-            # Email 1: Official recipients (TO list)
+            # Email 1: VIP group (all recipients in TO, they see each other)
             if preview:
-                click.echo("\nOpening official email in Outlook for preview...")
+                click.echo("\nOpening VIP group email in Outlook for preview...")
             else:
-                click.echo("\nSending official email...")
+                click.echo("\nSending VIP group email...")
 
             result = email_service.send_html_email_with_images(
                 to=email_recipients,
@@ -224,11 +224,11 @@ def email(
                 click.echo(f"\nError: {result.message}", err=True)
                 raise click.Abort()
 
-            # Email 2+: Individual emails to BCC recipients
-            # Each recipient gets their own email (cannot see others).
+            # Email 2+: Individual emails to remaining recipients
+            # Each gets their own email — cannot see VIP group or each other.
             bcc_recipients = config.email_bcc_list
             if bcc_recipients and not recipient:
-                click.echo(f"\nSending individual emails to {len(bcc_recipients)} BCC recipients...")
+                click.echo(f"\nSending individual emails to {len(bcc_recipients)} recipients...")
                 for bcc_addr in bcc_recipients:
                     bcc_result = email_service.send_html_email_with_images(
                         to=bcc_addr,

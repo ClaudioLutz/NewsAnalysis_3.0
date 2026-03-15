@@ -806,7 +806,7 @@ class PipelineOrchestrator:
                     logger.warning("email_skipped", reason="Outlook not available")
                     return False
 
-                # Email 1: Official recipients (TO list)
+                # Email 1: VIP group (all recipients in TO, they see each other)
                 result = email_service.send_html_email_with_images(
                     to=recipients,
                     subject=subject,
@@ -825,10 +825,9 @@ class PipelineOrchestrator:
                     logger.error("email_official_send_failed", error=result.message)
                     return False
 
-                # Email 2+: Individual emails to BCC recipients
-                # Each recipient gets their own email so they cannot see
-                # other BCC recipients. Outlook COM BCC is unreliable,
-                # so we send separate emails with each recipient as TO.
+                # Email 2+: Individual emails to remaining recipients
+                # Each gets their own email — cannot see VIP group or
+                # each other. Sent individually as TO (not via BCC).
                 bcc_recipients = self.config.email_bcc_list
                 if bcc_recipients:
                     bcc_sent = 0
