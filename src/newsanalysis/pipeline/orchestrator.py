@@ -825,35 +825,34 @@ class PipelineOrchestrator:
                     logger.error("email_official_send_failed", error=result.message)
                     return False
 
-                # Email 2: BCC recipients (separate email)
+                # Email 2+: Individual emails to BCC recipients
+                # Each recipient gets their own email so they cannot see
+                # other BCC recipients. Outlook COM BCC is unreliable,
+                # so we send separate emails with each recipient as TO.
                 bcc_recipients = self.config.email_bcc_list
                 if bcc_recipients:
-                    sender = self.config.email_sender
-                    if not sender:
-                        logger.warning(
-                            "email_bcc_skipped",
-                            reason="No EMAIL_SENDER configured for BCC email",
-                        )
-                    else:
+                    bcc_sent = 0
+                    for recipient in bcc_recipients:
                         bcc_result = email_service.send_html_email_with_images(
-                            to=sender,
+                            to=recipient,
                             subject=subject,
                             html_body=html_body,
                             image_attachments=image_cid_mapping,
-                            bcc=bcc_recipients,
                             preview=False,
                         )
-
                         if bcc_result.success:
-                            logger.info(
-                                "email_bcc_sent",
-                                bcc_count=len(bcc_recipients),
-                                images_attached=len(image_cid_mapping),
-                            )
+                            bcc_sent += 1
                         else:
                             logger.error(
-                                "email_bcc_send_failed", error=bcc_result.message
+                                "email_bcc_send_failed",
+                                recipient=recipient,
+                                error=bcc_result.message,
                             )
+                    logger.info(
+                        "email_bcc_sent",
+                        bcc_sent=bcc_sent,
+                        bcc_total=len(bcc_recipients),
+                    )
 
                 logger.info("stage_email_sending_complete")
                 return True

@@ -224,35 +224,23 @@ def email(
                 click.echo(f"\nError: {result.message}", err=True)
                 raise click.Abort()
 
-            # Email 2: BCC recipients (separate email)
+            # Email 2+: Individual emails to BCC recipients
+            # Each recipient gets their own email (cannot see others).
             bcc_recipients = config.email_bcc_list
             if bcc_recipients and not recipient:
-                sender = config.email_sender
-                if not sender:
-                    click.echo(
-                        "\nWarning: BCC recipients configured but no EMAIL_SENDER set. "
-                        "Skipping BCC email.",
-                        err=True,
-                    )
-                else:
-                    if preview:
-                        click.echo("\nOpening BCC email in Outlook for preview...")
-                    else:
-                        click.echo(f"\nSending BCC email to {len(bcc_recipients)} recipients...")
-
+                click.echo(f"\nSending individual emails to {len(bcc_recipients)} BCC recipients...")
+                for bcc_addr in bcc_recipients:
                     bcc_result = email_service.send_html_email_with_images(
-                        to=sender,
+                        to=bcc_addr,
                         subject=subject,
                         html_body=html_body,
                         image_attachments=image_cid_mapping,
-                        bcc=bcc_recipients,
                         preview=preview,
                     )
-
                     if bcc_result.success:
-                        click.echo(f"{bcc_result.message}")
+                        click.echo(f"  Sent to {bcc_addr}")
                     else:
-                        click.echo(f"\nWarning: BCC email failed: {bcc_result.message}", err=True)
+                        click.echo(f"\n  Warning: Failed for {bcc_addr}: {bcc_result.message}", err=True)
 
         finally:
             db.close()
