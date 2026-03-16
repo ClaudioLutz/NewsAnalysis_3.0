@@ -7,6 +7,9 @@ Schema Version History:
 - v1: Initial schema (articles, processed_links, etc.)
 - v2: Added semantic deduplication (is_duplicate, canonical_url_hash columns,
       duplicate_groups and duplicate_members tables)
+- v3: Disable FTS triggers to prevent corruption
+- v4: Add image extraction support (article_images table)
+- v5: Add credit_impact column to articles
 """
 
 import sqlite3
@@ -18,7 +21,7 @@ import structlog
 logger = structlog.get_logger(__name__)
 
 # Current schema version - increment when adding migrations
-CURRENT_SCHEMA_VERSION = 4
+CURRENT_SCHEMA_VERSION = 5
 
 # Type alias for migration functions
 MigrationFunc = Callable[[sqlite3.Connection], None]
@@ -317,11 +320,32 @@ def migrate_v3_to_v4(conn: sqlite3.Connection) -> None:
     logger.info("migration_complete", version=4)
 
 
+def migrate_v4_to_v5(conn: sqlite3.Connection) -> None:
+    """Migration v4 -> v5: Add credit impact classification.
+
+    Adds:
+    - credit_impact column to articles (negative, neutral, positive)
+    """
+    logger.info("applying_migration", from_version=4, to_version=5)
+
+    if not column_exists(conn, "articles", "credit_impact"):
+        conn.execute(
+            """
+            ALTER TABLE articles
+            ADD COLUMN credit_impact TEXT
+            """
+        )
+        logger.info("migration_added_column", table="articles", column="credit_impact")
+
+    logger.info("migration_complete", version=5)
+
+
 # Registry of migrations: version -> migration function
 MIGRATIONS: dict[int, MigrationFunc] = {
     2: migrate_v1_to_v2,
     3: migrate_v2_to_v3,
     4: migrate_v3_to_v4,
+    5: migrate_v4_to_v5,
 }
 
 
