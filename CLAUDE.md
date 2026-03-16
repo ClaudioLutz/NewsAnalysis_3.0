@@ -279,6 +279,26 @@ python -m newsanalysis.cli.main run --reset digest --skip-collection --today-onl
 python -m newsanalysis.cli.main run --reset all-today --skip-collection
 ```
 
+### Safe Production Re-Run (4-Step Workflow)
+
+When the daily pipeline fails and you need to re-run on production **with manual verification before sending emails**:
+
+```powershell
+# Step 1: Process articles (filter, scrape, summarize) — no digest, no email
+python -m newsanalysis.cli.main run --reset all-today --skip-collection --skip-digest
+
+# Step 2: Generate digest WITHOUT sending email
+$env:EMAIL_AUTO_SEND="false"; python -m newsanalysis.cli.main run --reset digest --skip-collection
+
+# Step 3: Preview in Outlook (opens email without sending)
+python -m newsanalysis.cli.main email --preview
+
+# Step 4: If everything looks good, send
+python -m newsanalysis.cli.main email
+```
+
+**Note:** Production uses PowerShell. Use `$env:VAR="value"` for env vars, not `set` or `export`.
+
 ### Other CLI Commands
 
 ```bash
