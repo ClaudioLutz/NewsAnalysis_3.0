@@ -537,49 +537,75 @@ class PipelineOrchestrator:
         """Run semantic deduplication stage.
 
         Detects articles from different sources that cover the same news story.
-        Marks duplicates so they are skipped during summarization.
+        Compares new (scraped) articles against each other AND against recently
+        processed articles from previous runs to prevent cross-run duplicates.
 
         Returns:
             Statistics dict with checked and duplicates counts.
         """
         logger.info("stage_deduplication_starting")
 
-        # Get articles that need deduplication check
-        articles = self.repository.get_articles_for_deduplication(limit=None)
+        # Get new articles that need deduplication check
+        new_articles = self.repository.get_articles_for_deduplication(limit=None)
 
-        if len(articles) < 2:
-            logger.info("insufficient_articles_for_deduplication", count=len(articles))
-            return {"checked": len(articles), "duplicates": 0}
+        if not new_articles:
+            logger.info("no_articles_for_deduplication")
+            return {"checked": 0, "duplicates": 0}
 
-        logger.info("articles_to_deduplicate", count=len(articles))
+        # Get recently processed articles as reference for cross-run dedup
+        reference_articles = self.repository.get_recent_processed_articles(
+            hours=self.duplicate_detector.time_window_hours
+        )
+
+        # Combine: new articles + reference articles for comparison
+        all_articles = new_articles + reference_articles
+        new_hashes = {a.url_hash for a in new_articles}
+
+        logger.info(
+            "articles_to_deduplicate",
+            new_count=len(new_articles),
+            reference_count=len(reference_articles),
+            total=len(all_articles),
+        )
+
+        if len(all_articles) < 2:
+            logger.info("insufficient_articles_for_deduplication", count=len(all_articles))
+            return {"checked": len(new_articles), "duplicates": 0}
 
         try:
-            # Run duplicate detection
+            # Run duplicate detection on combined set
             duplicate_groups, duplicate_hashes = await self.duplicate_detector.detect_duplicates(
-                articles=articles,
+                articles=all_articles,
                 max_concurrent=10,
             )
 
-            # Save duplicate groups to database
+            # Only mark NEW articles as duplicates, not reference articles
+            new_duplicate_hashes = duplicate_hashes & new_hashes
+
+            # Save duplicate groups — only mark NEW articles as duplicates
             if duplicate_groups:
-                self.repository.save_duplicate_groups(duplicate_groups, self.run_id)
+                self.repository.save_duplicate_groups(
+                    duplicate_groups, self.run_id, only_mark_hashes=new_hashes
+                )
 
             logger.info(
                 "stage_deduplication_complete",
-                checked=len(articles),
+                new_checked=len(new_articles),
+                reference_articles=len(reference_articles),
                 groups=len(duplicate_groups),
-                duplicates=len(duplicate_hashes),
+                new_duplicates=len(new_duplicate_hashes),
+                total_duplicates=len(duplicate_hashes),
             )
 
             return {
-                "checked": len(articles),
-                "duplicates": len(duplicate_hashes),
+                "checked": len(new_articles),
+                "duplicates": len(new_duplicate_hashes),
             }
 
         except Exception as e:
             logger.error("deduplication_failed", error=str(e))
             # Don't fail the pipeline - deduplication is optional
-            return {"checked": len(articles), "duplicates": 0}
+            return {"checked": len(new_articles), "duplicates": 0}
 
     async def _run_summarization(self) -> int:
         """Run article summarization stage.

@@ -2,7 +2,7 @@
 
 import json
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Set
 
 from newsanalysis.core.article import (
     Article,
@@ -539,12 +539,16 @@ class ArticleRepository:
         self,
         groups: List[DuplicateGroup],
         run_id: str,
+        only_mark_hashes: Optional[Set[str]] = None,
     ) -> int:
         """Save duplicate groups to database and mark duplicate articles.
 
         Args:
             groups: List of DuplicateGroup objects from detector.
             run_id: Pipeline run identifier.
+            only_mark_hashes: If provided, only mark articles with these url_hashes
+                as duplicates. Used to protect already-processed reference articles
+                from being marked as duplicates during cross-run deduplication.
 
         Returns:
             Number of articles marked as duplicates.
@@ -589,6 +593,10 @@ class ArticleRepository:
                         ) VALUES (?, ?, ?)
                     """
                     self.db.execute(member_query, (group_id, dup_hash, group.confidence))
+
+                    # Only mark as duplicate if in the allowed set (or no filter)
+                    if only_mark_hashes is not None and dup_hash not in only_mark_hashes:
+                        continue
 
                     # Mark article as duplicate
                     update_query = """
@@ -655,6 +663,50 @@ class ArticleRepository:
         except Exception as e:
             logger.error("fetch_articles_for_deduplication_failed", error=str(e))
             raise DatabaseError(f"Failed to fetch articles for deduplication: {e}") from e
+
+    def get_recent_processed_articles(self, hours: int = 48) -> List[Article]:
+        """Get recently processed (summarized/digested) articles for cross-run dedup reference.
+
+        These articles are already processed but serve as reference to detect duplicates
+        among newly scraped articles from subsequent pipeline runs.
+
+        Args:
+            hours: Time window in hours to look back.
+
+        Returns:
+            List of recently processed articles.
+
+        Raises:
+            DatabaseError: If database operation fails.
+        """
+        try:
+            query = """
+                SELECT * FROM articles
+                WHERE pipeline_stage IN ('summarized', 'digested')
+                  AND processing_status = 'completed'
+                  AND (is_duplicate = FALSE OR is_duplicate IS NULL)
+                  AND collected_at >= datetime('now', ?)
+                ORDER BY published_at DESC, feed_priority ASC
+            """
+
+            cursor = self.db.execute(query, (f"-{hours} hours",))
+            rows = cursor.fetchall()
+
+            articles = [self._row_to_article(row) for row in rows]
+
+            logger.info(
+                "recent_processed_articles_fetched",
+                count=len(articles),
+                hours=hours,
+            )
+
+            return articles
+
+        except Exception as e:
+            logger.error("fetch_recent_processed_articles_failed", error=str(e))
+            raise DatabaseError(
+                f"Failed to fetch recent processed articles: {e}"
+            ) from e
 
     def save_article_images(self, images: List[ArticleImage]) -> int:
         """Save article images to database.
