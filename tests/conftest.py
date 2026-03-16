@@ -34,7 +34,7 @@ def test_config(tmp_path: Path) -> Config:
 def test_db(tmp_path: Path) -> Generator[DatabaseConnection, None, None]:
     """In-memory SQLite database with schema initialized."""
     db_path = tmp_path / "test.db"
-    conn = DatabaseConnection(str(db_path))
+    conn = DatabaseConnection(db_path)
 
     # Initialize schema
     schema_path = Path(__file__).parent.parent / "src" / "newsanalysis" / "database" / "schema.sql"
@@ -52,15 +52,14 @@ def sample_article() -> Article:
     """Sample article for testing."""
     return Article(
         url="https://www.nzz.ch/test-article",
-        url_hash="test-hash-12345",
+        normalized_url="https://www.nzz.ch/test-article",
+        url_hash="a" * 64,
         title="Test Article: Swiss Company Files Bankruptcy",
         source="NZZ",
         published_at=datetime.now(UTC),
-        metadata=ArticleMetadata(
-            author="Test Author",
-            description="Test description",
-            language="de",
-        ),
+        collected_at=datetime.now(UTC),
+        feed_priority=3,
+        run_id="test-run-001",
     )
 
 
@@ -70,10 +69,14 @@ def sample_articles() -> list[Article]:
     return [
         Article(
             url=f"https://www.nzz.ch/article-{i}",
-            url_hash=f"hash-{i}",
+            normalized_url=f"https://www.nzz.ch/article-{i}",
+            url_hash=f"{'a' * 60}{i:04d}",
             title=f"Article {i}: Business News",
             source="NZZ",
             published_at=datetime.now(UTC),
+            collected_at=datetime.now(UTC),
+            feed_priority=3,
+            run_id="test-run-001",
         )
         for i in range(5)
     ]

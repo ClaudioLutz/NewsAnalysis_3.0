@@ -9,7 +9,7 @@ from newsanalysis.utils.date_utils import (
     is_within_hours,
     now_utc,
     parse_date,
-    format_date_german,
+    format_datetime,
 )
 
 
@@ -99,31 +99,27 @@ class TestIsWithinHours:
         future = now_utc() + timedelta(hours=1)
         assert is_within_hours(future, 24) is True
 
-    def test_is_within_hours_with_none(self):
-        """Should handle None input."""
-        assert is_within_hours(None, 24) is False
+    def test_is_within_hours_naive_datetime(self):
+        """Should handle naive datetime (no timezone) by assuming UTC."""
+        from datetime import datetime as dt
+        recent = dt.now() - timedelta(hours=1)
+        assert is_within_hours(recent, 24) is True
 
 
 @pytest.mark.unit
-class TestFormatDateGerman:
-    """Tests for format_date_german function."""
+class TestFormatDatetime:
+    """Tests for format_datetime function."""
 
-    def test_format_date_german_formats_correctly(self):
-        """Should format date in German style."""
+    def test_format_datetime_default_format(self):
+        """Should format datetime with default format."""
         date = datetime(2026, 1, 4, 10, 30, tzinfo=UTC)
-        result = format_date_german(date)
-        assert "04" in result or "4" in result
-        assert "Januar" in result or "01" in result
+        result = format_datetime(date)
         assert "2026" in result
+        assert "01" in result or "1" in result
+        assert "04" in result or "4" in result
 
-    def test_format_date_german_handles_different_months(self):
-        """Should handle different months."""
-        dates = [
-            datetime(2026, 1, 1, tzinfo=UTC),
-            datetime(2026, 6, 15, tzinfo=UTC),
-            datetime(2026, 12, 31, tzinfo=UTC),
-        ]
-        for date in dates:
-            result = format_date_german(date)
-            assert isinstance(result, str)
-            assert len(result) > 0
+    def test_format_datetime_custom_format(self):
+        """Should format datetime with custom format string."""
+        date = datetime(2026, 6, 15, 14, 0, tzinfo=UTC)
+        result = format_datetime(date, "%Y-%m-%d")
+        assert result == "2026-06-15"

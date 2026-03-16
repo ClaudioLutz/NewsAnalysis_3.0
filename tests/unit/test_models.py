@@ -22,43 +22,51 @@ class TestArticle:
     """Tests for Article model."""
 
     def test_article_creation_with_required_fields(self):
-        """Should create article with required fields only."""
+        """Should create article with required fields."""
         article = Article(
             url="https://example.com/article",
-            url_hash="test-hash",
+            normalized_url="https://example.com/article",
+            url_hash="a" * 64,
             title="Test Article",
             source="Test Source",
+            published_at=datetime.now(UTC),
+            collected_at=datetime.now(UTC),
+            feed_priority=3,
+            run_id="test-run",
         )
-        assert article.url == "https://example.com/article"
+        assert str(article.url) == "https://example.com/article"
         assert article.title == "Test Article"
         assert article.source == "Test Source"
 
     def test_article_with_metadata(self):
-        """Should create article with metadata."""
-        metadata = ArticleMetadata(
-            author="Test Author",
-            description="Test description",
-            language="de",
-        )
+        """Should create article with all fields."""
         article = Article(
             url="https://example.com/article",
-            url_hash="test-hash",
+            normalized_url="https://example.com/article",
+            url_hash="a" * 64,
             title="Test Article",
             source="Test Source",
-            metadata=metadata,
+            published_at=datetime.now(UTC),
+            collected_at=datetime.now(UTC),
+            feed_priority=3,
+            run_id="test-run",
+            author="Test Author",
         )
-        assert article.metadata.author == "Test Author"
-        assert article.metadata.language == "de"
+        assert article.author == "Test Author"
 
     def test_article_with_published_date(self):
         """Should handle published date."""
         pub_date = datetime.now(UTC)
         article = Article(
             url="https://example.com/article",
-            url_hash="test-hash",
+            normalized_url="https://example.com/article",
+            url_hash="a" * 64,
             title="Test Article",
             source="Test Source",
             published_at=pub_date,
+            collected_at=datetime.now(UTC),
+            feed_priority=3,
+            run_id="test-run",
         )
         assert article.published_at == pub_date
 
@@ -66,9 +74,14 @@ class TestArticle:
         """Should require URL field."""
         with pytest.raises(ValidationError):
             Article(
-                url_hash="test-hash",
+                normalized_url="https://example.com/article",
+                url_hash="a" * 64,
                 title="Test Article",
                 source="Test Source",
+                published_at=datetime.now(UTC),
+                collected_at=datetime.now(UTC),
+                feed_priority=3,
+                run_id="test-run",
             )
 
     def test_article_requires_title(self):
@@ -76,8 +89,13 @@ class TestArticle:
         with pytest.raises(ValidationError):
             Article(
                 url="https://example.com/article",
-                url_hash="test-hash",
+                normalized_url="https://example.com/article",
+                url_hash="a" * 64,
                 source="Test Source",
+                published_at=datetime.now(UTC),
+                collected_at=datetime.now(UTC),
+                feed_priority=3,
+                run_id="test-run",
             )
 
 
@@ -135,11 +153,14 @@ class TestFeedConfig:
         config = FeedConfig(
             name="Test Feed",
             url="https://example.com/feed.xml",
-            feed_type="rss",
+            type="rss",
+            priority=3,
+            max_age_hours=48,
+            rate_limit_seconds=5.0,
             enabled=True,
         )
         assert config.name == "Test Feed"
-        assert config.feed_type == "rss"
+        assert config.type == "rss"
         assert config.enabled is True
 
     def test_feed_config_validates_feed_type(self):
@@ -149,7 +170,10 @@ class TestFeedConfig:
             FeedConfig(
                 name="Test",
                 url="https://example.com",
-                feed_type=feed_type,
+                type=feed_type,
+                priority=3,
+                max_age_hours=48,
+                rate_limit_seconds=5.0,
             )
 
         # Invalid feed type
@@ -157,7 +181,10 @@ class TestFeedConfig:
             FeedConfig(
                 name="Test",
                 url="https://example.com",
-                feed_type="invalid",
+                type="invalid",
+                priority=3,
+                max_age_hours=48,
+                rate_limit_seconds=5.0,
             )
 
     def test_feed_config_default_enabled(self):
@@ -165,7 +192,10 @@ class TestFeedConfig:
         config = FeedConfig(
             name="Test",
             url="https://example.com",
-            feed_type="rss",
+            type="rss",
+            priority=3,
+            max_age_hours=48,
+            rate_limit_seconds=5.0,
         )
         assert config.enabled is True
 
@@ -234,12 +264,32 @@ class TestArticleSummary:
         )
         assert summary.topic == ArticleTopic.CREDIT_RISK
 
-    def test_article_summary_requires_key_points(self):
-        """Should require at least 2 key points."""
-        with pytest.raises(ValidationError):
-            ArticleSummary(
-                summary_title="Test Title",
-                summary="Test summary text",
-                key_points=["Only one point"],
-                entities=EntityData(),
-            )
+    def test_article_summary_allows_zero_key_points(self):
+        """Should allow 0 key points (simple articles)."""
+        summary = ArticleSummary(
+            summary_title="Test Title",
+            summary="Test summary text",
+            key_points=[],
+            entities=EntityData(),
+        )
+        assert len(summary.key_points) == 0
+
+    def test_article_summary_allows_up_to_four_key_points(self):
+        """Should allow up to 4 key points."""
+        summary = ArticleSummary(
+            summary_title="Test Title",
+            summary="Test summary text",
+            key_points=["Point 1", "Point 2", "Point 3", "Point 4"],
+            entities=EntityData(),
+        )
+        assert len(summary.key_points) == 4
+
+    def test_article_summary_truncates_excess_key_points(self):
+        """Should truncate to 4 if more than 4 key points provided."""
+        summary = ArticleSummary(
+            summary_title="Test Title",
+            summary="Test summary text",
+            key_points=["P1", "P2", "P3", "P4", "P5"],
+            entities=EntityData(),
+        )
+        assert len(summary.key_points) == 4

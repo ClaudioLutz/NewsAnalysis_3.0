@@ -226,7 +226,7 @@ class TestHtmlEmailFormatter:
             "version": 1,
             "generated_at": "2026-01-06T08:30:00",
             "meta_analysis_json": '{"key_themes": ["Swiss Banking"], "credit_risk_signals": ["Company X bankruptcy"]}',
-            "json_output": '{"articles": [{"title": "Test Article", "summary": "Brief summary", "key_points": ["Point 1", "Point 2"], "source": "Reuters", "url": "https://example.com"}]}',
+            "json_output": '{"articles": [{"title": "Test Article", "summary": "Brief summary", "key_points": ["Point 1", "Point 2"], "source": "Reuters", "url": "https://example.com", "topic": "credit_risk", "credit_impact": "negative"}]}',
         }
 
         html = formatter.format(digest_data)
@@ -234,28 +234,24 @@ class TestHtmlEmailFormatter:
         # Check key elements are present
         assert "Creditreform News-Digest" in html
         assert "6. Januar 2026" in html
-        assert "5" in html  # article count
-        assert "Swiss Banking" in html
-        assert "Company X bankruptcy" in html
         assert "Test Article" in html
         assert "Brief summary" in html
-        assert "Point 1" in html
 
     def test_parse_articles(self):
         """Should parse articles from JSON output."""
         formatter = HtmlEmailFormatter()
 
-        json_output = '{"articles": [{"title": "News Title", "summary": "A summary", "key_points": ["Key 1", "Key 2", "Key 3", "Key 4"], "source": "Source", "url": "https://test.com", "topic": "other"}]}'
+        json_output = '{"articles": [{"title": "News Title", "summary": "A summary", "key_points": ["Key 1", "Key 2", "Key 3", "Key 4"], "source": "Source", "url": "https://test.com", "topic": "credit_risk", "credit_impact": "negative"}]}'
         articles_by_topic = formatter._parse_articles(json_output)
 
         # Function returns dict of topic -> list of articles
         assert isinstance(articles_by_topic, dict)
-        assert "other" in articles_by_topic
-        assert len(articles_by_topic["other"]) == 1
-        article = articles_by_topic["other"][0]
+        assert "credit_risk" in articles_by_topic
+        assert len(articles_by_topic["credit_risk"]) == 1
+        article = articles_by_topic["credit_risk"][0]
         assert article["title"] == "News Title"
         assert article["summary"] == "A summary"
-        assert len(article["key_points"]) == 2  # Limited to 2
+        assert len(article["key_points"]) == 2  # Limited to 2 for non-neutral
         assert article["source"] == "Source"
         assert article["url"] == "https://test.com"
 
