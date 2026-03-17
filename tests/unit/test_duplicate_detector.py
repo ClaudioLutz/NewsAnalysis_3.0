@@ -131,6 +131,100 @@ class TestDuplicateGroup:
 
 
 @pytest.mark.unit
+class TestEntityExtraction:
+    """Tests for entity extraction pre-filter."""
+
+    def test_extract_entities_german(self):
+        """Should extract proper nouns and numbers from German title."""
+        entities = DuplicateDetector._extract_entities(
+            "UBS muss 10 Mrd. CHF abschreiben wegen Kapitalregeln"
+        )
+        assert "ubs" in entities  # Acronym, not stemmed
+        assert "chf" in entities  # Acronym, not stemmed
+        # "Kapitalregeln" is stemmed (regular word)
+        assert any(e.startswith("kapitalregel") for e in entities)
+
+    def test_extract_entities_french(self):
+        """Should extract entities from French title."""
+        entities = DuplicateDetector._extract_entities(
+            "L'UBS devra amortir 500 milliards CHF"
+        )
+        assert "ubs" in entities  # Acronym preserved
+        assert "500" in entities
+        assert "chf" in entities
+
+    def test_extract_entities_italian(self):
+        """Should extract entities from Italian title."""
+        entities = DuplicateDetector._extract_entities(
+            "BancaStato versa 57,4 milioni nelle casse cantonali"
+        )
+        # CamelCase is split and stemmed: Banca -> banc (stemmed)
+        assert any(e.startswith("banc") for e in entities)
+        assert "57,4" in entities
+
+    def test_cross_language_entity_match(self):
+        """Should find shared entities across languages."""
+        de = DuplicateDetector._extract_entities(
+            "UBS meldet Verlust von 500 Mrd. CHF"
+        )
+        fr = DuplicateDetector._extract_entities(
+            "UBS annonce des pertes de 500 milliards CHF"
+        )
+        shared = de & fr
+        assert "ubs" in shared  # Acronym matches exactly
+        assert "chf" in shared
+
+    def test_stemming_matches_inflected_forms(self):
+        """Should match inflected word forms via stemming."""
+        e1 = DuplicateDetector._extract_entities(
+            "300 bis 1400 Fr. pro Haushalt: So viel kosten"
+        )
+        e2 = DuplicateDetector._extract_entities(
+            "Das kostet die Mehrwertsteuer die Haushalte"
+        )
+        shared = e1 & e2
+        assert len(shared) > 0  # "Haushalt" and "Haushalte" share same stem
+
+    def test_no_shared_entities(self):
+        """Should find no shared entities for unrelated articles."""
+        de = DuplicateDetector._extract_entities(
+            "Bundesrat erhöht Mindestfranchise"
+        )
+        it = DuplicateDetector._extract_entities(
+            "BancaStato versa 57,4 milioni"
+        )
+        shared = de & it
+        assert len(shared) == 0
+
+    def test_stop_words_excluded(self):
+        """Should exclude common stop words."""
+        entities = DuplicateDetector._extract_entities(
+            "Die neue Regelung der Schweizer Banken"
+        )
+        assert "die" not in entities
+        assert "neue" not in entities
+        assert "der" not in entities
+
+    def test_pre_filter_reduces_pairs(self, duplicate_detector, sample_articles):
+        """Should filter out pairs with no shared entities."""
+        # Articles 0-2 share "Tesla", article 3 is about "Swiss Banks"
+        all_pairs = [
+            (sample_articles[0], sample_articles[1]),  # Tesla vs Tesla → keep
+            (sample_articles[0], sample_articles[2]),  # Tesla vs Tesla → keep
+            (sample_articles[0], sample_articles[3]),  # Tesla vs Swiss → skip
+            (sample_articles[1], sample_articles[2]),  # Tesla vs Tesla → keep
+            (sample_articles[1], sample_articles[3]),  # Tesla vs Swiss → skip
+            (sample_articles[2], sample_articles[3]),  # Tesla vs Swiss → skip
+        ]
+        filtered = duplicate_detector._pre_filter_candidates(all_pairs)
+
+        # Tesla articles share "Tesla" entity, Swiss Bank has no overlap
+        assert len(filtered) < len(all_pairs)
+        # All Tesla-Tesla pairs should survive
+        assert len(filtered) >= 3
+
+
+@pytest.mark.unit
 class TestDuplicateDetector:
     """Tests for DuplicateDetector class."""
 

@@ -1,11 +1,14 @@
 """Semantic duplicate detector using LLM for cross-source article deduplication."""
 
 import asyncio
+import re
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, FrozenSet, List, Optional, Set, Tuple
 
+import snowballstemmer
 from pydantic import BaseModel, Field
+from stop_words import get_stop_words
 
 from newsanalysis.core.article import Article
 from newsanalysis.integrations.provider_factory import LLMClient
@@ -123,12 +126,116 @@ Article 2:
 Are these articles covering the SAME specific news story or event?
 Respond with JSON: {{"is_duplicate": bool, "confidence": float, "reason": "brief explanation"}}"""
 
+    # Multilingual stop words from stop-words library (DE/FR/IT/EN)
+    _STOP_WORDS: Set[str] = (
+        set(get_stop_words("german"))
+        | set(get_stop_words("french"))
+        | set(get_stop_words("italian"))
+        | set(get_stop_words("english"))
+    )
+
+    # Snowball stemmers for reducing words to their root form (DE/FR/IT)
+    _STEMMERS = {
+        "de": snowballstemmer.stemmer("german"),
+        "fr": snowballstemmer.stemmer("french"),
+        "it": snowballstemmer.stemmer("italian"),
+    }
+
+    # Pattern for extracting tokens that are likely entities or numbers
+    _ENTITY_PATTERN = re.compile(r"[A-ZÄÖÜ][a-zäöüéèêàâîôûç]+|[A-ZÄÖÜ]{2,}|\d+[\.,]?\d*")
+
+    @staticmethod
+    def _stem_word(word: str) -> str:
+        """Stem a word using all stemmers, return the shortest result.
+
+        Using the shortest stem maximizes cross-language matching
+        (e.g., "Haushalte" and "Haushalt" both → "haushalt").
+        """
+        stems = [word]
+        for stemmer in DuplicateDetector._STEMMERS.values():
+            stems.append(stemmer.stemWord(word))
+        return min(stems, key=len)
+
+    @staticmethod
+    def _extract_entities(title: str) -> Set[str]:
+        """Extract named entities and numbers from a title.
+
+        Extracts capitalized words (proper nouns), acronyms, and numbers.
+        Applies stemming to normalize inflected forms across languages
+        (e.g., "Haushalte" → "haushalt", "Millionäre" → "millionär").
+
+        Args:
+            title: Article title string.
+
+        Returns:
+            Set of stemmed entity strings (lowercased for comparison).
+        """
+        tokens = DuplicateDetector._ENTITY_PATTERN.findall(title)
+        entities = set()
+        for token in tokens:
+            lower = token.lower()
+            if lower not in DuplicateDetector._STOP_WORDS and len(token) >= 2:
+                # Don't stem acronyms (all-uppercase) or numbers — only stem regular words
+                if token.isupper() or token[0].isdigit():
+                    entities.add(lower)
+                else:
+                    stemmed = DuplicateDetector._stem_word(lower)
+                    if len(stemmed) >= 2:
+                        entities.add(stemmed)
+        return entities
+
+    def _pre_filter_candidates(
+        self, pairs: List[Tuple[Article, Article]]
+    ) -> List[Tuple[Article, Article]]:
+        """Pre-filter candidate pairs using entity overlap.
+
+        Only keeps pairs where titles share at least one named entity or number.
+        This is language-independent because proper nouns and numbers are the same
+        across DE/FR/IT (e.g., "UBS", "57,4 Mio", "BancaStato").
+
+        Args:
+            pairs: All candidate pairs from time window grouping.
+
+        Returns:
+            Filtered pairs that share at least one entity.
+        """
+        # Cache entity extraction per article
+        entity_cache: Dict[str, Set[str]] = {}
+
+        def get_entities(article: Article) -> Set[str]:
+            if article.url_hash not in entity_cache:
+                entity_cache[article.url_hash] = self._extract_entities(article.title)
+            return entity_cache[article.url_hash]
+
+        filtered = []
+        for a1, a2 in pairs:
+            entities1 = get_entities(a1)
+            entities2 = get_entities(a2)
+            shared = entities1 & entities2
+            if shared:
+                filtered.append((a1, a2))
+
+        skipped = len(pairs) - len(filtered)
+        logger.info(
+            "pre_filter_complete",
+            total_pairs=len(pairs),
+            candidate_pairs=len(filtered),
+            skipped_pairs=skipped,
+            reduction_pct=round(skipped / len(pairs) * 100, 1) if pairs else 0,
+        )
+
+        return filtered
+
     async def detect_duplicates(
         self,
         articles: List[Article],
         max_concurrent: int = 10,
     ) -> Tuple[List[DuplicateGroup], Set[str]]:
         """Detect duplicate articles in a batch.
+
+        Uses a two-stage approach:
+        1. Pre-filter: Only pairs sharing named entities/numbers are candidates
+        2. LLM comparison: Semantic duplicate check on filtered candidates
 
         Args:
             articles: List of articles to check for duplicates.
@@ -147,17 +254,23 @@ Respond with JSON: {{"is_duplicate": bool, "confidence": float, "reason": "brief
         # Group articles by time window for comparison
         time_groups = self._group_by_time_window(articles)
 
-        # Find candidate pairs within each time group
-        candidate_pairs = []
+        # Find all candidate pairs within each time group
+        all_pairs = []
         for group in time_groups:
             if len(group) > 1:
-                # Generate all pairs within the group
                 for i, article1 in enumerate(group):
                     for article2 in group[i + 1 :]:
-                        candidate_pairs.append((article1, article2))
+                        all_pairs.append((article1, article2))
+
+        if not all_pairs:
+            logger.info("no_candidate_pairs_found")
+            return [], set()
+
+        # Pre-filter: only keep pairs with shared entities (language-independent)
+        candidate_pairs = self._pre_filter_candidates(all_pairs)
 
         if not candidate_pairs:
-            logger.info("no_candidate_pairs_found")
+            logger.info("no_candidates_after_pre_filter")
             return [], set()
 
         logger.info("comparing_candidate_pairs", pair_count=len(candidate_pairs))
