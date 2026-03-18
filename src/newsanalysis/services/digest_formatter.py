@@ -470,13 +470,12 @@ class HtmlEmailFormatter:
         if include_images and self.article_repository:
             image_cid_mapping = self._prepare_article_images(articles_by_topic)
 
-        # Add placeholder for articles without images
-        if PLACEHOLDER_PATH.exists():
-            image_cid_mapping[PLACEHOLDER_CID] = str(PLACEHOLDER_PATH)
+        # Use Swiss flag as placeholder for articles without images
+        if SWISS_FLAG_PATH.exists():
             for topic, articles in articles_by_topic.items():
                 for article in articles:
                     if "image_cid" not in article:
-                        article["image_cid"] = PLACEHOLDER_CID
+                        article["image_cid"] = SWISS_FLAG_CID
 
         # Add Swiss flag logo to image attachments
         swiss_flag_cid = None
