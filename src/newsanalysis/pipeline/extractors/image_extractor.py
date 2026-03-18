@@ -3,7 +3,6 @@
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
-from typing import List, Optional
 from urllib.parse import urljoin, urlparse
 
 import httpx
@@ -37,7 +36,7 @@ class ImageExtractor:
     def __init__(
         self,
         timeout: int = 30,
-        user_agent: Optional[str] = None,
+        user_agent: str | None = None,
         max_images: int = 5,
     ):
         """
@@ -53,8 +52,8 @@ class ImageExtractor:
         self.max_images = max_images
 
     async def extract_images(
-        self, url: str, html_content: Optional[str] = None
-    ) -> List[ArticleImage]:
+        self, url: str, html_content: str | None = None
+    ) -> list[ArticleImage]:
         """
         Extract images from an article URL.
 
@@ -126,7 +125,7 @@ class ImageExtractor:
 
         return images
 
-    def _extract_og_image(self, url: str, html_content: str) -> Optional[ArticleImage]:
+    def _extract_og_image(self, url: str, html_content: str) -> ArticleImage | None:
         """
         Extract Open Graph image from HTML meta tags.
 
@@ -178,7 +177,7 @@ class ImageExtractor:
 
         return None
 
-    async def _extract_with_newspaper3k(self, url: str) -> Optional[ArticleImage]:
+    async def _extract_with_newspaper3k(self, url: str) -> ArticleImage | None:
         """
         Extract featured image using newspaper3k.
 
@@ -193,7 +192,7 @@ class ImageExtractor:
             article.download()
             article.parse()
 
-            if article.top_image:
+            if article.top_image and self._validate_image_url(article.top_image):
                 return ArticleImage(
                     image_url=article.top_image,
                     is_featured=True,
@@ -208,8 +207,8 @@ class ImageExtractor:
         return None
 
     def _extract_with_beautifulsoup(
-        self, url: str, html_content: str, featured_url: Optional[str] = None
-    ) -> List[ArticleImage]:
+        self, url: str, html_content: str, featured_url: str | None = None
+    ) -> list[ArticleImage]:
         """
         Extract images using BeautifulSoup.
 
@@ -265,8 +264,8 @@ class ImageExtractor:
         return images
 
     def _extract_large_content_images(
-        self, url: str, html_content: str, exclude_url: Optional[str] = None
-    ) -> List[ArticleImage]:
+        self, url: str, html_content: str, exclude_url: str | None = None
+    ) -> list[ArticleImage]:
         """
         Extract large images from article content (likely to be article images, not icons).
 
@@ -279,6 +278,7 @@ class ImageExtractor:
             List of ArticleImage objects with large dimensions
         """
         images = []
+        seen_base_urls: set[str] = set()
 
         try:
             soup = BeautifulSoup(html_content, "html.parser")
@@ -286,9 +286,10 @@ class ImageExtractor:
             # Find images in article content areas
             # Look in common article containers first
             article_containers = soup.find_all(
-                ["article", "main", "div"],
+                ["article", "main", "div", "section"],
                 class_=lambda c: c and any(
-                    x in str(c).lower() for x in ["article", "content", "story", "body"]
+                    x in str(c).lower()
+                    for x in ["article", "content", "story", "body", "section", "hero"]
                 ) if c else False
             )
 
@@ -296,6 +297,46 @@ class ImageExtractor:
             search_areas = article_containers if article_containers else [soup]
 
             for area in search_areas:
+                # Also check <picture><source srcset> elements
+                for source in area.find_all("source", srcset=True):
+                    srcset = source["srcset"]
+                    best_url, best_width = None, 0
+                    for entry in srcset.split(","):
+                        parts = entry.strip().split()
+                        if len(parts) >= 1:
+                            candidate_url = parts[0]
+                            w = 0
+                            if len(parts) >= 2 and parts[1].endswith("w"):
+                                try:
+                                    w = int(parts[1][:-1])
+                                except ValueError:
+                                    pass
+                            if w > best_width:
+                                best_width = w
+                                best_url = candidate_url
+                    if best_url and best_width >= MIN_IMAGE_WIDTH:
+                        absolute_url = urljoin(url, best_url)
+                        # Deduplicate by base URL (ignore query params)
+                        base_url = absolute_url.split("?")[0]
+                        if base_url in seen_base_urls:
+                            continue
+                        if exclude_url and absolute_url == exclude_url:
+                            continue
+                        if self._validate_image_url(absolute_url):
+                            seen_base_urls.add(base_url)
+                            images.append(
+                                ArticleImage(
+                                    image_url=absolute_url,
+                                    is_featured=True,
+                                    extraction_method="picture_srcset",
+                                    extraction_quality="high",
+                                    image_width=best_width,
+                                    created_at=datetime.now(),
+                                )
+                            )
+                            # Only need the first good <picture> image per area
+                            break
+
                 for img in area.find_all("img"):
                     # Get image URL from various attributes
                     img_url = (
@@ -305,11 +346,39 @@ class ImageExtractor:
                         or img.get("data-original")
                     )
 
+                    # If src is missing/favicon, try srcset (responsive images)
+                    if not img_url or "favicon" in (img_url or "").lower():
+                        srcset = img.get("srcset", "")
+                        if srcset:
+                            # Pick the largest image from srcset
+                            # Format: "url1 640w, url2 1024w, url3 2048w"
+                            best_url, best_width = None, 0
+                            for entry in srcset.split(","):
+                                parts = entry.strip().split()
+                                if len(parts) >= 1:
+                                    candidate_url = parts[0]
+                                    w = 0
+                                    if len(parts) >= 2 and parts[1].endswith("w"):
+                                        try:
+                                            w = int(parts[1][:-1])
+                                        except ValueError:
+                                            pass
+                                    if w > best_width:
+                                        best_width = w
+                                        best_url = candidate_url
+                            if best_url:
+                                img_url = best_url
+
                     if not img_url:
                         continue
 
                     # Convert relative to absolute
                     absolute_url = urljoin(url, img_url)
+
+                    # Deduplicate by base URL (ignore query params)
+                    base_url = absolute_url.split("?")[0]
+                    if base_url in seen_base_urls:
+                        continue
 
                     # Skip if already extracted or invalid
                     if exclude_url and absolute_url == exclude_url:
@@ -327,11 +396,15 @@ class ImageExtractor:
                     if height and height < MIN_IMAGE_HEIGHT:
                         continue
 
-                    # Skip images with suspicious patterns (avatars, icons, logos)
+                    # Skip images with suspicious patterns (avatars, icons, logos, favicons)
                     url_lower = absolute_url.lower()
-                    if any(x in url_lower for x in ["avatar", "icon", "logo", "button", "pixel", "tracking", "1x1"]):
+                    if any(x in url_lower for x in [
+                        "avatar", "icon", "logo", "button", "pixel",
+                        "tracking", "1x1", "favicon",
+                    ]):
                         continue
 
+                    seen_base_urls.add(base_url)
                     images.append(
                         ArticleImage(
                             image_url=absolute_url,
@@ -349,7 +422,7 @@ class ImageExtractor:
 
         return images
 
-    async def _fetch_html(self, url: str) -> Optional[str]:
+    async def _fetch_html(self, url: str) -> str | None:
         """
         Fetch HTML content from URL.
 
@@ -399,7 +472,7 @@ class ImageExtractor:
             logger.error("fetch_error", url=url, error=str(e))
             return None
 
-    async def _fetch_with_curl_cffi(self, url: str) -> Optional[str]:
+    async def _fetch_with_curl_cffi(self, url: str) -> str | None:
         """Fetch HTML using curl_cffi with Chrome impersonation."""
         def _sync_fetch():
             response = curl_requests.get(
@@ -433,7 +506,6 @@ class ImageExtractor:
         Returns:
             True if valid, False otherwise
         """
-        from urllib.parse import urlparse
         from pathlib import Path
 
         try:
@@ -449,12 +521,17 @@ class ImageExtractor:
             if path_ext and path_ext not in allowed_extensions:
                 return False
 
+            # Reject favicons, icons, logos, tracking pixels
+            path_lower = parsed.path.lower()
+            if any(x in path_lower for x in ["favicon", "icon", "logo", "pixel", "1x1"]):
+                return False
+
             return True
 
         except Exception:
             return False
 
-    def _parse_dimension(self, value: Optional[str]) -> Optional[int]:
+    def _parse_dimension(self, value: str | None) -> int | None:
         """
         Parse dimension string to integer.
 

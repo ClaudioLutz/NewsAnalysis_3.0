@@ -11,7 +11,7 @@ class FeedConfig(BaseModel):
     """News feed configuration."""
 
     name: str
-    type: Literal["rss", "sitemap", "html"]
+    type: Literal["rss", "sitemap", "html", "adminch"]
     url: HttpUrl
     priority: int = Field(..., ge=1, le=3)
     max_age_hours: int = Field(..., gt=0)

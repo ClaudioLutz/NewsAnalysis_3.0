@@ -1,6 +1,7 @@
 """News collectors for different feed types."""
 
 from newsanalysis.core.config import FeedConfig
+from newsanalysis.pipeline.collectors.adminch import AdminChCollector
 from newsanalysis.pipeline.collectors.base import BaseCollector
 from newsanalysis.pipeline.collectors.html import HTMLCollector
 from newsanalysis.pipeline.collectors.rss import RSSCollector
@@ -12,6 +13,7 @@ __all__ = [
     "RSSCollector",
     "SitemapCollector",
     "HTMLCollector",
+    "AdminChCollector",
     "create_collector",
 ]
 
@@ -33,6 +35,7 @@ def create_collector(feed_config: FeedConfig, timeout: int = 12) -> BaseCollecto
         "rss": RSSCollector,
         "sitemap": SitemapCollector,
         "html": HTMLCollector,
+        "adminch": AdminChCollector,
     }
 
     collector_class = collectors.get(feed_config.type)

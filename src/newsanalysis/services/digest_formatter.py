@@ -20,6 +20,8 @@ logger = get_logger(__name__)
 # Logo paths (relative to project root)
 SWISS_FLAG_PATH = Path(__file__).parent.parent.parent.parent / "docs" / "assets" / "swiss-flag.png"
 SWISS_FLAG_CID = "swiss_flag"
+PLACEHOLDER_PATH = Path(__file__).parent.parent.parent.parent / "docs" / "assets" / "placeholder-article.png"
+PLACEHOLDER_CID = "placeholder_article"
 
 # High-risk topics that should be visually emphasized
 HIGH_RISK_TOPICS = {
@@ -457,6 +459,14 @@ class HtmlEmailFormatter:
         image_cid_mapping: Dict[str, str] = {}
         if include_images and self.article_repository:
             image_cid_mapping = self._prepare_article_images(articles_by_topic)
+
+        # Add placeholder for articles without images
+        if PLACEHOLDER_PATH.exists():
+            image_cid_mapping[PLACEHOLDER_CID] = str(PLACEHOLDER_PATH)
+            for topic, articles in articles_by_topic.items():
+                for article in articles:
+                    if "image_cid" not in article:
+                        article["image_cid"] = PLACEHOLDER_CID
 
         # Add Swiss flag logo to image attachments
         swiss_flag_cid = None

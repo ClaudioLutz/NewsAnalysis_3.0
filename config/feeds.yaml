@@ -73,12 +73,12 @@ feeds:
     rate_limit_seconds: 5.0
     enabled: true
 
-  # Federal Administration
+  # Federal Administration (RSS removed April 2025, replaced with SSR scraper)
   - name: "Federal Press Releases"
-    type: "rss"
-    url: "https://www.news.admin.ch/NSBSubscriber/feeds/rss"
+    type: "adminch"
+    url: "https://www.news.admin.ch/de/newnsb"
     priority: 1
-    max_age_hours: 168
+    max_age_hours: 24
     rate_limit_seconds: 5.0
     enabled: true
     
