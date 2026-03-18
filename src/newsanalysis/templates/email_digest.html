@@ -170,7 +170,7 @@
           {% if executive_summary %}
           <!-- Executive Summary: Heute in 30 Sekunden -->
           <tr>
-            <td class="section-summary section-pad" style="padding: 20px 30px; background-color: #f0f5fa; border-bottom: 2px solid #003366;">
+            <td class="section-summary section-pad" style="padding: 16px 20px; background-color: #f0f5fa; border-bottom: 2px solid #003366;">
               <h2 class="section-heading" style="margin: 0 0 12px 0; color: #003366; font-size: 16px; font-weight: bold;">
                 Heute in 30 Sekunden
               </h2>
@@ -189,13 +189,13 @@
 
           <!-- Articles by Topic - Single Column Layout (Outlook compatible) -->
           <tr>
-            <td class="section-pad" style="padding: 20px 30px;">
+            <td class="section-pad" style="padding: 16px 20px;">
               {% if articles_by_topic %}
                 {% for topic, topic_articles in articles_by_topic.items() %}
                 <!-- Topic Header -->
-                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse: collapse; border-bottom: 2px solid #003366;">
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse: collapse;">
                   <tr>
-                    <td class="topic-header-cell" style="padding: 15px 0 10px 0;">
+                    <td class="topic-header-cell" style="padding: 12px 0 8px 0; border-bottom: 2px solid #003366;">
                       <h2 class="section-heading" style="margin: 0; color: #003366; font-size: 16px; font-weight: bold;">
                         {% if topic_icons.get(topic) %}{{ topic_icons.get(topic)|safe }} {% endif %}{{ topic_translations.get(topic, topic) }}
                       </h2>
@@ -263,7 +263,7 @@
 
           <!-- Statistics -->
           <tr>
-            <td class="section-stats section-pad" bgcolor="#f8f9fa" style="background-color: #f8f9fa; padding: 20px 30px; border-top: 1px solid #e0e0e0;">
+            <td class="section-stats section-pad" bgcolor="#f8f9fa" style="background-color: #f8f9fa; padding: 16px 20px; border-top: 1px solid #e0e0e0;">
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                 <tr>
                   <td class="text-meta stat-text" style="color: #666666; font-size: 12px; line-height: 1.6;">
@@ -304,7 +304,7 @@
 
           <!-- Footer -->
           <tr>
-            <td class="section-footer section-pad" bgcolor="#f5f5f5" style="background-color: #f5f5f5; padding: 20px 30px; border-radius: 0 0 4px 4px; border-top: 1px solid #e0e0e0;">
+            <td class="section-footer section-pad" bgcolor="#f5f5f5" style="background-color: #f5f5f5; padding: 16px 20px; border-radius: 0 0 4px 4px; border-top: 1px solid #e0e0e0;">
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                 <tr>
                   <td class="text-meta footer-text" style="color: #888888; font-size: 11px; line-height: 1.5;">
