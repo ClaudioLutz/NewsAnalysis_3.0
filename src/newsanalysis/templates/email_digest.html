@@ -1,10 +1,21 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="de" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=yes">
+  <meta name="format-detection" content="telephone=no, date=no, address=no, email=no, url=no">
+  <meta name="x-apple-disable-message-reformatting">
   <title>Creditreform News-Digest - {{ date }}</title>
   <!--[if mso]>
+  <noscript>
+    <xml>
+      <o:OfficeDocumentSettings>
+        <o:AllowPNG/>
+        <o:PixelsPerInch>96</o:PixelsPerInch>
+      </o:OfficeDocumentSettings>
+    </xml>
+  </noscript>
   <style type="text/css">
     table { border-collapse: collapse; }
     td { padding: 0; }
@@ -12,6 +23,77 @@
   <![endif]-->
   <!--[if !mso]><!-->
   <style type="text/css">
+    body {
+      -webkit-text-size-adjust: 100%;
+      -ms-text-size-adjust: 100%;
+    }
+    @media screen and (max-width: 600px) {
+      .content-container {
+        width: 100% !important;
+        max-width: 100% !important;
+      }
+      .section-pad {
+        padding-left: 16px !important;
+        padding-right: 16px !important;
+      }
+      .header-pad {
+        padding: 18px 16px !important;
+      }
+      .header-brand {
+        font-size: 22px !important;
+      }
+      .header-subtitle {
+        font-size: 12px !important;
+      }
+      .header-right-title {
+        font-size: 13px !important;
+      }
+      .header-right-date {
+        font-size: 12px !important;
+      }
+      .section-heading {
+        font-size: 17px !important;
+      }
+      .text-body {
+        font-size: 15px !important;
+        line-height: 1.5 !important;
+      }
+      .article-title {
+        font-size: 15px !important;
+        line-height: 1.3 !important;
+      }
+      .text-companies {
+        font-size: 13px !important;
+      }
+      .text-secondary {
+        font-size: 13px !important;
+        line-height: 1.45 !important;
+      }
+      .text-meta {
+        font-size: 12px !important;
+        line-height: 1.4 !important;
+      }
+      .ci-label {
+        font-size: 11px !important;
+      }
+      .key-point {
+        font-size: 12px !important;
+        line-height: 1.4 !important;
+      }
+      .relevance-kw {
+        font-size: 12px !important;
+      }
+      .article-img {
+        width: 70px !important;
+        height: 47px !important;
+      }
+      .stat-text {
+        font-size: 12px !important;
+      }
+      .footer-text {
+        font-size: 11px !important;
+      }
+    }
     @media (prefers-color-scheme: dark) {
       .email-wrapper { background-color: #1a1a1a !important; }
       .content-container { background-color: #2d2d2d !important; }
@@ -23,23 +105,28 @@
       .text-meta { color: #999999 !important; }
       .link-primary { color: #6699cc !important; }
       .border-section { border-color: #444444 !important; }
-      /* Credit impact: no tinted background in dark mode, border-left is enough */
       .ci-negative { background-color: #2d2d2d !important; }
       .ci-positive { background-color: #2d2d2d !important; }
     }
   </style>
   <!--<![endif]-->
 </head>
-<body width="100%" class="email-wrapper" style="margin: 0; padding: 0; background-color: #f4f4f4; font-family: Arial, Helvetica, sans-serif; -webkit-font-smoothing: antialiased;" role="article" aria-label="Creditreform News-Digest">
+<body width="100%" class="email-wrapper" style="margin: 0; padding: 0; background-color: #f4f4f4; font-family: Arial, Helvetica, sans-serif; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%;" role="article" aria-label="Creditreform News-Digest">
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" class="email-wrapper" style="background-color: #f4f4f4;">
     <tr>
       <td align="center" style="padding: 20px 10px;">
-        <!-- Main Container - 700px (industry standard for email) -->
-        <table role="presentation" width="700" cellspacing="0" cellpadding="0" class="content-container" style="background-color: #ffffff; border-radius: 4px;">
+        <!--[if mso]>
+        <table role="presentation" align="center" border="0" cellspacing="0" cellpadding="0" width="700">
+        <tr>
+        <td>
+        <![endif]-->
+        <div style="max-width: 700px; margin: 0 auto;">
+        <!-- Main Container - fluid with max-width, ghost table for Outlook -->
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" class="content-container" style="background-color: #ffffff; border-radius: 4px; max-width: 700px;">
 
           <!-- Header with Swiss flag and text -->
           <tr>
-            <td style="background-color: #003366; padding: 24px 30px; border-radius: 4px 4px 0 0;">
+            <td class="header-pad" style="background-color: #003366; padding: 24px 30px; border-radius: 4px 4px 0 0;">
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                 <tr>
                   <!-- Swiss Flag Icon -->
@@ -50,19 +137,19 @@
                   </td>
                   <!-- Brand Text -->
                   <td valign="middle">
-                    <h1 style="margin: 0; color: #ffffff; font-size: 26px; font-weight: bold; letter-spacing: -0.5px;">
+                    <h1 class="header-brand" style="margin: 0; color: #ffffff; font-size: 26px; font-weight: bold; letter-spacing: -0.5px;">
                       Creditreform
                     </h1>
-                    <p style="margin: 3px 0 0 0; color: #a8c5e2; font-size: 13px; font-weight: normal; letter-spacing: 0.5px;">
+                    <p class="header-subtitle" style="margin: 3px 0 0 0; color: #a8c5e2; font-size: 13px; font-weight: normal; letter-spacing: 0.5px;">
                       Swiss Credit Risk Intelligence
                     </p>
                   </td>
                   <!-- Right side: News-Digest info -->
                   <td valign="middle" align="right">
-                    <p style="margin: 0; color: #ffffff; font-size: 15px; font-weight: bold;">
+                    <p class="header-right-title" style="margin: 0; color: #ffffff; font-size: 15px; font-weight: bold;">
                       News-Digest
                     </p>
-                    <p style="margin: 3px 0 0 0; color: #a8c5e2; font-size: 13px;">
+                    <p class="header-right-date" style="margin: 3px 0 0 0; color: #a8c5e2; font-size: 13px;">
                       {{ date }} &bull; {{ article_count }} relevante Artikel
                     </p>
                   </td>
@@ -74,8 +161,8 @@
           {% if executive_summary %}
           <!-- Executive Summary: Heute in 30 Sekunden -->
           <tr>
-            <td class="section-summary" style="padding: 20px 30px; background-color: #f0f5fa; border-bottom: 2px solid #003366;">
-              <h2 style="margin: 0 0 12px 0; color: #003366; font-size: 16px; font-weight: bold;">
+            <td class="section-summary section-pad" style="padding: 20px 30px; background-color: #f0f5fa; border-bottom: 2px solid #003366;">
+              <h2 class="section-heading" style="margin: 0 0 12px 0; color: #003366; font-size: 16px; font-weight: bold;">
                 Heute in 30 Sekunden
               </h2>
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
@@ -93,14 +180,14 @@
 
           <!-- Articles by Topic - Single Column Layout (Outlook compatible) -->
           <tr>
-            <td style="padding: 20px 30px;">
+            <td class="section-pad" style="padding: 20px 30px;">
               {% if articles_by_topic %}
                 {% for topic, topic_articles in articles_by_topic.items() %}
                 <!-- Topic Header -->
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse: collapse;">
                   <tr>
                     <td style="padding: 15px 0 10px 0; border-bottom: 2px solid #003366;">
-                      <h2 style="margin: 0; color: #003366; font-size: 16px; font-weight: bold;">
+                      <h2 class="section-heading" style="margin: 0; color: #003366; font-size: 16px; font-weight: bold;">
                         {% if topic_icons.get(topic) %}{{ topic_icons.get(topic)|safe }} {% endif %}{{ topic_translations.get(topic, topic) }}
                       </h2>
                     </td>
@@ -123,18 +210,18 @@
                     {% endif %}
                       <!-- Image with text wrap (Outlook-compatible align="left") -->
                       {% if article.image_cid and images_enabled %}
-                      <img src="cid:{{ article.image_cid }}" alt="" width="90" height="60" align="left" hspace="10" vspace="4" style="display: block; border-radius: 3px;" />
+                      <img class="article-img" src="cid:{{ article.image_cid }}" alt="" width="90" height="60" align="left" hspace="10" vspace="4" style="display: block; border-radius: 3px;" />
                       {% endif %}
                       {% if article.credit_impact == 'negative' %}
-                      <p style="margin: 0 0 4px 0; font-size: 10px; font-weight: bold; color: #dc2626; letter-spacing: 0.5px;">&#9660; Negativ</p>
+                      <p class="ci-label" style="margin: 0 0 4px 0; font-size: 10px; font-weight: bold; color: #dc2626; letter-spacing: 0.5px;">&#9660; Negativ</p>
                       {% elif article.credit_impact == 'positive' %}
-                      <p style="margin: 0 0 4px 0; font-size: 10px; font-weight: bold; color: #16a34a; letter-spacing: 0.5px;">&#9650; Positiv</p>
+                      <p class="ci-label" style="margin: 0 0 4px 0; font-size: 10px; font-weight: bold; color: #16a34a; letter-spacing: 0.5px;">&#9650; Positiv</p>
                       {% endif %}
-                      <p style="margin: 0 0 4px 0; font-size: 14px; font-weight: bold; line-height: 1.3;">
+                      <p class="article-title" style="margin: 0 0 4px 0; font-size: 14px; font-weight: bold; line-height: 1.3;">
                         {% if article.url %}<a href="{{ article.url }}" class="link-primary" style="color: {% if article.credit_impact == 'negative' %}#dc2626{% elif article.credit_impact == 'positive' %}#16a34a{% else %}#003366{% endif %}; text-decoration: none;">{{ article.title }}</a>{% else %}<span class="text-body">{{ article.title }}</span>{% endif %}
                       </p>
                       {% if article.companies %}
-                      <p style="margin: 0 0 4px 0; color: #cc6600; font-size: 12px; font-weight: bold;">{{ article.companies[:3]|join(", ") }}</p>
+                      <p class="text-companies" style="margin: 0 0 4px 0; color: #cc6600; font-size: 12px; font-weight: bold;">{{ article.companies[:3]|join(", ") }}</p>
                       {% endif %}
                       {% if article.source_links and article.source_links|length > 1 %}
                       <p class="text-meta" style="margin: 0 0 4px 0; color: #888888; font-size: 11px;">Quellen: {% for src in article.source_links %}{% if src.url %}<a href="{{ src.url }}" style="color: #888888;">{{ src.name }}</a>{% else %}{{ src.name }}{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}</p>
@@ -146,11 +233,11 @@
                       {% endif %}
                       {% if article.key_points %}
                       {% for point in article.key_points %}
-                      <p class="text-secondary" style="margin: 0; color: #666666; font-size: 11px; line-height: 1.3;">&bull; {{ point }}</p>
+                      <p class="key-point" style="margin: 0; color: #666666; font-size: 11px; line-height: 1.3;">&bull; {{ point }}</p>
                       {% endfor %}
                       {% endif %}
                       {% if article.relevance_keywords %}
-                      <p style="margin: 6px 0 0 0; color: #006699; font-size: 11px; font-style: italic;">&rarr; Relevant: {{ article.relevance_keywords|join(", ") }}</p>
+                      <p class="relevance-kw" style="margin: 6px 0 0 0; color: #006699; font-size: 11px; font-style: italic;">&rarr; Relevant: {{ article.relevance_keywords|join(", ") }}</p>
                       {% endif %}
                       <!-- Clear float after article content -->
                       <div style="clear: both;"></div>
@@ -167,10 +254,10 @@
 
           <!-- Statistics -->
           <tr>
-            <td class="section-stats" bgcolor="#f8f9fa" style="background-color: #f8f9fa; padding: 20px 30px; border-top: 1px solid #e0e0e0;">
+            <td class="section-stats section-pad" bgcolor="#f8f9fa" style="background-color: #f8f9fa; padding: 20px 30px; border-top: 1px solid #e0e0e0;">
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                 <tr>
-                  <td class="text-meta" style="color: #666666; font-size: 12px; line-height: 1.6;">
+                  <td class="text-meta stat-text" style="color: #666666; font-size: 12px; line-height: 1.6;">
                     <p style="margin: 0 0 8px 0; font-weight: bold; color: #003366; font-size: 14px;">
                       Statistik
                     </p>
@@ -208,10 +295,10 @@
 
           <!-- Footer -->
           <tr>
-            <td class="section-footer" bgcolor="#f5f5f5" style="background-color: #f5f5f5; padding: 20px 30px; border-radius: 0 0 4px 4px; border-top: 1px solid #e0e0e0;">
+            <td class="section-footer section-pad" bgcolor="#f5f5f5" style="background-color: #f5f5f5; padding: 20px 30px; border-radius: 0 0 4px 4px; border-top: 1px solid #e0e0e0;">
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                 <tr>
-                  <td class="text-meta" style="color: #888888; font-size: 11px; line-height: 1.5;">
+                  <td class="text-meta footer-text" style="color: #888888; font-size: 11px; line-height: 1.5;">
                     <p style="margin: 0;">
                       Creditreform Schweiz &bull; NewsAnalysis v{{ version }} &bull; {{ generated_at }}
                     </p>
@@ -222,6 +309,12 @@
           </tr>
 
         </table>
+        </div>
+        <!--[if mso]>
+        </td>
+        </tr>
+        </table>
+        <![endif]-->
         <!-- End Main Container -->
       </td>
     </tr>
