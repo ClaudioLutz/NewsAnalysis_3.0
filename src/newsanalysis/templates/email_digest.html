@@ -35,6 +35,15 @@
       .section-pad {
         padding-left: 16px !important;
         padding-right: 16px !important;
+        padding-top: 12px !important;
+        padding-bottom: 12px !important;
+      }
+      .topic-header-cell {
+        padding-top: 10px !important;
+        padding-bottom: 6px !important;
+      }
+      .article-cell {
+        padding: 10px !important;
       }
       .header-pad {
         padding: 18px 16px !important;
@@ -184,9 +193,9 @@
               {% if articles_by_topic %}
                 {% for topic, topic_articles in articles_by_topic.items() %}
                 <!-- Topic Header -->
-                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse: collapse;">
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse: collapse; border-bottom: 2px solid #003366;">
                   <tr>
-                    <td style="padding: 15px 0 10px 0; border-bottom: 2px solid #003366;">
+                    <td class="topic-header-cell" style="padding: 15px 0 10px 0;">
                       <h2 class="section-heading" style="margin: 0; color: #003366; font-size: 16px; font-weight: bold;">
                         {% if topic_icons.get(topic) %}{{ topic_icons.get(topic)|safe }} {% endif %}{{ topic_translations.get(topic, topic) }}
                       </h2>
@@ -200,13 +209,13 @@
                   <tr>
                     {% if article.credit_impact == 'negative' %}
                     <!-- Negative: Red -->
-                    <td class="ci-negative" style="padding: 12px; border-left: 4px solid #dc2626; background-color: #fef2f2; border-bottom: 1px solid #e0e0e0;">
+                    <td class="ci-negative article-cell" style="padding: 12px; border-left: 4px solid #dc2626; background-color: #fef2f2; border-bottom: 1px solid #e0e0e0;">
                     {% elif article.credit_impact == 'positive' %}
                     <!-- Positive: Green -->
-                    <td class="ci-positive" style="padding: 12px; border-left: 4px solid #16a34a; background-color: #f0fdf4; border-bottom: 1px solid #e0e0e0;">
+                    <td class="ci-positive article-cell" style="padding: 12px; border-left: 4px solid #16a34a; background-color: #f0fdf4; border-bottom: 1px solid #e0e0e0;">
                     {% else %}
                     <!-- Neutral: No marking -->
-                    <td style="padding: 12px; border-bottom: 1px solid #e0e0e0;">
+                    <td class="article-cell" style="padding: 12px; border-bottom: 1px solid #e0e0e0;">
                     {% endif %}
                       <!-- Image with text wrap (Outlook-compatible align="left") -->
                       {% if article.image_cid and images_enabled %}
