@@ -174,6 +174,29 @@ These updates must be in the **same commit** as the code change. Do not defer do
 
 ---
 
+## Versioning (required)
+
+This project uses **Semantic Versioning** (`MAJOR.MINOR.PATCH`). The version is defined in `pyproject.toml` field `version`.
+
+| Level | When to bump | Example |
+|-------|-------------|---------|
+| **PATCH** (3.1.x) | Bug fixes, small improvements, config changes | Fix scraping error, update feed URL |
+| **MINOR** (3.x.0) | New features, new collectors, new pipeline stages | Add new data source, new email feature |
+| **MAJOR** (x.0.0) | Breaking changes to DB schema, config format, or CLI | Schema migration required, renamed env vars |
+
+### Version bump rules
+
+* **Every commit that changes behavior** must bump the version in `pyproject.toml` — in the **same commit** as the code change.
+* After bumping, create a **git tag**: `git tag v3.x.x` (after the commit).
+* Pure documentation, formatting, or test-only changes do NOT require a version bump.
+* When in doubt, bump PATCH.
+
+### Current version
+
+Check with: `grep "^version" pyproject.toml`
+
+---
+
 ## Pipeline Operations
 
 ### Running the Pipeline

@@ -105,7 +105,7 @@ class HtmlEmailFormatter:
             topic_translations=TOPIC_TRANSLATIONS,
             topic_icons=TOPIC_ICONS,
             credit_impact_counts=credit_impact_counts,
-            version=digest_data.get("version", 1),
+            version=self._get_software_version(),
             generated_at=digest_data.get("generated_at", ""),
         )
 
@@ -342,6 +342,16 @@ class HtmlEmailFormatter:
                     counts["neutral"] += 1
         return counts
 
+    @staticmethod
+    def _get_software_version() -> str:
+        """Get software version from pyproject.toml or importlib metadata."""
+        try:
+            from importlib.metadata import version
+
+            return version("newsanalysis")
+        except Exception:
+            return "unknown"
+
     def _format_date(self, date_str: str | None) -> str:
         """Format date string in German style.
 
@@ -497,7 +507,7 @@ class HtmlEmailFormatter:
             topic_translations=TOPIC_TRANSLATIONS,
             topic_icons=TOPIC_ICONS,
             credit_impact_counts=credit_impact_counts,
-            version=digest_data.get("version", 1),
+            version=self._get_software_version(),
             generated_at=digest_data.get("generated_at", ""),
             images_enabled=include_images,
             pipeline_stats=pipeline_stats or {},
