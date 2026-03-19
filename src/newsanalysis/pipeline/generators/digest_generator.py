@@ -169,10 +169,21 @@ class DigestGenerator:
         rows = cursor.fetchall()
 
         # Convert canonical articles to Article objects
+        min_content_length = 400
         canonical_articles = []
         for row in rows:
             try:
                 article = self.article_repo._row_to_article(row)
+                # Skip articles with too little content (placeholder pages)
+                if (article.content_length or 0) < min_content_length:
+                    logger.info(
+                        "article_skipped_short_content",
+                        article_id=article.id,
+                        title=article.title[:50],
+                        content_length=article.content_length,
+                        min_required=min_content_length,
+                    )
+                    continue
                 canonical_articles.append(article)
             except Exception as e:
                 logger.warning(
