@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS articles (
 
     -- Feed Configuration
     feed_priority INTEGER NOT NULL,  -- 1=govt, 2=financial, 3=general
+    language TEXT NOT NULL DEFAULT 'de',  -- Feed language: de, fr, it
 
     -- Classification Results (Step 2)
     is_match BOOLEAN,

@@ -508,7 +508,7 @@ class ArticleRepository:
             published_at=_parse_datetime(row["published_at"]),
             collected_at=_parse_datetime(row["collected_at"]),
             feed_priority=row["feed_priority"],
-            language=row["language"] if "language" in row else "de",
+            language=row["language"] if "language" in row.keys() else "de",
             is_match=row["is_match"],
             confidence=row["confidence"],
             topic=row["topic"],
