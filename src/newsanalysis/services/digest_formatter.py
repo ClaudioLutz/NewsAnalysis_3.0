@@ -1,7 +1,7 @@
 """HTML email formatter for digest emails."""
 
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -214,7 +214,7 @@ class HtmlEmailFormatter:
                     "companies": companies,  # Company names for display
                     "credit_impact": credit_impact,  # negative, neutral, positive
                     "relevance_keywords": relevance_keywords,  # Why this article is relevant
-                    "published_time": self._format_published_time(article.get("published_at")),
+                    "published_time": self._get_earliest_published_time(article),
                 })
 
             # Sort articles within each topic by credit_impact priority, then confidence
@@ -354,25 +354,69 @@ class HtmlEmailFormatter:
             return "unknown"
 
     @staticmethod
-    def _format_published_time(published_at: str | None) -> str:
-        """Format published_at datetime to HH:MM time string.
-
-        Args:
-            published_at: ISO datetime string (e.g. "2026-03-19T08:31:08+00:00").
-
-        Returns:
-            Time string like "08:31" or "" if not available or midnight (00:00).
-        """
+    def _parse_published_dt(published_at: str | None) -> datetime | None:
+        """Parse published_at string to datetime, or None if invalid/midnight."""
         if not published_at:
-            return ""
+            return None
         try:
             dt = datetime.fromisoformat(published_at)
-            # Skip midnight timestamps (means date-only, no real time)
+            # Midnight = date-only feed, no real publication time
             if dt.hour == 0 and dt.minute == 0:
-                return ""
-            return dt.strftime("%H:%M")
+                return None
+            return dt
         except (ValueError, TypeError):
+            return None
+
+    def _get_earliest_published_time(self, article: dict) -> str:
+        """Get earliest publication time from article and its duplicate sources.
+
+        For grouped articles, shows the earliest time any source published
+        the story (e.g. "Heute, 08:31" or "Gestern, 18:12").
+
+        Args:
+            article: Article dict with published_at and duplicate_sources.
+
+        Returns:
+            Formatted string like "Heute, 08:31" or "Gestern, 18:12" or "".
+        """
+        candidates = []
+
+        # Main article
+        dt = self._parse_published_dt(article.get("published_at"))
+        if dt:
+            candidates.append(dt)
+
+        # Duplicate sources
+        for dup in article.get("duplicate_sources", []):
+            dup_dt = self._parse_published_dt(dup.get("published_at"))
+            if dup_dt:
+                candidates.append(dup_dt)
+
+        if not candidates:
             return ""
+
+        earliest = min(candidates)
+        now = datetime.now(earliest.tzinfo) if earliest.tzinfo else datetime.now()
+        today = now.date()
+
+        time_str = earliest.strftime("%H:%M")
+        if earliest.date() == today:
+            return f"Heute, {time_str}"
+        elif earliest.date() == today - timedelta(days=1):
+            return f"Gestern, {time_str}"
+        else:
+            day = earliest.day
+            month = self._german_month_name(earliest.month)
+            return f"{day}. {month}, {time_str}"
+
+    @staticmethod
+    def _german_month_name(month: int) -> str:
+        """Return German month name."""
+        names = {
+            1: "Jan.", 2: "Feb.", 3: "März", 4: "Apr.", 5: "Mai", 6: "Juni",
+            7: "Juli", 8: "Aug.", 9: "Sep.", 10: "Okt.", 11: "Nov.", 12: "Dez.",
+        }
+        return names.get(month, str(month))
 
     def _format_date(self, date_str: str | None) -> str:
         """Format date string in German style.
