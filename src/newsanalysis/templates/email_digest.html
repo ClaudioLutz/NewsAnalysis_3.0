@@ -233,9 +233,9 @@
                       <p class="text-companies" style="margin: 0 0 4px 0; color: #cc6600; font-size: 12px; font-weight: bold;">{{ article.companies[:3]|join(", ") }}</p>
                       {% endif %}
                       {% if article.source_links and article.source_links|length > 1 %}
-                      <p class="text-meta" style="margin: 0 0 4px 0; color: #888888; font-size: 11px;">Quellen: {% for src in article.source_links %}{% if src.url %}<a href="{{ src.url }}" style="color: #888888;">{{ src.name }}</a>{% else %}{{ src.name }}{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}</p>
+                      <p class="text-meta" style="margin: 0 0 4px 0; color: #888888; font-size: 11px;">Quellen: {% for src in article.source_links %}{% if src.url %}<a href="{{ src.url }}" style="color: #888888;">{{ src.name }}</a>{% else %}{{ src.name }}{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}{% if article.published_time %} &bull; {{ article.published_time }}{% endif %}</p>
                       {% elif article.source %}
-                      <p class="text-meta" style="margin: 0 0 4px 0; color: #888888; font-size: 11px;">{% if article.url %}<a href="{{ article.url }}" style="color: #888888;">{{ article.source }}</a>{% else %}{{ article.source }}{% endif %}</p>
+                      <p class="text-meta" style="margin: 0 0 4px 0; color: #888888; font-size: 11px;">{% if article.url %}<a href="{{ article.url }}" style="color: #888888;">{{ article.source }}</a>{% else %}{{ article.source }}{% endif %}{% if article.published_time %} &bull; {{ article.published_time }}{% endif %}</p>
                       {% endif %}
                       {% if article.summary %}
                       <p class="text-secondary" style="margin: 0 0 4px 0; color: #555555; font-size: 12px; line-height: 1.4;">{{ article.summary }}</p>

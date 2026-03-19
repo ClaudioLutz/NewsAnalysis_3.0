@@ -214,6 +214,7 @@ class HtmlEmailFormatter:
                     "companies": companies,  # Company names for display
                     "credit_impact": credit_impact,  # negative, neutral, positive
                     "relevance_keywords": relevance_keywords,  # Why this article is relevant
+                    "published_time": self._format_published_time(article.get("published_at")),
                 })
 
             # Sort articles within each topic by credit_impact priority, then confidence
@@ -351,6 +352,27 @@ class HtmlEmailFormatter:
             return version("newsanalysis")
         except Exception:
             return "unknown"
+
+    @staticmethod
+    def _format_published_time(published_at: str | None) -> str:
+        """Format published_at datetime to HH:MM time string.
+
+        Args:
+            published_at: ISO datetime string (e.g. "2026-03-19T08:31:08+00:00").
+
+        Returns:
+            Time string like "08:31" or "" if not available or midnight (00:00).
+        """
+        if not published_at:
+            return ""
+        try:
+            dt = datetime.fromisoformat(published_at)
+            # Skip midnight timestamps (means date-only, no real time)
+            if dt.hour == 0 and dt.minute == 0:
+                return ""
+            return dt.strftime("%H:%M")
+        except (ValueError, TypeError):
+            return ""
 
     def _format_date(self, date_str: str | None) -> str:
         """Format date string in German style.
