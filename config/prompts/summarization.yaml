@@ -8,12 +8,13 @@ system_prompt: |
   - Only include facts explicitly stated in the article
   - Do NOT make assumptions or interpretations
   - Do NOT add implications not mentioned in the source
+  - Do NOT start summaries with risk assessments or creditworthiness judgments unless the article explicitly makes that assessment
   - Keep titles strictly factual and based on article content
   - If credit risk/business impact is mentioned, include it; if not, don't add it
   - Every sentence must be relevant to a credit analyst — omit irrelevant details
 
   SUMMARY RULES:
-  - Lead with the impact/stakes: what does this mean for creditworthiness? Then state what happened.
+  - Lead with the most important fact. Only mention creditworthiness if the article explicitly states a concrete impact (e.g. revenue decline, bankruptcy, rating change). Do NOT add your own assessment of creditworthiness or risk.
   - STRICT LENGTH: Maximum 1-2 SHORT sentences. Aim for under 180 characters. Cut subordinate clauses.
   - The summary is a plain text block — no formatting, no line breaks.
   - Prefer dashes and colons over full subordinate clauses: "Umsatzrückgang bei der Post — 85 Mio. CHF weniger durch Briefrückgang" instead of long nested sentences.
@@ -48,6 +49,16 @@ system_prompt: |
     key_points: []
     → CORRECT: Simple routine update, summary covers everything.
 
+  BAD EXAMPLE 3 (interpretation — DO NOT do this):
+    summary: "Keine unmittelbaren Auswirkungen auf die Kreditwürdigkeit. SNB hält Leitzins bei 0%."
+    → WRONG: "Keine unmittelbaren Auswirkungen auf die Kreditwürdigkeit" is the model's own assessment, not a fact from the article.
+    → CORRECT: "SNB hält Leitzins unverändert bei 0% — Interventionen am Devisenmarkt möglich."
+
+  BAD EXAMPLE 4 (interpretation — DO NOT do this):
+    summary: "Mangelhafte Rückrufaktion birgt Reputationsrisiko für Danone."
+    → WRONG: "birgt Reputationsrisiko" is an interpretation not stated in the article. Report what happened, not what it might mean.
+    → CORRECT: "Kontaminierte Aptamil-Babymilch trotz Rückruf in Apotheken gefunden — BLV leitet Untersuchung gegen Danone ein."
+
   Write in clear, professional, telegraphic language.
 
 user_prompt_template: |
@@ -58,7 +69,7 @@ user_prompt_template: |
   Create a structured summary in JSON format:
   {{
     "title": "Factual, neutral title based ONLY on what is stated in the article (max 150 chars). Do NOT add interpretations, implications, or assumptions.",
-    "summary": "Stakes-first: impact on creditworthiness first, then what happened. 1-2 sentences, concise. Plain text, no formatting.",
+    "summary": "Most important fact first. Mention creditworthiness only if explicitly stated in article. No interpretations. 1-2 sentences, concise. Plain text, no formatting.",
     "key_points": ["ONLY new facts/figures NOT in the summary. Telegraphic style. 0-4 items based on complexity. Empty array [] if summary covers everything."],
     "entities": {{
       "companies": ["1-3 MAIN companies the article is ABOUT (not all mentioned)"],
@@ -81,7 +92,7 @@ output_schema:
       type: string
       minLength: 20
       maxLength: 300
-      description: "Stakes-first summary: impact on creditworthiness, then what happened. 1-2 sentences, concise."
+      description: "Most important fact first. Mention creditworthiness only if explicitly stated in article. 1-2 sentences, concise."
     key_points:
       type: array
       items:

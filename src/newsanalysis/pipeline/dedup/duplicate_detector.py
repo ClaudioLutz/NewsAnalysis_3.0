@@ -314,6 +314,89 @@ Respond with JSON: {{"is_duplicate": bool, "confidence": float, "reason": "brief
 
         return duplicate_groups, duplicate_hashes
 
+    async def detect_cross_language_duplicates(
+        self,
+        foreign_articles: List[Article],
+        canonical_articles: List[Article],
+        max_concurrent: int = 10,
+    ) -> Tuple[List[DuplicateGroup], Set[str]]:
+        """Detect FR/IT articles that duplicate DE canonical articles.
+
+        Skips the entity pre-filter because cross-language entity matching
+        is unreliable (e.g. SNB vs BNS, Leitzins vs taux directeur).
+        Sends all pairs directly to the LLM for semantic comparison.
+
+        Args:
+            foreign_articles: FR/IT articles to check against DE canonicals.
+            canonical_articles: DE articles that survived same-language dedup.
+            max_concurrent: Maximum concurrent LLM calls.
+
+        Returns:
+            Tuple of (DuplicateGroup list, set of duplicate url_hashes).
+        """
+        if not foreign_articles or not canonical_articles:
+            return [], set()
+
+        logger.info(
+            "cross_language_dedup_starting",
+            foreign_count=len(foreign_articles),
+            canonical_count=len(canonical_articles),
+        )
+
+        # Build all cross-language pairs (no pre-filter)
+        all_pairs = [
+            (foreign, canonical)
+            for foreign in foreign_articles
+            for canonical in canonical_articles
+        ]
+
+        logger.info(
+            "cross_language_pairs",
+            pair_count=len(all_pairs),
+        )
+
+        # Compare pairs concurrently
+        duplicate_pairs: List[Tuple[Article, Article, float]] = []
+
+        for i in range(0, len(all_pairs), max_concurrent):
+            chunk = all_pairs[i : i + max_concurrent]
+            tasks = [
+                self._compare_articles(pair[0], pair[1]) for pair in chunk
+            ]
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+
+            for j, result in enumerate(results):
+                if isinstance(result, Exception):
+                    logger.warning(
+                        "cross_language_comparison_failed",
+                        error=str(result),
+                    )
+                    continue
+
+                is_dup, confidence = result
+                if is_dup and confidence >= self.confidence_threshold:
+                    duplicate_pairs.append((chunk[j][0], chunk[j][1], confidence))
+
+        # Cluster duplicates
+        all_articles = foreign_articles + canonical_articles
+        duplicate_groups = self._cluster_duplicates(duplicate_pairs, all_articles)
+
+        # Collect duplicate hashes (only foreign articles, never DE canonicals)
+        canonical_hashes = {a.url_hash for a in canonical_articles}
+        duplicate_hashes: Set[str] = set()
+        for group in duplicate_groups:
+            for dup_hash in group.duplicate_url_hashes:
+                if dup_hash not in canonical_hashes:
+                    duplicate_hashes.add(dup_hash)
+
+        logger.info(
+            "cross_language_dedup_complete",
+            groups_found=len(duplicate_groups),
+            foreign_duplicates=len(duplicate_hashes),
+        )
+
+        return duplicate_groups, duplicate_hashes
+
     def _group_by_time_window(self, articles: List[Article]) -> List[List[Article]]:
         """Group articles that fall within the time window of each other.
 

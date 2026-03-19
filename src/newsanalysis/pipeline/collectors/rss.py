@@ -153,6 +153,7 @@ class RSSCollector(BaseCollector):
                     published_at=published_at,
                     collected_at=datetime.now(),
                     feed_priority=self.feed_config.priority,
+                    language=self.feed_config.language,
                 )
 
                 articles.append(article)

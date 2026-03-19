@@ -10,6 +10,7 @@ Schema Version History:
 - v3: Disable FTS triggers to prevent corruption
 - v4: Add image extraction support (article_images table)
 - v5: Add credit_impact column to articles
+- v6: Add language column to articles for cross-language deduplication
 """
 
 import sqlite3
@@ -21,7 +22,7 @@ import structlog
 logger = structlog.get_logger(__name__)
 
 # Current schema version - increment when adding migrations
-CURRENT_SCHEMA_VERSION = 5
+CURRENT_SCHEMA_VERSION = 6
 
 # Type alias for migration functions
 MigrationFunc = Callable[[sqlite3.Connection], None]
@@ -340,12 +341,33 @@ def migrate_v4_to_v5(conn: sqlite3.Connection) -> None:
     logger.info("migration_complete", version=5)
 
 
+def migrate_v5_to_v6(conn: sqlite3.Connection) -> None:
+    """Migration v5 -> v6: Add language column for cross-language deduplication.
+
+    Adds:
+    - language column to articles (de, fr, it, en — default: de)
+    """
+    logger.info("applying_migration", from_version=5, to_version=6)
+
+    if not column_exists(conn, "articles", "language"):
+        conn.execute(
+            """
+            ALTER TABLE articles
+            ADD COLUMN language TEXT DEFAULT 'de'
+            """
+        )
+        logger.info("migration_added_column", table="articles", column="language")
+
+    logger.info("migration_complete", version=6)
+
+
 # Registry of migrations: version -> migration function
 MIGRATIONS: dict[int, MigrationFunc] = {
     2: migrate_v1_to_v2,
     3: migrate_v2_to_v3,
     4: migrate_v3_to_v4,
     5: migrate_v4_to_v5,
+    6: migrate_v5_to_v6,
 }
 
 

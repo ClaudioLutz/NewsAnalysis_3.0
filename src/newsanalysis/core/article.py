@@ -21,6 +21,7 @@ class ArticleMetadata(BaseModel):
     collected_at: datetime = Field(default_factory=datetime.now)
 
     feed_priority: int = Field(..., ge=1, le=3)  # 1=govt, 2=financial, 3=general
+    language: str = Field(default="de")  # Feed language: de, fr, it, en
 
     model_config = {
         "json_schema_extra": {
@@ -33,6 +34,7 @@ class ArticleMetadata(BaseModel):
                 "published_at": "2026-01-04T10:30:00",
                 "collected_at": "2026-01-04T11:00:00",
                 "feed_priority": 3,
+                "language": "de",
             }
         }
     }
@@ -153,6 +155,7 @@ class Article(BaseModel):
     published_at: Optional[datetime]
     collected_at: datetime
     feed_priority: int
+    language: str = "de"
 
     # Classification (Step 2)
     is_match: Optional[bool] = None

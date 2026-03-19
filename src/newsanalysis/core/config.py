@@ -16,6 +16,7 @@ class FeedConfig(BaseModel):
     priority: int = Field(..., ge=1, le=3)
     max_age_hours: int = Field(..., gt=0)
     rate_limit_seconds: float = Field(..., gt=0)
+    language: str = Field(default="de", pattern=r"^(de|fr|it|en)$")
     enabled: bool = True
 
 

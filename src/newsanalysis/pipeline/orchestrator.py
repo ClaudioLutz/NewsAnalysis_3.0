@@ -588,12 +588,61 @@ class PipelineOrchestrator:
                     duplicate_groups, self.run_id, only_mark_hashes=new_hashes
                 )
 
+            # --- Cross-language dedup pass (FR/IT vs DE) ---
+            cross_lang_duplicates = 0
+
+            # Get FR/IT articles that survived the first dedup pass
+            foreign_articles = [
+                a for a in new_articles
+                if a.language in ("fr", "it")
+                and a.url_hash not in new_duplicate_hashes
+            ]
+
+            if foreign_articles:
+                # Get DE canonical articles (not duplicated) for comparison
+                de_canonical = [
+                    a for a in all_articles
+                    if a.language == "de"
+                    and a.url_hash not in duplicate_hashes
+                ]
+
+                if de_canonical:
+                    logger.info(
+                        "cross_language_dedup_starting",
+                        foreign_count=len(foreign_articles),
+                        de_canonical_count=len(de_canonical),
+                    )
+
+                    cross_groups, cross_hashes = (
+                        await self.duplicate_detector.detect_cross_language_duplicates(
+                            foreign_articles=foreign_articles,
+                            canonical_articles=de_canonical,
+                            max_concurrent=10,
+                        )
+                    )
+
+                    # Only mark NEW foreign articles as duplicates
+                    new_cross_hashes = cross_hashes & new_hashes
+                    cross_lang_duplicates = len(new_cross_hashes)
+                    new_duplicate_hashes |= new_cross_hashes
+
+                    if cross_groups:
+                        self.repository.save_duplicate_groups(
+                            cross_groups, self.run_id, only_mark_hashes=new_hashes
+                        )
+
+                    logger.info(
+                        "cross_language_dedup_complete",
+                        foreign_duplicates=cross_lang_duplicates,
+                    )
+
             logger.info(
                 "stage_deduplication_complete",
                 new_checked=len(new_articles),
                 reference_articles=len(reference_articles),
                 groups=len(duplicate_groups),
                 new_duplicates=len(new_duplicate_hashes),
+                cross_language_duplicates=cross_lang_duplicates,
                 total_duplicates=len(duplicate_hashes),
             )
 

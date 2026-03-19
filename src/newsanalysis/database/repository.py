@@ -78,10 +78,10 @@ class ArticleRepository:
                 query = """
                     INSERT INTO articles (
                         url, normalized_url, url_hash, title, source,
-                        published_at, collected_at, feed_priority,
+                        published_at, collected_at, feed_priority, language,
                         pipeline_stage, processing_status, run_id,
                         created_at, updated_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """
 
                 params = (
@@ -93,6 +93,7 @@ class ArticleRepository:
                     article.published_at,
                     article.collected_at,
                     article.feed_priority,
+                    getattr(article, "language", "de"),
                     "collected",
                     "pending",
                     run_id,
@@ -507,6 +508,7 @@ class ArticleRepository:
             published_at=_parse_datetime(row["published_at"]),
             collected_at=_parse_datetime(row["collected_at"]),
             feed_priority=row["feed_priority"],
+            language=row["language"] if "language" in row else "de",
             is_match=row["is_match"],
             confidence=row["confidence"],
             topic=row["topic"],

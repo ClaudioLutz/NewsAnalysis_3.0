@@ -427,3 +427,156 @@ class TestDuplicateDetector:
         assert len(groups) == 1
         # NZZ (priority 1) should be canonical
         assert groups[0].canonical_url_hash == sample_articles[3].url_hash
+
+
+@pytest.mark.unit
+class TestCrossLanguageDedup:
+    """Tests for cross-language duplicate detection (FR/IT vs DE)."""
+
+    @pytest.fixture
+    def cross_language_articles(self):
+        """SNB articles in DE, FR, and IT for cross-language testing."""
+        base_time = datetime.now(UTC)
+        return {
+            "de": Article(
+                id=10,
+                url="https://blick.ch/snb-leitzins",
+                normalized_url="https://blick.ch/snb-leitzins",
+                url_hash="hashde" + "0" * 56,
+                title="SNB hält Leitzins unverändert bei 0%",
+                source="Blick",
+                published_at=base_time,
+                collected_at=base_time,
+                feed_priority=3,
+                language="de",
+                run_id="test_run",
+            ),
+            "fr": Article(
+                id=11,
+                url="https://letemps.ch/bns-taux",
+                normalized_url="https://letemps.ch/bns-taux",
+                url_hash="hashfr" + "0" * 56,
+                title="La Banque nationale garde son taux directeur inchangé",
+                source="Le Temps Économie",
+                published_at=base_time + timedelta(hours=1),
+                collected_at=base_time + timedelta(hours=1),
+                feed_priority=3,
+                language="fr",
+                run_id="test_run",
+            ),
+            "it": Article(
+                id=12,
+                url="https://rsi.ch/bns-tasso",
+                normalized_url="https://rsi.ch/bns-tasso",
+                url_hash="hashit" + "0" * 56,
+                title="BNS lascia il tasso guida allo 0%, in linea con le attese",
+                source="RSI Economia",
+                published_at=base_time + timedelta(hours=2),
+                collected_at=base_time + timedelta(hours=2),
+                feed_priority=3,
+                language="it",
+                run_id="test_run",
+            ),
+            "de_unrelated": Article(
+                id=13,
+                url="https://blick.ch/nestlé-schokolade",
+                normalized_url="https://blick.ch/nestlé-schokolade",
+                url_hash="hashde2" + "0" * 55,
+                title="Nestlé plant riesigen Schokoladenpark für 400 Mio. CHF",
+                source="SRF Latest",
+                published_at=base_time + timedelta(hours=3),
+                collected_at=base_time + timedelta(hours=3),
+                feed_priority=3,
+                language="de",
+                run_id="test_run",
+            ),
+        }
+
+    @pytest.mark.asyncio
+    async def test_cross_language_detects_fr_duplicate(
+        self, duplicate_detector, mock_llm_client, cross_language_articles
+    ):
+        """Should detect FR article as duplicate of DE article."""
+        mock_llm_client.create_completion = AsyncMock(
+            return_value={
+                "content": {
+                    "is_duplicate": True,
+                    "confidence": 0.92,
+                    "reason": "Both cover SNB interest rate decision",
+                },
+                "usage": {"total_tokens": 100, "cost": 0.001},
+            }
+        )
+
+        groups, dup_hashes = await duplicate_detector.detect_cross_language_duplicates(
+            foreign_articles=[cross_language_articles["fr"]],
+            canonical_articles=[cross_language_articles["de"]],
+        )
+
+        assert len(groups) >= 1
+        # FR article should be marked as duplicate
+        assert cross_language_articles["fr"].url_hash in dup_hashes
+        # DE canonical should NOT be marked
+        assert cross_language_articles["de"].url_hash not in dup_hashes
+
+    @pytest.mark.asyncio
+    async def test_cross_language_skips_pre_filter(
+        self, duplicate_detector, mock_llm_client, cross_language_articles
+    ):
+        """Should send all pairs to LLM without entity pre-filter."""
+        mock_llm_client.create_completion = AsyncMock(
+            return_value={
+                "content": {
+                    "is_duplicate": False,
+                    "confidence": 0.10,
+                    "reason": "Different topics",
+                },
+                "usage": {"total_tokens": 100, "cost": 0.001},
+            }
+        )
+
+        await duplicate_detector.detect_cross_language_duplicates(
+            foreign_articles=[cross_language_articles["fr"], cross_language_articles["it"]],
+            canonical_articles=[cross_language_articles["de"], cross_language_articles["de_unrelated"]],
+        )
+
+        # 2 foreign × 2 canonical = 4 LLM calls (no pre-filtering)
+        assert mock_llm_client.create_completion.call_count == 4
+
+    @pytest.mark.asyncio
+    async def test_cross_language_empty_foreign(self, duplicate_detector):
+        """Should handle empty foreign articles list."""
+        groups, dup_hashes = await duplicate_detector.detect_cross_language_duplicates(
+            foreign_articles=[],
+            canonical_articles=[],
+        )
+        assert groups == []
+        assert dup_hashes == set()
+
+    @pytest.mark.asyncio
+    async def test_cross_language_protects_canonical(
+        self, duplicate_detector, mock_llm_client, cross_language_articles
+    ):
+        """Should never mark DE canonical articles as duplicates."""
+        mock_llm_client.create_completion = AsyncMock(
+            return_value={
+                "content": {
+                    "is_duplicate": True,
+                    "confidence": 0.95,
+                    "reason": "Same story",
+                },
+                "usage": {"total_tokens": 100, "cost": 0.001},
+            }
+        )
+
+        de_art = cross_language_articles["de"]
+        fr_art = cross_language_articles["fr"]
+
+        groups, dup_hashes = await duplicate_detector.detect_cross_language_duplicates(
+            foreign_articles=[fr_art],
+            canonical_articles=[de_art],
+        )
+
+        # Only FR should be a duplicate, never DE
+        assert de_art.url_hash not in dup_hashes
+        assert fr_art.url_hash in dup_hashes
