@@ -62,9 +62,20 @@ Gesammelt am 2026-03-19. Status: Ideen zur Diskussion.
 - **Deduplizierung über Tage:** Artikel, die nichts Neues bringen, gar nicht mehr aufnehmen
 - **Relevanz-Decay:** Wiederkehrende Themen ohne neue Fakten automatisch tiefer einstufen
 
-**Konkretes Beispiel:** "Kanton Wallis schliesst 13 Campingplätze sofort wegen Naturgefahren" — dieses Thema wurde bereits vor mehreren Tagen gemeldet. Im heutigen Digest (19.03.) erscheint es erneut, ohne Hinweis darauf, dass es eine fortlaufende Geschichte ist. Ideal wäre: *"Update (seit ~15.03.): Kanton Wallis schliesst 13 Campingplätze..."* oder *"Bereits am 15.03. berichtet — neue Entwicklung: ..."*
+- **Frühere Artikel anzeigen:** Unter einem Artikel im Digest die verwandten früheren Meldungen auflisten, z.B. "Frühere Berichte: 15.03., 16.03." mit Titel/Link. So sieht der Leser sofort den zeitlichen Verlauf.
 
-**Priorität:** Mittel — verbessert die Nützlichkeit des Digests erheblich, aber komplexer umzusetzen.
+**Konkretes Beispiel:** "Kanton Wallis schliesst 13 Campingplätze sofort wegen Naturgefahren" — dieses Thema wurde bereits vor mehreren Tagen gemeldet. Der heutige Artikel enthält vermutlich neue Fakten und gehört darum zurecht in den Digest. Aber ohne Kontext fehlt dem Leser der Bezug zur laufenden Geschichte. Ideal wäre: Unter dem Artikel eine Zeile wie *"Siehe auch: 15.03. — Wallis prüft Schliessung von Campingplätzen"*.
+
+**Herausforderungen:**
+- **Erkennung verwandter Artikel:** Nicht trivial — gleiches Thema ≠ gleicher Titel oder gleiche Entities. Mögliche Ansätze:
+  - Entity-Overlap (gleiche Firmen/Organisationen/Orte + ähnliches Thema)
+  - Embedding-Similarity gegen die letzten 7-14 Tage
+  - LLM-basiert: "Ist dieser Artikel eine Fortsetzung von einem der folgenden?"
+- **Zeitfenster:** Wie weit zurückschauen? 7 Tage? 14 Tage? Konfigurierbar?
+- **Darstellung:** Wo genau im Digest? Unter dem Artikel? Als Fussnote? Wie viele frühere Artikel maximal?
+- **Performance/Kosten:** Jeder neue Artikel müsste gegen potenziell hunderte alte verglichen werden
+
+**Priorität:** Mittel — verbessert die Nützlichkeit des Digests erheblich, aber komplexer umzusetzen. Erkennung verwandter Artikel ist der schwierigste Teil.
 
 ---
 
