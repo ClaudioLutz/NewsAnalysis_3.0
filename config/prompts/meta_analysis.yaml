@@ -11,24 +11,34 @@ system_prompt: |
   - Executive summary with specific company names and impacts
 
   CRITICAL for executive_summary:
-  - Each sentence MUST name a specific company (e.g., "Baltensperger AG", "FINMA", "Nestlé")
-  - Each sentence MUST state a specific impact or action
-  - Format: "[Company] [action/event] - [consequence for credit risk]"
-  - Examples:
-    - "Baltensperger AG steht vor Konkurs - Bausektor-Lieferanten betroffen"
-    - "FINMA verschärft Eigenmittelregeln für Retailbanken"
-    - "Nestlé-Rückruf: Reputationsschaden, aber Finanzen stabil"
-  - Do NOT use generic category descriptions like "Im Bausektor gibt es Insolvenzen"
-  - Each sentence must be actionable for a credit analyst
+  - Write 1-5 sentences depending on the news day. Only include sentences that carry real weight.
+    - Quiet day with only routine news: 1-2 sentences are enough.
+    - Busy day with multiple major events: up to 5 sentences.
+    - Do NOT pad with filler sentences just to reach a number.
+  - Look for PATTERNS across multiple articles — do not just paraphrase individual articles.
+    - If 3 articles cover the same sector (e.g., construction insolvencies), combine them into ONE sentence.
+    - Example: "Bausektor unter Druck: Firma A meldet Konkurs, Firma B führt Kurzarbeit ein"
+    - Only create a single-article sentence if the event is truly standalone.
+  - Each sentence MUST name specific companies or organisations (e.g., "Baltensperger AG", "FINMA", "Nestlé")
+  - Each sentence MUST state a specific fact or event — NO risk assessments or interpretations
+  - Format: "[Company/Organisation] [fact/event that happened]"
+  - GOOD examples:
+    - "Bausektor unter Druck: Baltensperger AG meldet Konkurs, Marti Bau führt Kurzarbeit ein"
+    - "FINMA verschärft Eigenmittelregeln für Retailbanken ab Juli 2026"
+    - "SNB hält Leitzins unverändert bei 0%"
+  - BAD examples (do NOT produce these):
+    - "Nestlé-Rückruf: Reputationsschaden, aber Finanzen stabil" ← Interpretation!
+    - "Keine unmittelbaren Auswirkungen auf die Kreditwürdigkeit" ← Bewertung!
+    - "Im Bausektor gibt es Insolvenzen" ← zu generisch, keine Firmennamen!
 
-  Provide strategic perspective for credit analysts and risk managers.
+  Provide factual perspective for credit analysts and risk managers.
 
 user_prompt_template: |
   Daily Articles Summary:
   {articles_summary}
 
   Generate a meta-analysis in JSON format identifying:
-  - Executive summary (exactly 3 sentences naming specific companies and their impacts)
+  - Executive summary (1-5 sentences: combine related articles into pattern sentences, only facts)
   - Key themes (1-5 main themes across all articles)
   - Credit risk signals (up to 5 emerging risk signals)
   - Regulatory updates (up to 5 compliance/regulatory items)
@@ -36,7 +46,7 @@ user_prompt_template: |
 
   Response format:
   {{
-    "executive_summary": ["sentence 1", "sentence 2", "sentence 3"],  // EXACTLY 3 sentences with company names
+    "executive_summary": ["sentence 1", ...],  // 1-5 factual sentences, combine related articles
     "key_themes": ["theme 1", "theme 2", ...],  // 1-5 items
     "credit_risk_signals": ["signal 1", ...],   // 0-5 items
     "regulatory_updates": ["update 1", ...],     // 0-5 items
@@ -50,9 +60,9 @@ output_schema:
       type: array
       items:
         type: string
-      minItems: 3
-      maxItems: 3
-      description: "3 specific sentences naming companies and impacts for executives"
+      minItems: 1
+      maxItems: 5
+      description: "1-5 factual sentences combining related articles into patterns"
     key_themes:
       type: array
       items:

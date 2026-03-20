@@ -19,8 +19,8 @@ class MetaAnalysis(BaseModel):
     # Executive summary for "Heute in 30 Sekunden" section
     executive_summary: List[str] = Field(
         default_factory=list,
-        max_length=3,
-        description="3 specific sentences naming companies and impacts for executives"
+        max_length=5,
+        description="1-5 factual sentences combining related articles into patterns"
     )
 
 
