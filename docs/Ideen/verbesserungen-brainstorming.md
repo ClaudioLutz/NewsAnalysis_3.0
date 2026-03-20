@@ -80,8 +80,41 @@ Gesammelt am 2026-03-19. Status: Ideen zur Diskussion.
 
 ---
 
+## 6. Finaler Digest-Review per LLM (Quality Gate)
+
+**Problem:** Trotz Duplikaterkennung auf Artikelebene können im fertigen Digest inhaltlich redundante Zusammenfassungen stehen — z.B. wenn zwei Artikel zum SNB-Entscheid beide durch die Dedup kommen, weil sie leicht unterschiedliche Schwerpunkte haben, aber im Digest praktisch dasselbe sagen.
+
+**Idee:**
+- **Letzter API-Call** nach der Digest-Generierung: Das gesamte Mail (oder alle Zusammenfassungen) wird nochmals einem LLM übergeben
+- Das LLM prüft auf:
+  - **Inhaltliche Duplikate:** Zusammenfassungen, die im Wesentlichen dasselbe sagen → zusammenführen
+  - **Widersprüche:** Artikel, die sich widersprechen → kennzeichnen oder harmonisieren
+  - **Redundante Key Points:** Gleiche Fakten in verschiedenen Artikeln → konsolidieren
+- Ergebnis: Ein bereinigter, kompakterer Digest ohne Wiederholungen
+- Optional: LLM kann auch den "Heute in 30 Sekunden"-Bereich nochmals auf Interpretationen prüfen
+
+**Vorteile:**
+- Fängt Duplikate ab, die die Artikel-Level-Dedup nicht erkennt (unterschiedliche Quellen, gleiche Story)
+- Verbessert die Lesequalität: kein Déjà-vu-Effekt beim Lesen
+- Kann mehrere Probleme gleichzeitig lösen (Duplikate + Interpretationen + Konsistenz)
+
+**Nachteile / Risiken:**
+- Zusätzliche API-Kosten (ein grosser Call mit dem gesamten Digest)
+- Latenz: ein weiterer Schritt in der Pipeline
+- LLM könnte beim Zusammenführen Fakten verlieren oder verfälschen
+
+**Umsetzung:**
+- Neuer Pipeline-Schritt nach `digest_generator`, vor E-Mail-Versand
+- Input: alle Zusammenfassungen + Key Points als JSON
+- Output: bereinigte Version mit Merge-Hinweisen
+- Konfigurierbar: an/aus via Config, damit Kosten kontrollierbar
+
+**Priorität:** Mittel — elegante Lösung, die mehrere Probleme auf einmal adressiert.
+
+---
+
 ## Nächste Schritte
 
 1. **Quick Wins:** Betreff-Länge begrenzen, Prompt weiter verfeinern
-2. **Mittelfristig:** Themen-History implementieren, Cross-Language-Dedup tunen
+2. **Mittelfristig:** Themen-History implementieren, Cross-Language-Dedup tunen, Digest-Review Quality Gate
 3. **Langfristig:** Embedding-basierte Dedup, Darstellungsverbesserungen
