@@ -62,6 +62,8 @@ Gesammelt am 2026-03-19. Status: Ideen zur Diskussion.
 - **Deduplizierung über Tage:** Artikel, die nichts Neues bringen, gar nicht mehr aufnehmen
 - **Relevanz-Decay:** Wiederkehrende Themen ohne neue Fakten automatisch tiefer einstufen
 
+**Konkretes Beispiel:** "Kanton Wallis schliesst 13 Campingplätze sofort wegen Naturgefahren" — dieses Thema wurde bereits vor mehreren Tagen gemeldet. Im heutigen Digest (19.03.) erscheint es erneut, ohne Hinweis darauf, dass es eine fortlaufende Geschichte ist. Ideal wäre: *"Update (seit ~15.03.): Kanton Wallis schliesst 13 Campingplätze..."* oder *"Bereits am 15.03. berichtet — neue Entwicklung: ..."*
+
 **Priorität:** Mittel — verbessert die Nützlichkeit des Digests erheblich, aber komplexer umzusetzen.
 
 ---
