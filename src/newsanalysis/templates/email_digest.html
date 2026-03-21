@@ -197,7 +197,7 @@
                   <tr>
                     <td class="topic-header-cell" style="padding: 12px 0 8px 0; border-bottom: 2px solid #003366;">
                       <h2 class="section-heading" style="margin: 0; color: #003366; font-size: 16px; font-weight: bold;">
-                        {% if topic_icons.get(topic) %}{{ topic_icons.get(topic)|safe }} {% endif %}{{ topic_translations.get(topic, topic) }}
+                        {% if use_dynamic_groups %}{{ group_icons.get(topic, '')|safe }} {{ topic }}{% else %}{% if topic_icons.get(topic) %}{{ topic_icons.get(topic)|safe }} {% endif %}{{ topic_translations.get(topic, topic) }}{% endif %}
                       </h2>
                     </td>
                   </tr>
@@ -292,7 +292,7 @@
                     <p style="margin: 0;">
                       <strong>Themen:</strong>
                       {% for topic, topic_articles in articles_by_topic.items() %}
-                      {{ topic_translations.get(topic, topic) }}: {{ topic_articles|length }}{% if not loop.last %}, {% endif %}
+                      {% if use_dynamic_groups %}{{ topic }}{% else %}{{ topic_translations.get(topic, topic) }}{% endif %}: {{ topic_articles|length }}{% if not loop.last %}, {% endif %}
                       {% endfor %}
                     </p>
                     {% endif %}

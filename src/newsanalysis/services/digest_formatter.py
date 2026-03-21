@@ -82,8 +82,19 @@ class HtmlEmailFormatter:
                     if item and "unavailable" not in item.lower()
                 ]
 
-        # Parse articles from JSON output grouped by topic
-        articles_by_topic = self._parse_articles(digest_data.get("json_output"))
+        # Try dynamic LLM grouping first, fall back to static topics
+        use_dynamic_groups = False
+        group_icons: Dict[str, str] = {}
+        article_groups = meta_analysis.get("article_groups", [])
+
+        articles_by_topic = self._regroup_by_llm_groups(
+            digest_data.get("json_output"), article_groups
+        )
+        if articles_by_topic:
+            use_dynamic_groups = True
+            group_icons = {g.get("label", ""): g.get("icon", "") for g in article_groups}
+        else:
+            articles_by_topic = self._parse_articles(digest_data.get("json_output"))
 
         # Format date in German style
         digest_date = self._format_date(digest_data.get("digest_date"))
@@ -107,6 +118,8 @@ class HtmlEmailFormatter:
             credit_impact_counts=credit_impact_counts,
             version=self._get_software_version(),
             generated_at=digest_data.get("generated_at", ""),
+            use_dynamic_groups=use_dynamic_groups,
+            group_icons=group_icons,
         )
 
         logger.debug("digest_formatted", html_length=len(html))
@@ -130,14 +143,82 @@ class HtmlEmailFormatter:
             logger.warning("meta_analysis_parse_failed", error=str(e))
             return {}
 
+    def _parse_article_dict(self, article: Dict[str, Any]) -> Dict[str, Any]:
+        """Parse a single article from JSON into display format.
+
+        Args:
+            article: Raw article dict from JSON output.
+
+        Returns:
+            Processed article dict ready for template rendering.
+        """
+        topic = article.get("topic", "other")
+
+        # Smart truncate summary at sentence boundary
+        summary = self._truncate_summary(article.get("summary", ""))
+
+        # Handle duplicate sources (grouped articles) with URLs
+        duplicate_sources = article.get("duplicate_sources", [])
+        source_links = []
+        main_source = article.get("source", "")
+        main_url = article.get("url", "")
+        if main_source:
+            source_links.append({"name": main_source, "url": main_url})
+        if duplicate_sources:
+            for dup in duplicate_sources:
+                dup_source = dup.get("source", "")
+                dup_url = dup.get("url", "")
+                if dup_source:
+                    source_links.append({"name": dup_source, "url": dup_url})
+        all_sources = [s["name"] for s in source_links]
+
+        # Extract company names from entities
+        entities = article.get("entities", {})
+        companies = entities.get("companies", []) if entities else []
+
+        # Determine credit impact (LLM value or rule-based fallback)
+        confidence = article.get("confidence", 0)
+        credit_impact = article.get("credit_impact") or self._determine_risk_level(
+            topic, confidence
+        )
+        # Normalize old values to 3-level enum
+        if credit_impact in ("elevated", "elevated_risk"):
+            credit_impact = "negative"
+        elif credit_impact == "standard":
+            credit_impact = "neutral"
+
+        # Extract relevance keywords from entities
+        relevance_keywords = self._extract_relevance_keywords(entities, topic)
+
+        # Neutral articles show 1 key point, others show 2
+        max_key_points = 1 if credit_impact == "neutral" else 2
+
+        return {
+            "id": article.get("id"),
+            "title": article.get("title", "Untitled"),
+            "url": article.get("url", ""),
+            "source": article.get("source", ""),
+            "all_sources": all_sources,
+            "source_links": source_links,
+            "duplicate_sources": duplicate_sources,
+            "summary": summary,
+            "key_points": article.get("key_points", [])[:max_key_points],
+            "topic": topic,
+            "confidence": confidence,
+            "companies": companies,
+            "credit_impact": credit_impact,
+            "relevance_keywords": relevance_keywords,
+            "published_time": self._get_earliest_published_time(article),
+        }
+
     def _parse_articles(self, json_output: Optional[str]) -> Dict[str, List[Dict[str, Any]]]:
-        """Parse articles from JSON output and group by topic.
+        """Parse articles from JSON output and group by static topic.
 
         Args:
             json_output: Full JSON digest output string.
 
         Returns:
-            Dictionary mapping topic to list of article dicts, ordered by TOPIC_PRIORITY.
+            Dictionary mapping topic to list of article dicts, ordered by avg confidence.
         """
         if not json_output:
             return {}
@@ -150,7 +231,6 @@ class HtmlEmailFormatter:
             articles_by_topic: Dict[str, List[Dict[str, Any]]] = {}
             for article in articles:
                 topic = article.get("topic", "other")
-                # Fallback unknown topics to "other" to prevent article loss
                 if topic not in TOPIC_PRIORITY:
                     logger.warning("unknown_topic_fallback", topic=topic)
                     topic = "other"
@@ -158,96 +238,106 @@ class HtmlEmailFormatter:
                 if topic not in articles_by_topic:
                     articles_by_topic[topic] = []
 
-                # Smart truncate summary at sentence boundary
-                summary = self._truncate_summary(article.get("summary", ""))
-
-                # Handle duplicate sources (grouped articles) with URLs
-                duplicate_sources = article.get("duplicate_sources", [])
-                # Build source objects with name and URL
-                source_links = []
-                main_source = article.get("source", "")
-                main_url = article.get("url", "")
-                if main_source:
-                    source_links.append({"name": main_source, "url": main_url})
-                if duplicate_sources:
-                    for dup in duplicate_sources:
-                        dup_source = dup.get("source", "")
-                        dup_url = dup.get("url", "")
-                        if dup_source:
-                            source_links.append({"name": dup_source, "url": dup_url})
-                # Keep flat list for backwards compatibility
-                all_sources = [s["name"] for s in source_links]
-
-                # Extract company names from entities
-                entities = article.get("entities", {})
-                companies = entities.get("companies", []) if entities else []
-
-                # Determine credit impact (LLM value or rule-based fallback)
-                confidence = article.get("confidence", 0)
-                credit_impact = article.get("credit_impact") or self._determine_risk_level(
-                    topic, confidence
-                )
-                # Normalize old values to 3-level enum
-                if credit_impact in ("elevated", "elevated_risk"):
-                    credit_impact = "negative"
-                elif credit_impact == "standard":
-                    credit_impact = "neutral"
-
-                # Extract relevance keywords from entities
-                relevance_keywords = self._extract_relevance_keywords(entities, topic)
-
-                # Neutral articles show 1 key point, others show 2
-                max_key_points = 1 if credit_impact == "neutral" else 2
-
-                articles_by_topic[topic].append({
-                    "id": article.get("id"),  # Add article ID for image lookup
-                    "title": article.get("title", "Untitled"),
-                    "url": article.get("url", ""),
-                    "source": article.get("source", ""),
-                    "all_sources": all_sources,  # List of all sources including duplicates
-                    "source_links": source_links,  # List of {name, url} for linked sources
-                    "duplicate_sources": duplicate_sources,  # Full duplicate source info
-                    "summary": summary,
-                    "key_points": article.get("key_points", [])[:max_key_points],
-                    "topic": topic,
-                    "confidence": confidence,
-                    "companies": companies,  # Company names for display
-                    "credit_impact": credit_impact,  # negative, neutral, positive
-                    "relevance_keywords": relevance_keywords,  # Why this article is relevant
-                    "published_time": self._get_earliest_published_time(article),
-                })
+                articles_by_topic[topic].append(self._parse_article_dict(article))
 
             # Sort articles within each topic by credit_impact priority, then confidence
-            credit_impact_priority = {
-                "negative": 0,
-                "neutral": 1,
-                "positive": 2,
-            }
-            for topic in articles_by_topic:
-                articles_by_topic[topic].sort(
-                    key=lambda a: (
-                        credit_impact_priority.get(a.get("credit_impact", "neutral"), 2),
-                        -a.get("confidence", 0),
-                    ),
-                )
+            self._sort_articles_in_groups(articles_by_topic)
 
             # Order topics by average relevance score (highest first)
-            def _avg_confidence(topic_articles: List[Dict[str, Any]]) -> float:
-                scores = [a.get("confidence", 0) for a in topic_articles]
-                return sum(scores) / len(scores) if scores else 0
-
-            sorted_topics = sorted(
-                [t for t in articles_by_topic if articles_by_topic[t]],
-                key=lambda t: _avg_confidence(articles_by_topic[t]),
-                reverse=True,
-            )
-            sorted_by_topic = {t: articles_by_topic[t] for t in sorted_topics}
-
-            return sorted_by_topic
+            return self._sort_groups_by_confidence(articles_by_topic)
 
         except json.JSONDecodeError as e:
             logger.warning("json_output_parse_failed", error=str(e))
             return {}
+
+    def _regroup_by_llm_groups(
+        self,
+        json_output: Optional[str],
+        article_groups: List[Dict[str, Any]],
+    ) -> Optional[Dict[str, List[Dict[str, Any]]]]:
+        """Regroup articles using LLM-generated thematic clusters.
+
+        Args:
+            json_output: Full JSON digest output string.
+            article_groups: List of group dicts with label, icon, article_indices.
+
+        Returns:
+            OrderedDict mapping group label to article dicts, or None on failure.
+        """
+        if not json_output or not article_groups:
+            return None
+
+        try:
+            data = json.loads(json_output)
+            raw_articles = data.get("articles", [])
+            if not raw_articles:
+                return None
+
+            # Parse all articles into display format (flat, indexed)
+            parsed_articles = [self._parse_article_dict(a) for a in raw_articles]
+
+            # Group by LLM clusters (preserve LLM order)
+            grouped: Dict[str, List[Dict[str, Any]]] = {}
+            for group in article_groups:
+                label = group.get("label", "Weitere")
+                indices = group.get("article_indices", [])
+
+                group_articles = []
+                for idx in indices:
+                    if 1 <= idx <= len(parsed_articles):
+                        group_articles.append(parsed_articles[idx - 1])
+
+                if group_articles:
+                    grouped[label] = group_articles
+
+            if not grouped:
+                return None
+
+            # Sort articles within each group (same logic as static topics)
+            self._sort_articles_in_groups(grouped)
+
+            logger.info(
+                "articles_regrouped_by_llm",
+                group_count=len(grouped),
+                article_count=sum(len(a) for a in grouped.values()),
+            )
+
+            return grouped
+
+        except (json.JSONDecodeError, Exception) as e:
+            logger.warning("llm_regrouping_failed", error=str(e))
+            return None
+
+    @staticmethod
+    def _sort_articles_in_groups(
+        groups: Dict[str, List[Dict[str, Any]]],
+    ) -> None:
+        """Sort articles within each group by credit_impact priority, then confidence."""
+        credit_impact_priority = {"negative": 0, "neutral": 1, "positive": 2}
+        for group_articles in groups.values():
+            group_articles.sort(
+                key=lambda a: (
+                    credit_impact_priority.get(a.get("credit_impact", "neutral"), 2),
+                    -a.get("confidence", 0),
+                ),
+            )
+
+    @staticmethod
+    def _sort_groups_by_confidence(
+        groups: Dict[str, List[Dict[str, Any]]],
+    ) -> Dict[str, List[Dict[str, Any]]]:
+        """Sort groups by average confidence score (highest first)."""
+
+        def _avg_confidence(topic_articles: List[Dict[str, Any]]) -> float:
+            scores = [a.get("confidence", 0) for a in topic_articles]
+            return sum(scores) / len(scores) if scores else 0
+
+        sorted_topics = sorted(
+            [t for t in groups if groups[t]],
+            key=lambda t: _avg_confidence(groups[t]),
+            reverse=True,
+        )
+        return {t: groups[t] for t in sorted_topics}
 
     def _truncate_summary(self, summary: str, max_length: int = 300) -> str:
         """Smart truncate summary at sentence boundary.
@@ -528,8 +618,19 @@ class HtmlEmailFormatter:
                     if item and "unavailable" not in item.lower()
                 ]
 
-        # Parse articles from JSON output grouped by topic
-        articles_by_topic = self._parse_articles(digest_data.get("json_output"))
+        # Try dynamic LLM grouping first, fall back to static topics
+        use_dynamic_groups = False
+        group_icons: Dict[str, str] = {}
+        article_groups = meta_analysis.get("article_groups", [])
+
+        articles_by_topic = self._regroup_by_llm_groups(
+            digest_data.get("json_output"), article_groups
+        )
+        if articles_by_topic:
+            use_dynamic_groups = True
+            group_icons = {g.get("label", ""): g.get("icon", "") for g in article_groups}
+        else:
+            articles_by_topic = self._parse_articles(digest_data.get("json_output"))
 
         # Fetch article images if repository available and images enabled
         image_cid_mapping: Dict[str, str] = {}
@@ -578,6 +679,8 @@ class HtmlEmailFormatter:
             pipeline_stats=pipeline_stats or {},
             feed_stats=feed_stats or [],
             swiss_flag_cid=swiss_flag_cid,
+            use_dynamic_groups=use_dynamic_groups,
+            group_icons=group_icons,
         )
 
         logger.debug(

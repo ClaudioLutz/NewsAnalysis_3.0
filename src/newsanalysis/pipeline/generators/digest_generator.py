@@ -4,7 +4,7 @@ from datetime import date
 from typing import List, Optional
 
 from newsanalysis.core.article import Article
-from newsanalysis.core.digest import DailyDigest, MetaAnalysis
+from newsanalysis.core.digest import ArticleGroup, DailyDigest, MetaAnalysis
 from newsanalysis.database.digest_repository import DigestRepository
 from newsanalysis.database.repository import ArticleRepository
 from newsanalysis.integrations.provider_factory import LLMClient
@@ -503,10 +503,14 @@ class DigestGenerator:
             # Extract MetaAnalysis from response
             meta_analysis = MetaAnalysis(**response["content"])
 
+            # Validate and fix article groupings from LLM
+            meta_analysis = self._validate_article_groups(meta_analysis, len(articles))
+
             logger.info(
                 "meta_analysis_generated",
                 themes=len(meta_analysis.key_themes),
                 signals=len(meta_analysis.credit_risk_signals),
+                article_groups=len(meta_analysis.article_groups),
             )
 
             return meta_analysis
@@ -548,7 +552,107 @@ class DigestGenerator:
 
             summaries.append(summary_text)
 
+        # Add instruction for article_groups indexing
+        summaries.append(
+            f"\n---\nTotal articles: {len(articles)}. "
+            f"Use indices 1-{len(articles)} for article_groups."
+        )
+
         return "\n\n".join(summaries)
+
+    def _validate_article_groups(
+        self, meta: MetaAnalysis, article_count: int
+    ) -> MetaAnalysis:
+        """Validate and fix article_groups from LLM response.
+
+        Ensures all indices are valid, no duplicates across groups,
+        and every article is assigned to exactly one group.
+
+        Args:
+            meta: MetaAnalysis with raw article_groups from LLM.
+            article_count: Total number of articles in the digest.
+
+        Returns:
+            MetaAnalysis with validated article_groups.
+        """
+        if not meta.article_groups:
+            logger.warning("no_article_groups_from_llm", article_count=article_count)
+            return meta
+
+        assigned_indices: set[int] = set()
+        valid_groups: list[ArticleGroup] = []
+
+        for group in meta.article_groups:
+            # Filter invalid indices and deduplicate across groups
+            unique_indices = [
+                i
+                for i in group.article_indices
+                if 1 <= i <= article_count and i not in assigned_indices
+            ]
+            if unique_indices:
+                valid_groups.append(
+                    ArticleGroup(
+                        label=group.label,
+                        icon=group.icon,
+                        article_indices=unique_indices,
+                    )
+                )
+                assigned_indices.update(unique_indices)
+
+        # Catch-all for articles missing from all groups
+        all_expected = set(range(1, article_count + 1))
+        missing = all_expected - assigned_indices
+        if missing:
+            valid_groups.append(
+                ArticleGroup(
+                    label="Weitere Themen",
+                    icon="&#8226;",
+                    article_indices=sorted(missing),
+                )
+            )
+            logger.info(
+                "article_groups_catch_all",
+                missing_count=len(missing),
+                missing_indices=sorted(missing),
+            )
+
+        # Trim to max 10 groups: merge smallest groups into "Weitere Themen"
+        max_groups = 10
+        if len(valid_groups) > max_groups:
+            logger.info(
+                "article_groups_trimming",
+                original_count=len(valid_groups),
+                max_groups=max_groups,
+            )
+            # Sort by size (largest first), keep top max_groups-1, merge rest
+            valid_groups.sort(key=lambda g: len(g.article_indices), reverse=True)
+            keep = valid_groups[: max_groups - 1]
+            merge = valid_groups[max_groups - 1 :]
+
+            # Merge small groups into one "Weitere Themen" group
+            merged_indices: list[int] = []
+            for g in merge:
+                merged_indices.extend(g.article_indices)
+
+            keep.append(
+                ArticleGroup(
+                    label="Weitere Themen",
+                    icon="&#8226;",
+                    article_indices=sorted(merged_indices),
+                )
+            )
+            valid_groups = keep
+
+        meta.article_groups = valid_groups
+
+        logger.info(
+            "article_groups_validated",
+            group_count=len(valid_groups),
+            article_count=article_count,
+            all_covered=len(assigned_indices | missing) == article_count,
+        )
+
+        return meta
 
     async def mark_articles_digested(
         self, articles: List[Article], digest_date: date, version: int

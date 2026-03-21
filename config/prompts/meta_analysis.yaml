@@ -31,6 +31,17 @@ system_prompt: |
     - "Keine unmittelbaren Auswirkungen auf die Kreditwürdigkeit" ← Bewertung!
     - "Im Bausektor gibt es Insolvenzen" ← zu generisch, keine Firmennamen!
 
+  ARTICLE GROUPING (article_groups):
+  - Group ALL articles into 3-10 thematic clusters based on content similarity.
+  - Related articles MUST be in the same group, even if they have different static topic categories.
+    - Example: "Marti Bau Konkurs" and "Bausektor verzeichnet 15% mehr Pleiten" belong together.
+  - Each group gets a short, descriptive German label (max 40 chars).
+  - Each group gets a single BMP Unicode icon as HTML entity (e.g., &#9888; for warnings, &#128176; for finance).
+    - Use only BMP characters (no emoji above U+FFFF — Outlook cannot render them).
+  - EVERY article must appear in exactly ONE group. Do not skip any article index.
+  - Prefer FEWER, LARGER groups over many small ones.
+  - Use the article indices (1-based numbers) from the article list above.
+
   Provide factual perspective for credit analysts and risk managers.
 
 user_prompt_template: |
@@ -43,6 +54,7 @@ user_prompt_template: |
   - Credit risk signals (up to 5 emerging risk signals)
   - Regulatory updates (up to 5 compliance/regulatory items)
   - Market insights (up to 5 actionable business intelligence points)
+  - Article groups (3-10 thematic clusters covering ALL articles)
 
   Response format:
   {{
@@ -50,7 +62,12 @@ user_prompt_template: |
     "key_themes": ["theme 1", "theme 2", ...],  // 1-5 items
     "credit_risk_signals": ["signal 1", ...],   // 0-5 items
     "regulatory_updates": ["update 1", ...],     // 0-5 items
-    "market_insights": ["insight 1", ...]        // 0-5 items
+    "market_insights": ["insight 1", ...],       // 0-5 items
+    "article_groups": [                          // 3-10 groups, EVERY article index must appear
+      {{"label": "Bausektor unter Druck", "icon": "&#9888;", "article_indices": [1, 3, 7]}},
+      {{"label": "FINMA-Regulierung", "icon": "&#167;", "article_indices": [2, 5]}},
+      ...
+    ]
   }}
 
 output_schema:
@@ -88,10 +105,33 @@ output_schema:
         type: string
       maxItems: 5
       description: "Actionable market intelligence"
+    article_groups:
+      type: array
+      items:
+        type: object
+        properties:
+          label:
+            type: string
+            description: "Short German label for the group (max 40 chars)"
+          icon:
+            type: string
+            description: "BMP Unicode HTML entity for group icon"
+          article_indices:
+            type: array
+            items:
+              type: integer
+            description: "1-based article indices belonging to this group"
+        required:
+          - label
+          - article_indices
+      minItems: 1
+      maxItems: 10
+      description: "Thematic grouping of all articles into max 10 clusters"
   required:
     - executive_summary
     - key_themes
     - credit_risk_signals
     - regulatory_updates
     - market_insights
+    - article_groups
   additionalProperties: false
