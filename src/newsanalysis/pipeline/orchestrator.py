@@ -866,14 +866,18 @@ class PipelineOrchestrator:
                 feed_stats=feed_stats,
             )
 
-            # Create dynamic subject line with top article title
-            top_title = formatter.get_top_article_title(digest_data, max_length=50)
+            # Create dynamic subject line with top article title (max 60 chars total)
+            subject_prefix = "News-Digest: "
+            max_title_length = 60 - len(subject_prefix)
+            top_title = formatter.get_top_article_title(
+                digest_data, max_length=max_title_length
+            )
 
             if top_title:
-                subject = f"Creditreform News-Digest: {top_title}"
+                subject = f"{subject_prefix}{top_title}"
             else:
                 # Fallback to date-based subject when no articles
-                subject = f"Creditreform News-Digest: {digest_date.strftime('%d.%m.%Y')}"
+                subject = f"News-Digest {digest_date.strftime('%d.%m.%Y')}"
 
             # Send emails
             with OutlookEmailService() as email_service:

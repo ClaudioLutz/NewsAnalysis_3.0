@@ -1,10 +1,12 @@
 # Verbesserungen — Brainstorming
 
-Gesammelt am 2026-03-19. Status: Ideen zur Diskussion.
+Gesammelt am 2026-03-19. Zuletzt aktualisiert: 2026-03-21.
 
 ---
 
-## 1. Heute-in-30-Sekunden: Weniger Interpretation, mehr Fakten
+## 1. ✅ Heute-in-30-Sekunden: Weniger Interpretation, mehr Fakten
+
+> **Status: Umgesetzt am 19.03.2026** — Story: `20260319124500-fix-summarization-no-interpretations.md`
 
 **Problem:** Der "Heute in 30 Sekunden"-Bereich enthält teilweise Interpretationen und Risikobewertungen, die nicht direkt aus den Artikeln stammen. Beispiel: *"Keine unmittelbaren Auswirkungen auf die Kreditwürdigkeit"* — das ist eine Einschätzung des Modells, kein Fakt.
 
@@ -14,11 +16,18 @@ Gesammelt am 2026-03-19. Status: Ideen zur Diskussion.
 - Eventuell zweistufig: erst zusammenfassen, dann in einem separaten Schritt prüfen ob Interpretationen enthalten sind
 - "Heute in 30 Sekunden" Einträge kürzer und telegrafischer formulieren
 
-**Priorität:** Hoch — betrifft die Glaubwürdigkeit des Digests.
+**Was umgesetzt wurde:**
+- CRITICAL RULES im Summarization-Prompt gegen Interpretationen
+- Konkrete Bad/Good Examples (z.B. "Keine unmittelbaren Auswirkungen..." als Bad Example)
+- Telegrafischer Stil wird erzwungen
+
+**Priorität:** ~~Hoch~~ Erledigt.
 
 ---
 
-## 2. E-Mail-Betreff: Abschneiden verhindern
+## 2. ✅ E-Mail-Betreff: Abschneiden verhindern
+
+> **Status: Umgesetzt** — Story: `20260110204501--dynamic-subject-line.md`
 
 **Problem:** Der Betreff ist manchmal zu lang und wird in Outlook mit "..." abgeschnitten. Empfänger sehen nicht den vollständigen Betreff.
 
@@ -29,11 +38,19 @@ Gesammelt am 2026-03-19. Status: Ideen zur Diskussion.
 - Eventuell das wichtigste Thema des Tages im Betreff nennen (kurz)
 - Betreff-Generierung im Prompt oder Template anpassen mit striktem Zeichenlimit
 
-**Priorität:** Mittel — einfach umzusetzen, verbessert den ersten Eindruck.
+**Was umgesetzt wurde:**
+- Dynamischer Betreff mit Top-Artikel-Titel, begrenzt auf `max_length=47`
+- Prefix gekürzt: `News-Digest: {top_title}` statt `Creditreform News-Digest: {top_title}`
+- Gesamtlänge auf **60 Zeichen** begrenzt (Outlook-safe, kein Abschneiden)
+- Fallback auf Datum wenn keine Artikel vorhanden
+
+**Priorität:** ~~Mittel~~ Erledigt.
 
 ---
 
-## 3. Duplikaterkennung verbessern
+## 3. ✅ Duplikaterkennung verbessern (Cross-Language)
+
+> **Status: Umgesetzt am 19.03.2026** — Story: `20260319133000-cross-language-deduplication.md`
 
 **Problem:** Gewisse Duplikate werden nicht erkannt, insbesondere bei:
 - **Cross-Language:** FR/IT-Artikel zum gleichen Thema wie DE-Artikel (z.B. SNB/BNS Leitzinsentscheid)
@@ -47,7 +64,18 @@ Gesammelt am 2026-03-19. Status: Ideen zur Diskussion.
 - Threshold für Cross-Language-Vergleiche eventuell tiefer setzen als für Same-Language
 - Zeitfenster für Duplikaterkennung erweitern (aktuell nur innerhalb eines Runs?)
 
-**Priorität:** Hoch — Duplikate im Digest wirken unprofessionell.
+**Was umgesetzt wurde:**
+- `language`-Feld in Artikel-Modell und Feeds (`config/feeds.yaml`)
+- DB-Migration v5→v6 mit `language`-Spalte
+- Zweiter Dedup-Pass: `detect_cross_language_duplicates()` vergleicht FR/IT gegen DE-Kanonicals via LLM
+- Ohne Entity-Prefilter (umgeht SNB↔BNS-Problem)
+
+**Noch offen:**
+- Entity-Mapping für bekannte Institutionen
+- Embedding-basierter Vergleich (günstiger bei vielen Paaren)
+- Threshold-Tuning für Cross-Language
+
+**Priorität:** ~~Hoch~~ Grundversion erledigt, Tuning-Potential vorhanden.
 
 ---
 
@@ -79,7 +107,7 @@ Gesammelt am 2026-03-19. Status: Ideen zur Diskussion.
 
 ---
 
-## 5. Darstellung im Digest verbessern
+## 5. ⚠️ Darstellung im Digest verbessern (teilweise umgesetzt)
 
 **Ideen:**
 - **Visuelle Hierarchie:** Wichtige Artikel visuell stärker hervorheben (grössere Überschrift, Farbakzent)
@@ -88,6 +116,16 @@ Gesammelt am 2026-03-19. Status: Ideen zur Diskussion.
 - **Quellenangabe:** Quellen prominenter anzeigen (Vertrauen)
 - **Artikel-Anzahl pro Thema:** Bei vielen Artikeln zum gleichen Thema nur den besten zeigen + "X weitere Quellen"
 - **Lesezeit-Schätzung:** "~2 Min. Lesezeit" für den gesamten Digest
+
+**Was bereits umgesetzt wurde:**
+- ✅ **Dynamische Themengruppierung via LLM** (20.03.) — 3–10 Cluster statt 13 statische Kategorien, mit BMP-sicheren Icons
+- ✅ **Credit-Impact-Styling** (14.03.) — 4-Farben-Schema (negative/neutral/positive/elevated_risk), Risiko-Radar Sektion
+- ✅ **AVIF-zu-JPEG Konvertierung** (14.03.) — Outlook-kompatible Bildformate
+
+**Noch offen:**
+- Mobile-Optimierung
+- Lesezeit-Schätzung
+- "X weitere Quellen"-Zusammenfassung bei vielen Artikeln
 
 **Priorität:** Niedrig — nice-to-have, aktuelle Darstellung funktioniert.
 
@@ -128,6 +166,13 @@ Gesammelt am 2026-03-19. Status: Ideen zur Diskussion.
 
 ## Nächste Schritte
 
-1. **Quick Wins:** Betreff-Länge begrenzen, Prompt weiter verfeinern
-2. **Mittelfristig:** Themen-History implementieren, Cross-Language-Dedup tunen, Digest-Review Quality Gate
-3. **Langfristig:** Embedding-basierte Dedup, Darstellungsverbesserungen
+~~1. **Quick Wins:** Betreff-Länge begrenzen, Prompt weiter verfeinern~~ ✅ Erledigt
+
+2. **Mittelfristig:**
+   - Themen-History implementieren (Idee 4) — wiederkehrende Themen erkennen, frühere Artikel verlinken
+   - Digest-Review Quality Gate (Idee 6) — finaler LLM-Call gegen Redundanzen/Widersprüche
+   - Cross-Language-Dedup tunen — Entity-Mapping, Threshold-Optimierung
+
+3. **Langfristig:**
+   - Embedding-basierte Dedup (günstiger/schneller bei vielen Vergleichen)
+   - Darstellungsverbesserungen (Mobile, Lesezeit, "X weitere Quellen")
