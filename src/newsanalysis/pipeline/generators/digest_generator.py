@@ -560,6 +560,57 @@ class DigestGenerator:
 
         return "\n\n".join(summaries)
 
+    @staticmethod
+    def _sanitize_icon(icon: str) -> str:
+        """Ensure icon is a valid BMP HTML entity (U+0000 to U+FFFF).
+
+        Args:
+            icon: HTML entity string like "&#9888;".
+
+        Returns:
+            Sanitized icon or fallback "&#9679;" (bullet).
+        """
+        import re
+
+        fallback = "&#9679;"
+        if not icon:
+            return fallback
+
+        # Extract numeric value from HTML entity like &#9888; or &#x2602;
+        match = re.match(r"&#(\d+);", icon.strip())
+        if match:
+            codepoint = int(match.group(1))
+            if codepoint <= 0xFFFF:
+                return icon.strip()
+            logger.warning("non_bmp_icon_replaced", icon=icon, codepoint=codepoint)
+            return fallback
+
+        match_hex = re.match(r"&#x([0-9a-fA-F]+);", icon.strip())
+        if match_hex:
+            codepoint = int(match_hex.group(1), 16)
+            if codepoint <= 0xFFFF:
+                return icon.strip()
+            logger.warning("non_bmp_icon_replaced", icon=icon, codepoint=codepoint)
+            return fallback
+
+        return fallback
+
+    @staticmethod
+    def _sanitize_label(label: str) -> str:
+        """Remove HTML entities and trailing icons from group label.
+
+        Args:
+            label: Raw group label from LLM.
+
+        Returns:
+            Clean label with only text.
+        """
+        import re
+
+        # Remove HTML entities (&#1234; or &#xABCD;)
+        cleaned = re.sub(r"&#x?[0-9a-fA-F]+;", "", label)
+        return cleaned.strip()
+
     def _validate_article_groups(
         self, meta: MetaAnalysis, article_count: int
     ) -> MetaAnalysis:
@@ -592,8 +643,8 @@ class DigestGenerator:
             if unique_indices:
                 valid_groups.append(
                     ArticleGroup(
-                        label=group.label,
-                        icon=group.icon,
+                        label=self._sanitize_label(group.label),
+                        icon=self._sanitize_icon(group.icon),
                         article_indices=unique_indices,
                     )
                 )
