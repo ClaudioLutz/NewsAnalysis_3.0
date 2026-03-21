@@ -21,11 +21,19 @@ Zwei Probleme mit der statischen Themengruppierung:
   - System-Prompt: Neue ARTICLE GROUPING Sektion mit Anweisungen für 3-10 Cluster
   - User-Prompt: JSON-Format um `article_groups` erweitert
   - Output-Schema: `article_groups` Array hinzugefügt
+  - Icons: Explizite BMP-Whitelist (nur U+0000–U+FFFF) mit erlaubten Beispielen
+  - Labels: Klare Anweisung, dass Labels nur Text enthalten dürfen (keine HTML-Entities)
+  - Skalierung: Max 1-3 Gruppen bei weniger als 6 Artikeln
 
 - **`src/newsanalysis/pipeline/generators/digest_generator.py`**:
   - Neue Methode `_validate_article_groups()`: validiert Indices, entfernt Duplikate, erstellt Catch-all-Gruppe
+  - Neue Methode `_sanitize_icon()`: ersetzt nicht-BMP HTML-Entities (>U+FFFF) durch Fallback-Icon
+  - Neue Methode `_sanitize_label()`: entfernt HTML-Entities aus Labels (LLM schrieb Icons doppelt)
   - `_build_articles_summary()`: Hinweis am Ende für LLM-Indexierung
   - Import von `ArticleGroup` hinzugefügt
+
+- **`src/newsanalysis/pipeline/formatters/json_formatter.py`**:
+  - `_build_digest_dict()`: nutzt `model_dump()` statt manuellem Dict für `meta_analysis` (article_groups fehlten im JSON-Output)
 
 - **`src/newsanalysis/services/digest_formatter.py`**:
   - Refactoring: `_parse_article_dict()` extrahiert aus `_parse_articles()` (keine Duplikation)
@@ -59,3 +67,4 @@ python -m newsanalysis.cli.main run --reset digest --skip-collection
 - **Fallback eingebaut**: Wenn das LLM keine `article_groups` liefert oder die Validierung fehlschlägt, greift automatisch die statische Topic-Gruppierung.
 - **Rollback**: `article_groups` Feld und Prompt-Erweiterung entfernen; Formatter fällt automatisch auf statische Gruppierung zurück.
 - **Risiko**: LLM könnte suboptimale Cluster bilden (zu viele kleine Gruppen, unklare Labels). Evaluierung nach ersten Runs empfohlen.
+- **Bekannte Einschränkung**: Bei wenigen Artikeln (<6) ist die Gruppierung wenig aussagekräftig — jeder Artikel erhält tendenziell eine eigene Gruppe. Prompt enthält Hinweis für max 1-3 Gruppen in diesem Fall.
