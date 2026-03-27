@@ -13,6 +13,7 @@ from newsanalysis.pipeline.formatters.german_formatter import (
     TOPIC_PRIORITY,
     TOPIC_TRANSLATIONS,
 )
+from newsanalysis.services.company_matcher import CompanyMatcher
 from newsanalysis.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -42,11 +43,16 @@ class HtmlEmailFormatter:
     with Outlook's Word-based rendering engine. Supports embedded images via CID.
     """
 
-    def __init__(self, article_repository: Optional[ArticleRepository] = None) -> None:
+    def __init__(
+        self,
+        article_repository: Optional[ArticleRepository] = None,
+        company_matcher: Optional[CompanyMatcher] = None,
+    ) -> None:
         """Initialize the formatter with Jinja2 environment.
 
         Args:
             article_repository: Optional repository for fetching article images.
+            company_matcher: Optional matcher for resolving company names to crediweb links.
         """
         templates_dir = Path(__file__).parent.parent / "templates"
         self.env = Environment(
@@ -54,6 +60,7 @@ class HtmlEmailFormatter:
             autoescape=select_autoescape(["html", "xml"]),
         )
         self.article_repository = article_repository
+        self.company_matcher = company_matcher
 
     def format(self, digest_data: Dict[str, Any]) -> str:
         """Format digest data as HTML email.
@@ -172,9 +179,13 @@ class HtmlEmailFormatter:
                     source_links.append({"name": dup_source, "url": dup_url})
         all_sources = [s["name"] for s in source_links]
 
-        # Extract company names from entities
+        # Extract company names from entities and resolve to crediweb links
         entities = article.get("entities", {})
-        companies = entities.get("companies", []) if entities else []
+        raw_companies = entities.get("companies", []) if entities else []
+        if self.company_matcher and self.company_matcher.is_connected and raw_companies:
+            companies = self.company_matcher.resolve_companies(raw_companies[:3])
+        else:
+            companies = [{"name": c, "url": ""} for c in raw_companies]
 
         # Determine credit impact (LLM value or rule-based fallback)
         confidence = article.get("confidence", 0)

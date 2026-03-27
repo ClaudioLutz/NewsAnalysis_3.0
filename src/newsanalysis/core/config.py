@@ -74,9 +74,14 @@ class Config(BaseSettings):
     summarization_provider: Literal["gemini", "openai"] = "gemini"
     digest_provider: Literal["gemini", "openai"] = "gemini"
 
-    # Database
+    # Database (SQLite - local pipeline)
     db_path: Path = Path("./news.db")
     db_backup_dir: Path = Path("./backups")
+
+    # CNC Report Database (MSSQL - Creditreform company matching)
+    db_server: Optional[str] = None
+    db_database: Optional[str] = None
+    db_driver: str = "ODBC Driver 17 for SQL Server"
 
     # Pipeline Settings
     confidence_threshold: float = Field(default=0.70, ge=0.0, le=1.0)

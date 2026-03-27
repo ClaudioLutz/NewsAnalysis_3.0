@@ -26,6 +26,7 @@ from newsanalysis.pipeline.summarizers import ArticleSummarizer
 from newsanalysis.pipeline.extractors.image_extractor import ImageExtractor
 from newsanalysis.services.cache_service import CacheService
 from newsanalysis.services.config_loader import ConfigLoader, load_feeds_config
+from newsanalysis.services.company_matcher import CompanyMatcher
 from newsanalysis.services.digest_formatter import HtmlEmailFormatter
 from newsanalysis.services.email_service import OutlookEmailService
 from newsanalysis.services.image_cache import ImageCache
@@ -857,8 +858,21 @@ class PipelineOrchestrator:
             # Query feed stats for today
             feed_stats = self._get_feed_stats()
 
+            # Initialize company matcher for crediweb links (optional, graceful fallback)
+            company_matcher = None
+            if self.config.db_server and self.config.db_database:
+                company_matcher = CompanyMatcher(
+                    db_server=self.config.db_server,
+                    db_database=self.config.db_database,
+                    db_driver=self.config.db_driver,
+                )
+                company_matcher.connect()
+
             # Format as HTML with images
-            formatter = HtmlEmailFormatter(article_repository=self.repository)
+            formatter = HtmlEmailFormatter(
+                article_repository=self.repository,
+                company_matcher=company_matcher,
+            )
             html_body, image_cid_mapping = formatter.format_with_images(
                 digest_data,
                 include_images=True,
@@ -934,6 +948,9 @@ class PipelineOrchestrator:
         except Exception as e:
             logger.error("email_send_failed", error=str(e))
             return False
+        finally:
+            if company_matcher is not None:
+                company_matcher.close()
 
     def _get_feed_stats(self) -> List[Dict[str, Any]]:
         """Get article statistics grouped by feed source for today.

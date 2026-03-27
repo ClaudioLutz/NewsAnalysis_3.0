@@ -230,7 +230,7 @@
                         {% if article.url %}<a href="{{ article.url }}" class="link-primary" style="color: {% if article.credit_impact == 'negative' %}#dc2626{% elif article.credit_impact == 'positive' %}#16a34a{% else %}#003366{% endif %}; text-decoration: none;">{{ article.title }}</a>{% else %}<span class="text-body">{{ article.title }}</span>{% endif %}
                       </p>
                       {% if article.companies %}
-                      <p class="text-companies" style="margin: 0 0 4px 0; color: #cc6600; font-size: 12px; font-weight: bold;">{{ article.companies[:3]|join(", ") }}</p>
+                      <p class="text-companies" style="margin: 0 0 4px 0; color: #cc6600; font-size: 12px; font-weight: bold;">{% for co in article.companies[:3] %}{% if co.url %}<a href="{{ co.url }}" style="color: #cc6600; text-decoration: underline dotted; text-underline-offset: 2px;">{{ co.name }}</a>{% elif co.name is defined %}{{ co.name }}{% else %}{{ co }}{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}</p>
                       {% endif %}
                       {% if article.source_links and article.source_links|length > 1 %}
                       <p class="text-meta" style="margin: 0 0 4px 0; color: #888888; font-size: 11px;">Quellen: {% for src in article.source_links %}{% if src.url %}<a href="{{ src.url }}" style="color: #888888;">{{ src.name }}</a>{% else %}{{ src.name }}{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}{% if article.published_time %} &bull; {{ article.published_time }}{% endif %}</p>
