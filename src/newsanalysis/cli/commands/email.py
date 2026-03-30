@@ -10,6 +10,8 @@ from newsanalysis.core.config import Config
 from newsanalysis.database.connection import DatabaseConnection
 from newsanalysis.database.digest_repository import DigestRepository
 from newsanalysis.database.repository import ArticleRepository
+from newsanalysis.services.company_matcher import CompanyMatcher
+from newsanalysis.services.company_matcher import CompanyMatcher
 from newsanalysis.services.digest_formatter import HtmlEmailFormatter
 from newsanalysis.services.email_service import OutlookEmailService
 from newsanalysis.utils.logging import setup_logging
@@ -185,13 +187,29 @@ def email(
                     f"Filtered to {digest_data['article_count']} articles from today"
                 )
 
+            # Initialize company matcher for crediweb links (optional)
+            company_matcher = None
+            if config.db_server and config.db_database:
+                company_matcher = CompanyMatcher(
+                    db_server=config.db_server,
+                    db_database=config.db_database,
+                    db_driver=config.db_driver,
+                )
+                company_matcher.connect()
+
             # Format as HTML with embedded images
             click.echo("Formatting email with images...")
-            formatter = HtmlEmailFormatter(article_repository=article_repo)
+            formatter = HtmlEmailFormatter(
+                article_repository=article_repo,
+                company_matcher=company_matcher,
+            )
             html_body, image_cid_mapping = formatter.format_with_images(
                 digest_data,
                 include_images=True
             )
+
+            if company_matcher is not None:
+                company_matcher.close()
 
             click.echo(f"Prepared {len(image_cid_mapping)} images for embedding")
 

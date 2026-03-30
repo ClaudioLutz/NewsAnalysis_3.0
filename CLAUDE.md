@@ -12,7 +12,7 @@ Collects articles from 30+ RSS feeds, classifies them via LLM, scrapes content, 
 - **Relevance-based topic ordering**: Email topics sorted by average article relevance score (highest first)
 - **Multi-email delivery**: VIP group receives one shared email (all in TO, see each other); remaining recipients each get an individual email (cannot see anyone else)
 - **Content fingerprint cache**: SHA-256 based summary cache with 90-day TTL (must be cleared to force re-summarization)
-- **Crediweb company links**: Company names in digest are auto-matched against Creditreform Pool_Adresse DB (MSSQL) and linked to crediweb.ch. Requires `DB_SERVER`/`DB_DATABASE` in `.env`. Graceful fallback to plain text if DB unavailable.
+- **Crediweb company links**: Company names in digest are auto-matched against Creditreform Pool_Adresse DB (CnZenReport, MSSQL) and linked to crediweb.ch. Filters for valid Swiss firm addresses (Adrart=F, Adrtyp=1, SperrCode!=XX, Land=CH). Requires `DB_SERVER`/`DB_DATABASE` in `.env`. Graceful fallback to plain text if DB unavailable.
 
 ---
 

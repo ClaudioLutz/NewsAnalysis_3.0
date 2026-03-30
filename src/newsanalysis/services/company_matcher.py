@@ -15,6 +15,14 @@ CREDIWEB_URL_TEMPLATE = (
     "&hitsPerPage=20&isMonitored=False"
 )
 
+# Required filter for valid Pool_Adresse records
+_POOL_ADRESSE_FILTER = (
+    "Pa_S_Adrart = 'F' "
+    "AND Pa_S_Adrtyp = 1 "
+    "AND Pa_S_SperrCode != 'XX' "
+    "AND Pa_S_Land = 'CH'"
+)
+
 # Legal suffixes to strip during normalization
 _LEGAL_SUFFIXES = re.compile(
     r"\b("
@@ -30,11 +38,7 @@ _PUNCT = re.compile(r"[.,;:()\-/&\"]")
 
 
 def _normalize(name: str) -> str:
-    """Normalize a company name for comparison.
-
-    Lowercases, strips legal suffixes (AG, GmbH, SA, …), removes punctuation,
-    collapses whitespace.
-    """
+    """Normalize a company name for comparison."""
     name = name.lower().strip()
     name = _LEGAL_SUFFIXES.sub("", name)
     name = _PUNCT.sub(" ", name)
@@ -43,11 +47,14 @@ def _normalize(name: str) -> str:
 
 
 class CompanyMatcher:
-    """Matches article company names against Pool_Adresse in CNC Report DB.
+    """Matches article company names against Pool_Adresse in CnZenReport DB.
 
-    Uses a two-stage strategy:
-    1. Exact match on normalized name
-    2. LIKE fallback (shortest match wins)
+    Uses batch queries to resolve all names efficiently:
+    1. Single batch exact-match query for all names at once
+    2. Individual LIKE fallback only for unmatched names (min 3 chars)
+
+    All queries filter for valid Swiss firm addresses only
+    (Adrart=F, Adrtyp=1, SperrCode!=XX, Land=CH).
 
     Results are cached in-memory per session so identical names are queried only once.
     """
@@ -77,7 +84,10 @@ class CompanyMatcher:
             return
         try:
             self._conn = pyodbc.connect(self._conn_str, timeout=10)
-            logger.info("cnc_db_connected", server=self._conn_str.split("SERVER=")[1].split(";")[0])
+            logger.info(
+                "cnc_db_connected",
+                server=self._conn_str.split("SERVER=")[1].split(";")[0],
+            )
         except pyodbc.Error as exc:
             logger.error("cnc_db_connection_failed", error=str(exc))
             self._conn = None
@@ -93,67 +103,64 @@ class CompanyMatcher:
         return self._conn is not None
 
     # ------------------------------------------------------------------
-    # Core matching
+    # Batch matching (primary approach)
     # ------------------------------------------------------------------
 
-    def match_company(self, name: str) -> tuple[int, str] | None:
-        """Match a single company name against Pool_Adresse.
+    def _batch_exact_match(self, names: list[str]) -> dict[str, tuple[int, str]]:
+        """Batch exact match — one query for all names.
 
-        Returns:
-            (Pa_L_Nr, Pa_S_Firma) tuple if found, else None.
+        Returns dict mapping lowercase-trimmed name → (Pa_L_Nr, Pa_S_Firma).
         """
-        if not self.is_connected:
-            return None
-
-        # Check cache first
-        cache_key = _normalize(name)
-        if not cache_key:
-            return None
-        if cache_key in self._cache:
-            return self._cache[cache_key]
-
-        result = self._query_exact(name) or self._query_like(name)
-        self._cache[cache_key] = result
-        return result
-
-    def _query_exact(self, name: str) -> tuple[int, str] | None:
-        """Stage 1: Exact match (case-insensitive, trimmed)."""
         assert self._conn is not None
+        if not names:
+            return {}
+
+        placeholders = ",".join("?" for _ in names)
+        params = [n.strip().lower() for n in names]
+
         try:
             cursor = self._conn.cursor()
             cursor.execute(
-                "SELECT TOP 1 Pa_L_Nr, Pa_S_Firma "
-                "FROM Pool_Adresse "
-                "WHERE LTRIM(RTRIM(LOWER(Pa_S_Firma))) = LTRIM(RTRIM(LOWER(?)))",
-                (name.strip(),),
+                f"SELECT Pa_L_Nr, Pa_S_Firma "
+                f"FROM Pool_Adresse "
+                f"WHERE {_POOL_ADRESSE_FILTER} "
+                f"AND LTRIM(RTRIM(LOWER(Pa_S_Firma))) IN ({placeholders})",
+                params,
             )
-            row = cursor.fetchone()
-            if row:
-                logger.debug("company_match_exact", name=name, crefo_id=row[0])
-                return (int(row[0]), str(row[1]))
+            results: dict[str, tuple[int, str]] = {}
+            for row in cursor.fetchall():
+                db_name = str(row[1]).strip().lower()
+                if db_name not in results:
+                    results[db_name] = (int(row[0]), str(row[1]))
+            logger.info(
+                "company_batch_exact",
+                queried=len(names),
+                matched=len(results),
+            )
+            return results
         except pyodbc.Error as exc:
-            logger.warning("company_match_query_failed", name=name, error=str(exc))
-        return None
+            logger.warning("company_batch_exact_failed", error=str(exc))
+            return {}
 
     def _query_like(self, name: str) -> tuple[int, str] | None:
-        """Stage 2: LIKE fallback — pick shortest matching Pa_S_Firma."""
+        """LIKE fallback for a single unmatched name — pick shortest match."""
         assert self._conn is not None
         normalized = _normalize(name)
         if len(normalized) < 3:
-            return None  # Too short for LIKE, would match too many
+            return None
 
         try:
             cursor = self._conn.cursor()
             cursor.execute(
-                "SELECT TOP 10 Pa_L_Nr, Pa_S_Firma "
-                "FROM Pool_Adresse "
-                "WHERE Pa_S_Firma LIKE ? "
-                "ORDER BY LEN(Pa_S_Firma) ASC",
+                f"SELECT TOP 5 Pa_L_Nr, Pa_S_Firma "
+                f"FROM Pool_Adresse "
+                f"WHERE {_POOL_ADRESSE_FILTER} "
+                f"AND LOWER(Pa_S_Firma) LIKE ? "
+                f"ORDER BY LEN(Pa_S_Firma) ASC",
                 (f"%{normalized}%",),
             )
             rows = cursor.fetchall()
             if rows:
-                # Pick the shortest name (most specific match)
                 best = rows[0]
                 logger.debug(
                     "company_match_like",
@@ -168,19 +175,52 @@ class CompanyMatcher:
         return None
 
     # ------------------------------------------------------------------
-    # Batch matching for digest
+    # Public API
     # ------------------------------------------------------------------
 
     def resolve_companies(self, companies: list[str]) -> list[dict[str, str]]:
         """Resolve a list of company names to display dicts.
 
+        Efficiently batches exact matches, then falls back to LIKE for unmatched.
+
         Returns list of dicts with keys:
             - name: original company name
             - url: crediweb URL if matched, else empty string
         """
+        if not self.is_connected or not companies:
+            return [{"name": c, "url": ""} for c in companies]
+
+        # Deduplicate and filter cached
+        uncached = []
+        for c in companies:
+            key = _normalize(c)
+            if key and key not in self._cache:
+                uncached.append(c)
+
+        # Stage 1: Batch exact match for all uncached names in one query
+        if uncached:
+            exact_results = self._batch_exact_match(uncached)
+
+            # Populate cache from batch results
+            matched_keys: set[str] = set()
+            for c in uncached:
+                key = _normalize(c)
+                lookup = c.strip().lower()
+                if lookup in exact_results:
+                    self._cache[key] = exact_results[lookup]
+                    matched_keys.add(key)
+
+            # Stage 2: LIKE fallback only for unmatched (typically few)
+            for c in uncached:
+                key = _normalize(c)
+                if key not in matched_keys and key not in self._cache:
+                    self._cache[key] = self._query_like(c)
+
+        # Build results
         results: list[dict[str, str]] = []
         for company in companies:
-            match = self.match_company(company)
+            key = _normalize(company)
+            match = self._cache.get(key) if key else None
             if match:
                 crefo_id, _db_name = match
                 url = CREDIWEB_URL_TEMPLATE.format(crefo_id=crefo_id)
