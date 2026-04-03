@@ -17,10 +17,7 @@ CREDIWEB_URL_TEMPLATE = (
 
 # Required filter for valid Pool_Adresse records
 _POOL_ADRESSE_FILTER = (
-    "Pa_S_Adrart = 'F' "
-    "AND Pa_S_Adrtyp = 1 "
-    "AND Pa_S_SperrCode != 'XX' "
-    "AND Pa_S_Land = 'CH'"
+    "Pa_S_Adrart = 'F' AND Pa_S_Adrtyp = 1 AND Pa_S_SperrCode != 'XX' AND Pa_S_Land = 'CH'"
 )
 
 # Legal suffixes to strip during normalization
@@ -143,16 +140,19 @@ class CompanyMatcher:
             return {}
 
     def _query_like(self, name: str) -> tuple[int, str] | None:
-        """LIKE fallback for a single unmatched name — pick shortest match."""
+        """LIKE fallback for a single unmatched name — pick shortest match.
+
+        Returns None if name too short (<4 chars) or too many hits (>5 = ambiguous).
+        """
         assert self._conn is not None
         normalized = _normalize(name)
-        if len(normalized) < 3:
+        if len(normalized) < 4:
             return None
 
         try:
             cursor = self._conn.cursor()
             cursor.execute(
-                f"SELECT TOP 5 Pa_L_Nr, Pa_S_Firma "
+                f"SELECT TOP 6 Pa_L_Nr, Pa_S_Firma "
                 f"FROM Pool_Adresse "
                 f"WHERE {_POOL_ADRESSE_FILTER} "
                 f"AND LOWER(Pa_S_Firma) LIKE ? "
@@ -160,6 +160,10 @@ class CompanyMatcher:
                 (f"%{normalized}%",),
             )
             rows = cursor.fetchall()
+            if len(rows) > 5:
+                # Too many hits = ambiguous, discard (CrSearch4Match rule)
+                logger.debug("company_match_like_ambiguous", name=name, hits=len(rows))
+                return None
             if rows:
                 best = rows[0]
                 logger.debug(
