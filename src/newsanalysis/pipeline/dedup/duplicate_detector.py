@@ -1,10 +1,28 @@
-"""Semantic duplicate detector using LLM for cross-source article deduplication."""
+"""Semantic duplicate detector using multi-signal pre-filtering and LLM verification.
+
+Pre-filter cascade (union — any signal triggers LLM comparison):
+1. URL slug similarity (Jaccard on path tokens >= 0.5)
+2. Embedding cosine similarity (multilingual, >= 0.65)
+3. Entity overlap (existing: shared proper nouns/acronyms)
+4. Title token Jaccard similarity (>= 0.3)
+5. Content SimHash (hamming distance <= 10, if content available)
+
+LLM comparison receives title + optional content snippet for better accuracy.
+Cross-language dedup uses the same pipeline (multilingual embeddings handle DE/FR/IT).
+"""
+
+from __future__ import annotations
 
 import asyncio
+import hashlib
 import re
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, FrozenSet, List, Optional, Set, Tuple
+from typing import TYPE_CHECKING
+from urllib.parse import urlparse
+
+if TYPE_CHECKING:
+    from newsanalysis.pipeline.dedup.embedding_service import EmbeddingService
 
 import snowballstemmer
 from pydantic import BaseModel, Field
@@ -36,7 +54,7 @@ class DuplicateGroup(BaseModel):
     """A group of duplicate articles covering the same story."""
 
     canonical_url_hash: str = Field(..., description="URL hash of the canonical article")
-    duplicate_url_hashes: List[str] = Field(
+    duplicate_url_hashes: list[str] = Field(
         default_factory=list, description="URL hashes of duplicate articles"
     )
     confidence: float = Field(..., description="Average confidence across comparisons")
@@ -46,14 +64,14 @@ class DuplicateGroup(BaseModel):
 class DuplicateDetector:
     """Detects semantically duplicate articles across different news sources.
 
-    Uses LLM to compare article titles and determine if they cover the same story,
-    even when published by different sources with different wording.
+    Uses a multi-signal pre-filter cascade followed by LLM verification:
+    1. URL slug similarity — catches syndicated content with similar URLs
+    2. Embedding cosine similarity — multilingual semantic matching (DE/FR/IT)
+    3. Entity overlap — shared proper nouns, acronyms, numbers
+    4. Title token Jaccard — token-level overlap for similar headlines
+    5. Content SimHash — fuzzy content fingerprinting (if content available)
 
-    Strategy:
-    1. Group articles by publication date (same-day window)
-    2. Within each group, compare titles pairwise using LLM
-    3. Cluster duplicates and select canonical article (highest priority source)
-    4. Mark duplicates to skip summarization
+    Only candidate pairs passing at least one pre-filter go to LLM.
     """
 
     def __init__(
@@ -62,6 +80,10 @@ class DuplicateDetector:
         prompt_config_path: str = "config/prompts/deduplication.yaml",
         confidence_threshold: float = 0.75,
         time_window_hours: int = 48,
+        embedding_threshold: float = 0.65,
+        jaccard_threshold: float = 0.30,
+        url_slug_threshold: float = 0.50,
+        simhash_max_distance: int = 15,
     ):
         """Initialize duplicate detector.
 
@@ -70,10 +92,18 @@ class DuplicateDetector:
             prompt_config_path: Path to deduplication prompt config.
             confidence_threshold: Minimum confidence to consider articles as duplicates.
             time_window_hours: Maximum time difference between articles to compare.
+            embedding_threshold: Minimum cosine similarity for embedding pre-filter.
+            jaccard_threshold: Minimum Jaccard similarity for title token pre-filter.
+            url_slug_threshold: Minimum Jaccard similarity for URL slug pre-filter.
+            simhash_max_distance: Maximum hamming distance for SimHash content pre-filter.
         """
         self.llm_client = llm_client
         self.confidence_threshold = confidence_threshold
         self.time_window_hours = time_window_hours
+        self.embedding_threshold = embedding_threshold
+        self.jaccard_threshold = jaccard_threshold
+        self.url_slug_threshold = url_slug_threshold
+        self.simhash_max_distance = simhash_max_distance
 
         # Load prompt configuration
         try:
@@ -88,16 +118,23 @@ class DuplicateDetector:
             )
             self._use_default_prompts()
 
+        # Lazy-init embedding service
+        self._embedding_service: EmbeddingService | None = None
+
         logger.info(
             "duplicate_detector_initialized",
             confidence_threshold=confidence_threshold,
             time_window_hours=time_window_hours,
+            embedding_threshold=embedding_threshold,
+            jaccard_threshold=jaccard_threshold,
+            url_slug_threshold=url_slug_threshold,
+            simhash_max_distance=simhash_max_distance,
         )
 
     def _use_default_prompts(self) -> None:
         """Set default prompts if config file not found."""
         self.system_prompt = """You are a news article duplicate detector.
-Your task is to determine if two article titles refer to the SAME news story/event.
+Your task is to determine if two articles refer to the SAME news story/event.
 
 Consider articles as duplicates if they:
 - Report on the same specific event, announcement, or development
@@ -111,71 +148,106 @@ Consider articles as NOT duplicates if they:
 
 Be strict: only mark as duplicate if you are confident they cover the EXACT same story."""
 
-        self.user_prompt_template = """Compare these two article titles:
+        self.user_prompt_template = """Compare these two articles:
 
 Article 1:
 - Title: {title1}
 - Source: {source1}
-- Published: {date1}
+- Date: {date1}
+{snippet1}
 
 Article 2:
 - Title: {title2}
 - Source: {source2}
-- Published: {date2}
+- Date: {date2}
+{snippet2}
 
 Are these articles covering the SAME specific news story or event?
 Respond with JSON: {{"is_duplicate": bool, "confidence": float, "reason": "brief explanation"}}"""
 
-    # Multilingual stop words from stop-words library (DE/FR/IT/EN)
-    _STOP_WORDS: Set[str] = (
+    @property
+    def embedding_service(self) -> EmbeddingService | None:
+        """Lazy-load the embedding service."""
+        if self._embedding_service is None:
+            try:
+                from newsanalysis.pipeline.dedup.embedding_service import EmbeddingService
+
+                self._embedding_service = EmbeddingService(
+                    similarity_threshold=self.embedding_threshold
+                )
+                if not self._embedding_service.available:
+                    self._embedding_service = None
+            except Exception as e:
+                logger.warning("embedding_service_init_failed", error=str(e))
+                self._embedding_service = None
+        return self._embedding_service
+
+    # ── Multilingual stop words ──────────────────────────────────────────
+
+    _STOP_WORDS: set[str] = (
         set(get_stop_words("german"))
         | set(get_stop_words("french"))
         | set(get_stop_words("italian"))
         | set(get_stop_words("english"))
     )
 
-    # Snowball stemmers for reducing words to their root form (DE/FR/IT)
     _STEMMERS = {
         "de": snowballstemmer.stemmer("german"),
         "fr": snowballstemmer.stemmer("french"),
         "it": snowballstemmer.stemmer("italian"),
     }
 
-    # Pattern for extracting tokens that are likely entities or numbers
     _ENTITY_PATTERN = re.compile(r"[A-ZÄÖÜ][a-zäöüéèêàâîôûç]+|[A-ZÄÖÜ]{2,}|\d+[\.,]?\d*")
+
+    # ── Pre-Filter 1: URL Slug Similarity ────────────────────────────────
+
+    @staticmethod
+    def _extract_slug_tokens(url: str) -> set[str]:
+        """Extract meaningful tokens from the URL path.
+
+        Splits the path on /, -, _ and filters out short/numeric-only tokens.
+        E.g. "https://nzz.ch/wirtschaft/ubs-meldet-konkurs-2026" → {"wirtschaft", "ubs", "meldet", "konkurs"}
+        """
+        try:
+            path = urlparse(str(url)).path
+        except Exception:
+            return set()
+        tokens = re.split(r"[/\-_.]", path.lower())
+        return {t for t in tokens if len(t) >= 3 and not t.isdigit()}
+
+    @staticmethod
+    def _url_slug_similarity(url1: str, url2: str) -> float:
+        """Jaccard similarity between URL slug tokens."""
+        tokens1 = DuplicateDetector._extract_slug_tokens(url1)
+        tokens2 = DuplicateDetector._extract_slug_tokens(url2)
+        if not tokens1 or not tokens2:
+            return 0.0
+        intersection = tokens1 & tokens2
+        union = tokens1 | tokens2
+        return len(intersection) / len(union) if union else 0.0
+
+    # ── Pre-Filter 2: Entity Overlap (existing) ─────────────────────────
 
     @staticmethod
     def _stem_word(word: str) -> str:
-        """Stem a word using all stemmers, return the shortest result.
-
-        Using the shortest stem maximizes cross-language matching
-        (e.g., "Haushalte" and "Haushalt" both → "haushalt").
-        """
+        """Stem a word using all stemmers, return the shortest result."""
         stems = [word]
         for stemmer in DuplicateDetector._STEMMERS.values():
             stems.append(stemmer.stemWord(word))
         return min(stems, key=len)
 
     @staticmethod
-    def _extract_entities(title: str) -> Set[str]:
+    def _extract_entities(title: str) -> set[str]:
         """Extract named entities and numbers from a title.
 
         Extracts capitalized words (proper nouns), acronyms, and numbers.
-        Applies stemming to normalize inflected forms across languages
-        (e.g., "Haushalte" → "haushalt", "Millionäre" → "millionär").
-
-        Args:
-            title: Article title string.
-
-        Returns:
-            Set of stemmed entity strings (lowercased for comparison).
+        Applies stemming to normalize inflected forms across languages.
         """
         tokens = DuplicateDetector._ENTITY_PATTERN.findall(title)
         entities = set()
         for token in tokens:
             lower = token.lower()
             if lower not in DuplicateDetector._STOP_WORDS and len(token) >= 2:
-                # Don't stem acronyms (all-uppercase) or numbers — only stem regular words
                 if token.isupper() or token[0].isdigit():
                     entities.add(lower)
                 else:
@@ -184,58 +256,222 @@ Respond with JSON: {{"is_duplicate": bool, "confidence": float, "reason": "brief
                         entities.add(stemmed)
         return entities
 
-    def _pre_filter_candidates(
-        self, pairs: List[Tuple[Article, Article]]
-    ) -> List[Tuple[Article, Article]]:
-        """Pre-filter candidate pairs using entity overlap.
+    # ── Pre-Filter 3: Title Token Jaccard ────────────────────────────────
 
-        Only keeps pairs where titles share at least one named entity or number.
-        This is language-independent because proper nouns and numbers are the same
-        across DE/FR/IT (e.g., "UBS", "57,4 Mio", "BancaStato").
+    @staticmethod
+    def _title_token_jaccard(title1: str, title2: str) -> float:
+        """Jaccard similarity on lowercased title tokens (excluding stop words).
+
+        More permissive than entity overlap — catches common words that
+        aren't proper nouns but still indicate the same story.
+        """
+        tokens1 = {
+            t
+            for t in re.findall(r"\w+", title1.lower())
+            if len(t) >= 3 and t not in DuplicateDetector._STOP_WORDS
+        }
+        tokens2 = {
+            t
+            for t in re.findall(r"\w+", title2.lower())
+            if len(t) >= 3 and t not in DuplicateDetector._STOP_WORDS
+        }
+        if not tokens1 or not tokens2:
+            return 0.0
+        intersection = tokens1 & tokens2
+        union = tokens1 | tokens2
+        return len(intersection) / len(union) if union else 0.0
+
+    # ── Pre-Filter 4: Content SimHash ────────────────────────────────────
+
+    @staticmethod
+    def _compute_simhash(text: str, hash_bits: int = 64) -> int:
+        """Compute a SimHash fingerprint for text content.
+
+        SimHash is a locality-sensitive hash: similar texts produce hashes
+        with small hamming distance. Uses word-level shingles (3-grams).
+
+        Args:
+            text: Text content to hash.
+            hash_bits: Number of bits in the hash (default 64).
+
+        Returns:
+            Integer SimHash value.
+        """
+        if not text:
+            return 0
+
+        # Normalize: lowercase, collapse whitespace
+        text = re.sub(r"\s+", " ", text.lower().strip())
+        words = text.split()
+
+        if len(words) < 3:
+            return 0
+
+        # Generate 3-gram shingles
+        vector = [0] * hash_bits
+        for i in range(len(words) - 2):
+            shingle = " ".join(words[i : i + 3])
+            h = int(hashlib.md5(shingle.encode("utf-8")).hexdigest(), 16)
+            for bit in range(hash_bits):
+                if h & (1 << bit):
+                    vector[bit] += 1
+                else:
+                    vector[bit] -= 1
+
+        # Build fingerprint from sign of each dimension
+        fingerprint = 0
+        for bit in range(hash_bits):
+            if vector[bit] > 0:
+                fingerprint |= 1 << bit
+        return fingerprint
+
+    @staticmethod
+    def _hamming_distance(hash1: int, hash2: int) -> int:
+        """Count differing bits between two SimHash values."""
+        return bin(hash1 ^ hash2).count("1")
+
+    # ── Multi-Signal Pre-Filter ──────────────────────────────────────────
+
+    def _multi_signal_pre_filter(
+        self,
+        pairs: list[tuple[Article, Article]],
+        entity_cache: dict[str, set[str]] | None = None,
+        simhash_cache: dict[str, int] | None = None,
+        embedding_threshold_override: float | None = None,
+    ) -> list[tuple[Article, Article]]:
+        """Multi-signal pre-filter replacing the old entity-only pre-filter.
+
+        A pair is a candidate if ANY of these signals fires:
+        1. URL slug Jaccard >= url_slug_threshold
+        2. Embedding cosine similarity >= embedding_threshold (or override)
+        3. Shared entities (at least 1)
+        4. Title token Jaccard >= jaccard_threshold
+        5. Content SimHash hamming distance <= simhash_max_distance
 
         Args:
             pairs: All candidate pairs from time window grouping.
+            entity_cache: Pre-computed entity cache (url_hash → entities).
+            simhash_cache: Pre-computed SimHash cache (url_hash → simhash).
+            embedding_threshold_override: Lower threshold for cross-language comparisons.
 
         Returns:
-            Filtered pairs that share at least one entity.
+            Filtered pairs that pass at least one signal.
         """
-        # Cache entity extraction per article
-        entity_cache: Dict[str, Set[str]] = {}
+        if entity_cache is None:
+            entity_cache = {}
+        if simhash_cache is None:
+            simhash_cache = {}
 
-        def get_entities(article: Article) -> Set[str]:
-            if article.url_hash not in entity_cache:
-                entity_cache[article.url_hash] = self._extract_entities(article.title)
-            return entity_cache[article.url_hash]
-
-        filtered = []
+        # Pre-compute entities and simhashes
         for a1, a2 in pairs:
-            entities1 = get_entities(a1)
-            entities2 = get_entities(a2)
-            shared = entities1 & entities2
-            if shared:
+            for a in (a1, a2):
+                if a.url_hash not in entity_cache:
+                    entity_cache[a.url_hash] = self._extract_entities(a.title)
+                if a.url_hash not in simhash_cache and a.content:
+                    simhash_cache[a.url_hash] = self._compute_simhash(a.content)
+
+        # Batch-encode titles for embedding similarity
+        all_hashes_in_pairs: set[str] = set()
+        for a1, a2 in pairs:
+            all_hashes_in_pairs.add(a1.url_hash)
+            all_hashes_in_pairs.add(a2.url_hash)
+
+        effective_emb_threshold = embedding_threshold_override or self.embedding_threshold
+
+        if self.embedding_service:
+            hash_list = list(all_hashes_in_pairs)
+            title_map: dict[str, str] = {}
+            for a1, a2 in pairs:
+                title_map[a1.url_hash] = a1.title
+                title_map[a2.url_hash] = a2.title
+            self.embedding_service.encode_titles(
+                [title_map[h] for h in hash_list], hash_list
+            )
+            # Get all similar pairs from embeddings (using effective threshold)
+            old_threshold = self.embedding_service.similarity_threshold
+            self.embedding_service.similarity_threshold = effective_emb_threshold
+            embedding_pairs = self.embedding_service.get_similar_pairs(hash_list)
+            self.embedding_service.similarity_threshold = old_threshold
+            embedding_pair_set: set[frozenset[str]] = {
+                frozenset((h1, h2)) for h1, h2, _ in embedding_pairs
+            }
+        else:
+            embedding_pair_set = set()
+
+        # Evaluate each pair against all signals
+        filtered = []
+        signal_stats = {
+            "url_slug": 0,
+            "embedding": 0,
+            "entity": 0,
+            "jaccard": 0,
+            "simhash": 0,
+        }
+
+        for a1, a2 in pairs:
+            matched = False
+
+            # Signal 1: URL slug similarity
+            url_sim = self._url_slug_similarity(str(a1.url), str(a2.url))
+            if url_sim >= self.url_slug_threshold:
+                signal_stats["url_slug"] += 1
+                matched = True
+
+            # Signal 2: Embedding cosine similarity
+            if not matched and frozenset((a1.url_hash, a2.url_hash)) in embedding_pair_set:
+                signal_stats["embedding"] += 1
+                matched = True
+
+            # Signal 3: Entity overlap
+            if not matched:
+                entities1 = entity_cache.get(a1.url_hash, set())
+                entities2 = entity_cache.get(a2.url_hash, set())
+                if entities1 & entities2:
+                    signal_stats["entity"] += 1
+                    matched = True
+
+            # Signal 4: Title token Jaccard
+            if not matched:
+                jaccard = self._title_token_jaccard(a1.title, a2.title)
+                if jaccard >= self.jaccard_threshold:
+                    signal_stats["jaccard"] += 1
+                    matched = True
+
+            # Signal 5: Content SimHash
+            if not matched:
+                sh1 = simhash_cache.get(a1.url_hash)
+                sh2 = simhash_cache.get(a2.url_hash)
+                if sh1 and sh2:
+                    dist = self._hamming_distance(sh1, sh2)
+                    if dist <= self.simhash_max_distance:
+                        signal_stats["simhash"] += 1
+                        matched = True
+
+            if matched:
                 filtered.append((a1, a2))
 
         skipped = len(pairs) - len(filtered)
         logger.info(
-            "pre_filter_complete",
+            "multi_signal_pre_filter_complete",
             total_pairs=len(pairs),
             candidate_pairs=len(filtered),
             skipped_pairs=skipped,
             reduction_pct=round(skipped / len(pairs) * 100, 1) if pairs else 0,
+            signal_hits=signal_stats,
         )
 
         return filtered
 
+    # ── Main Duplicate Detection ─────────────────────────────────────────
+
     async def detect_duplicates(
         self,
-        articles: List[Article],
+        articles: list[Article],
         max_concurrent: int = 10,
-    ) -> Tuple[List[DuplicateGroup], Set[str]]:
+    ) -> tuple[list[DuplicateGroup], set[str]]:
         """Detect duplicate articles in a batch.
 
-        Uses a two-stage approach:
-        1. Pre-filter: Only pairs sharing named entities/numbers are candidates
-        2. LLM comparison: Semantic duplicate check on filtered candidates
+        Uses multi-signal pre-filtering followed by LLM verification.
 
         Args:
             articles: List of articles to check for duplicates.
@@ -266,8 +502,8 @@ Respond with JSON: {{"is_duplicate": bool, "confidence": float, "reason": "brief
             logger.info("no_candidate_pairs_found")
             return [], set()
 
-        # Pre-filter: only keep pairs with shared entities (language-independent)
-        candidate_pairs = self._pre_filter_candidates(all_pairs)
+        # Multi-signal pre-filter (replaces old entity-only pre-filter)
+        candidate_pairs = self._multi_signal_pre_filter(all_pairs)
 
         if not candidate_pairs:
             logger.info("no_candidates_after_pre_filter")
@@ -275,18 +511,16 @@ Respond with JSON: {{"is_duplicate": bool, "confidence": float, "reason": "brief
 
         logger.info("comparing_candidate_pairs", pair_count=len(candidate_pairs))
 
-        # Compare pairs concurrently
-        duplicate_pairs: List[Tuple[Article, Article, float]] = []
+        # Compare pairs concurrently via LLM
+        duplicate_pairs: list[tuple[Article, Article, float]] = []
 
         for i in range(0, len(candidate_pairs), max_concurrent):
             chunk = candidate_pairs[i : i + max_concurrent]
-            tasks = [
-                self._compare_articles(pair[0], pair[1]) for pair in chunk
-            ]
+            tasks = [self._compare_articles(pair[0], pair[1]) for pair in chunk]
             results = await asyncio.gather(*tasks, return_exceptions=True)
 
             for j, result in enumerate(results):
-                if isinstance(result, Exception):
+                if isinstance(result, BaseException):
                     logger.warning(
                         "duplicate_comparison_failed",
                         error=str(result),
@@ -298,12 +532,14 @@ Respond with JSON: {{"is_duplicate": bool, "confidence": float, "reason": "brief
                     duplicate_pairs.append((chunk[j][0], chunk[j][1], confidence))
 
         # Cluster duplicates using Union-Find
-        duplicate_groups = self._cluster_duplicates(duplicate_pairs, articles)
+        duplicate_groups: list[DuplicateGroup] = self._cluster_duplicates(
+            duplicate_pairs, articles
+        )
 
         # Collect all duplicate url_hashes (excluding canonical)
-        duplicate_hashes: Set[str] = set()
-        for group in duplicate_groups:
-            duplicate_hashes.update(group.duplicate_url_hashes)
+        duplicate_hashes: set[str] = set()
+        for dg in duplicate_groups:
+            duplicate_hashes.update(dg.duplicate_url_hashes)
 
         logger.info(
             "duplicate_detection_complete",
@@ -316,15 +552,15 @@ Respond with JSON: {{"is_duplicate": bool, "confidence": float, "reason": "brief
 
     async def detect_cross_language_duplicates(
         self,
-        foreign_articles: List[Article],
-        canonical_articles: List[Article],
+        foreign_articles: list[Article],
+        canonical_articles: list[Article],
         max_concurrent: int = 10,
-    ) -> Tuple[List[DuplicateGroup], Set[str]]:
+    ) -> tuple[list[DuplicateGroup], set[str]]:
         """Detect FR/IT articles that duplicate DE canonical articles.
 
-        Skips the entity pre-filter because cross-language entity matching
-        is unreliable (e.g. SNB vs BNS, Leitzins vs taux directeur).
-        Sends all pairs directly to the LLM for semantic comparison.
+        Now uses multi-signal pre-filter with multilingual embeddings instead of
+        brute-force all-pairs LLM comparison. This drastically reduces API costs
+        while improving detection quality.
 
         Args:
             foreign_articles: FR/IT articles to check against DE canonicals.
@@ -343,30 +579,45 @@ Respond with JSON: {{"is_duplicate": bool, "confidence": float, "reason": "brief
             canonical_count=len(canonical_articles),
         )
 
-        # Build all cross-language pairs (no pre-filter)
+        # Build all cross-language pairs
         all_pairs = [
             (foreign, canonical)
             for foreign in foreign_articles
             for canonical in canonical_articles
         ]
 
-        logger.info(
-            "cross_language_pairs",
-            pair_count=len(all_pairs),
+        logger.info("cross_language_pairs", pair_count=len(all_pairs))
+
+        # Use multi-signal pre-filter with lower embedding threshold for cross-language
+        # (translations create more distance in embedding space: SNB vs BNS, etc.)
+        candidate_pairs = self._multi_signal_pre_filter(
+            all_pairs, embedding_threshold_override=0.40
         )
 
-        # Compare pairs concurrently
-        duplicate_pairs: List[Tuple[Article, Article, float]] = []
+        if not candidate_pairs:
+            logger.info("no_cross_language_candidates_after_filter")
+            return [], set()
 
-        for i in range(0, len(all_pairs), max_concurrent):
-            chunk = all_pairs[i : i + max_concurrent]
-            tasks = [
-                self._compare_articles(pair[0], pair[1]) for pair in chunk
-            ]
+        logger.info(
+            "cross_language_candidates",
+            candidate_count=len(candidate_pairs),
+            reduction_pct=round(
+                (1 - len(candidate_pairs) / len(all_pairs)) * 100, 1
+            )
+            if all_pairs
+            else 0,
+        )
+
+        # Compare pairs concurrently via LLM
+        duplicate_pairs: list[tuple[Article, Article, float]] = []
+
+        for i in range(0, len(candidate_pairs), max_concurrent):
+            chunk = candidate_pairs[i : i + max_concurrent]
+            tasks = [self._compare_articles(pair[0], pair[1]) for pair in chunk]
             results = await asyncio.gather(*tasks, return_exceptions=True)
 
             for j, result in enumerate(results):
-                if isinstance(result, Exception):
+                if isinstance(result, BaseException):
                     logger.warning(
                         "cross_language_comparison_failed",
                         error=str(result),
@@ -379,44 +630,38 @@ Respond with JSON: {{"is_duplicate": bool, "confidence": float, "reason": "brief
 
         # Cluster duplicates
         all_articles = foreign_articles + canonical_articles
-        duplicate_groups = self._cluster_duplicates(duplicate_pairs, all_articles)
+        groups = self._cluster_duplicates(duplicate_pairs, all_articles)
 
         # Collect duplicate hashes (only foreign articles, never DE canonicals)
         canonical_hashes = {a.url_hash for a in canonical_articles}
-        duplicate_hashes: Set[str] = set()
-        for group in duplicate_groups:
+        duplicate_hashes: set[str] = set()
+        for group in groups:
             for dup_hash in group.duplicate_url_hashes:
                 if dup_hash not in canonical_hashes:
                     duplicate_hashes.add(dup_hash)
 
         logger.info(
             "cross_language_dedup_complete",
-            groups_found=len(duplicate_groups),
+            groups_found=len(groups),
             foreign_duplicates=len(duplicate_hashes),
         )
 
-        return duplicate_groups, duplicate_hashes
+        return groups, duplicate_hashes
 
-    def _group_by_time_window(self, articles: List[Article]) -> List[List[Article]]:
-        """Group articles that fall within the time window of each other.
+    # ── Time Window Grouping ─────────────────────────────────────────────
 
-        Args:
-            articles: List of articles to group.
-
-        Returns:
-            List of article groups (articles within time window).
-        """
+    def _group_by_time_window(self, articles: list[Article]) -> list[list[Article]]:
+        """Group articles that fall within the time window of each other."""
         if not articles:
             return []
 
-        # Sort by published_at (use collected_at as fallback)
         def get_time(a: Article) -> datetime:
             return a.published_at or a.collected_at
 
         sorted_articles = sorted(articles, key=get_time)
 
-        groups: List[List[Article]] = []
-        current_group: List[Article] = [sorted_articles[0]]
+        groups: list[list[Article]] = []
+        current_group: list[Article] = [sorted_articles[0]]
         group_start_time = get_time(sorted_articles[0])
 
         for article in sorted_articles[1:]:
@@ -431,35 +676,43 @@ Respond with JSON: {{"is_duplicate": bool, "confidence": float, "reason": "brief
                 current_group = [article]
                 group_start_time = article_time
 
-        # Don't forget the last group
         if len(current_group) > 1:
             groups.append(current_group)
 
         return groups
 
+    # ── LLM Article Comparison ───────────────────────────────────────────
+
     async def _compare_articles(
         self, article1: Article, article2: Article
-    ) -> Tuple[bool, float]:
-        """Compare two articles to determine if they're duplicates.
+    ) -> tuple[bool, float]:
+        """Compare two articles via LLM to determine if they're duplicates.
 
-        Args:
-            article1: First article.
-            article2: Second article.
-
-        Returns:
-            Tuple of (is_duplicate, confidence).
+        Now includes optional content snippets for better accuracy.
         """
-        # Format dates for prompt
         date1 = (article1.published_at or article1.collected_at).strftime("%Y-%m-%d")
         date2 = (article2.published_at or article2.collected_at).strftime("%Y-%m-%d")
+
+        # Build content snippets (first 300 chars of scraped content)
+        snippet1 = ""
+        if article1.content:
+            preview = article1.content[:300].strip()
+            snippet1 = f"- Content preview: {preview}"
+
+        snippet2 = ""
+        if article2.content:
+            preview = article2.content[:300].strip()
+            snippet2 = f"- Content preview: {preview}"
 
         user_prompt = self.user_prompt_template.format(
             title1=article1.title,
             source1=article1.source,
             date1=date1,
+            snippet1=snippet1,
             title2=article2.title,
             source2=article2.source,
             date2=date2,
+            snippet2=snippet2,
         )
 
         messages = [
@@ -499,60 +752,50 @@ Respond with JSON: {{"is_duplicate": bool, "confidence": float, "reason": "brief
             )
             raise
 
+    # ── Clustering ───────────────────────────────────────────────────────
+
     def _cluster_duplicates(
         self,
-        duplicate_pairs: List[Tuple[Article, Article, float]],
-        all_articles: List[Article],
-    ) -> List[DuplicateGroup]:
-        """Cluster duplicate pairs into groups using Union-Find.
-
-        Args:
-            duplicate_pairs: List of (article1, article2, confidence) tuples.
-            all_articles: All articles for reference.
-
-        Returns:
-            List of DuplicateGroup objects.
-        """
+        duplicate_pairs: list[tuple[Article, Article, float]],
+        all_articles: list[Article],
+    ) -> list[DuplicateGroup]:
+        """Cluster duplicate pairs into groups using Union-Find."""
         if not duplicate_pairs:
             return []
 
-        # Build URL hash to article mapping
-        hash_to_article: Dict[str, Article] = {a.url_hash: a for a in all_articles}
+        hash_to_article: dict[str, Article] = {a.url_hash: a for a in all_articles}
 
-        # Union-Find data structure
-        parent: Dict[str, str] = {}
-        rank: Dict[str, int] = {}
+        # Union-Find
+        parent: dict[str, str] = {}
+        rank: dict[str, int] = {}
 
         def find(x: str) -> str:
             if x not in parent:
                 parent[x] = x
                 rank[x] = 0
             if parent[x] != x:
-                parent[x] = find(parent[x])  # Path compression
+                parent[x] = find(parent[x])
             return parent[x]
 
         def union(x: str, y: str) -> None:
             px, py = find(x), find(y)
             if px == py:
                 return
-            # Union by rank
             if rank[px] < rank[py]:
                 px, py = py, px
             parent[py] = px
             if rank[px] == rank[py]:
                 rank[px] += 1
 
-        # Track confidence for each pair
-        pair_confidence: Dict[Tuple[str, str], float] = {}
+        pair_confidence: dict[tuple[str, ...], float] = {}
 
-        # Process pairs
         for article1, article2, confidence in duplicate_pairs:
             union(article1.url_hash, article2.url_hash)
             pair_key = tuple(sorted([article1.url_hash, article2.url_hash]))
             pair_confidence[pair_key] = confidence
 
         # Group by root
-        clusters: Dict[str, List[str]] = {}
+        clusters: dict[str, list[str]] = {}
         for url_hash in parent:
             root = find(url_hash)
             if root not in clusters:
@@ -560,12 +803,11 @@ Respond with JSON: {{"is_duplicate": bool, "confidence": float, "reason": "brief
             clusters[root].append(url_hash)
 
         # Convert to DuplicateGroup objects
-        groups: List[DuplicateGroup] = []
+        groups: list[DuplicateGroup] = []
         for members in clusters.values():
             if len(members) < 2:
                 continue
 
-            # Select canonical article (lowest feed_priority = highest importance)
             articles_in_group = [hash_to_article[h] for h in members if h in hash_to_article]
             if not articles_in_group:
                 continue
@@ -573,7 +815,6 @@ Respond with JSON: {{"is_duplicate": bool, "confidence": float, "reason": "brief
             canonical = min(articles_in_group, key=lambda a: (a.feed_priority, a.collected_at))
             duplicates = [a.url_hash for a in articles_in_group if a.url_hash != canonical.url_hash]
 
-            # Calculate average confidence for the group
             group_confidences = []
             for h in members:
                 for other_h in members:
