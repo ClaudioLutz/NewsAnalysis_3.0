@@ -121,13 +121,14 @@ class CompanyMatcher:
                 f"SELECT Pa_L_Nr, Pa_S_Firma "
                 f"FROM Pool_Adresse "
                 f"WHERE {_POOL_ADRESSE_FILTER} "
-                f"AND LTRIM(RTRIM(LOWER(Pa_S_Firma))) IN ({placeholders})",
+                f"AND LTRIM(RTRIM(LOWER(Pa_S_Firma))) IN ({placeholders}) "
+                f"ORDER BY CASE Pa_N_Status WHEN 20 THEN 1 WHEN 30 THEN 2 WHEN 40 THEN 3 ELSE 4 END",
                 params,
             )
             results: dict[str, tuple[int, str]] = {}
             for row in cursor.fetchall():
                 db_name = str(row[1]).strip().lower()
-                if db_name not in results:
+                if db_name not in results:  # first hit wins (best status)
                     results[db_name] = (int(row[0]), str(row[1]))
             logger.info(
                 "company_batch_exact",
@@ -156,7 +157,8 @@ class CompanyMatcher:
                 f"FROM Pool_Adresse "
                 f"WHERE {_POOL_ADRESSE_FILTER} "
                 f"AND LOWER(Pa_S_Firma) LIKE ? "
-                f"ORDER BY LEN(Pa_S_Firma) ASC",
+                f"ORDER BY CASE Pa_N_Status WHEN 20 THEN 1 WHEN 30 THEN 2 WHEN 40 THEN 3 ELSE 4 END, "
+                f"LEN(Pa_S_Firma) ASC",
                 (f"%{normalized}%",),
             )
             rows = cursor.fetchall()
