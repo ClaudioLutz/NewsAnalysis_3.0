@@ -3,7 +3,7 @@
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Literal, Optional
 
 from newsanalysis.utils.logging import get_logger
 
@@ -11,6 +11,8 @@ if TYPE_CHECKING:
     import pywintypes  # noqa: F401
 
 logger = get_logger(__name__)
+
+DeliveryMode = Literal["send", "preview", "draft"]
 
 
 @dataclass
@@ -108,7 +110,7 @@ class OutlookEmailService:
         to: str | list[str],
         subject: str,
         html_body: str,
-        preview: bool = False,
+        delivery_mode: DeliveryMode = "send",
     ) -> EmailResult:
         """Send an HTML email via Outlook.
 
@@ -116,7 +118,10 @@ class OutlookEmailService:
             to: Recipient email address or list of addresses.
             subject: Email subject line.
             html_body: HTML content of the email body.
-            preview: If True, display email in Outlook without sending.
+            delivery_mode: How to deliver the email.
+                - "send" (default): send immediately via mail.Send().
+                - "preview": open in Outlook so the user clicks Send manually.
+                - "draft": save to Outlook Drafts folder without opening a window.
 
         Returns:
             EmailResult with success status and message.
@@ -145,12 +150,19 @@ class OutlookEmailService:
             mail.Subject = subject
             mail.HTMLBody = html_body
 
-            if preview:
+            if delivery_mode == "preview":
                 mail.Display(True)
                 logger.info("email_displayed", recipients=recipient_display, subject=subject)
                 return EmailResult(
                     success=True,
                     message="Email opened in Outlook for preview",
+                )
+            elif delivery_mode == "draft":
+                mail.Save()
+                logger.info("email_drafted", recipients=recipient_display, subject=subject)
+                return EmailResult(
+                    success=True,
+                    message=f"Email saved as draft for {recipient_display}",
                 )
             else:
                 mail.Send()
@@ -191,7 +203,7 @@ class OutlookEmailService:
         html_body: str,
         image_attachments: Optional[Dict[str, str]] = None,
         bcc: Optional[str | list[str]] = None,
-        preview: bool = False,
+        delivery_mode: DeliveryMode = "send",
     ) -> EmailResult:
         """Send an HTML email with embedded images via Outlook.
 
@@ -201,7 +213,10 @@ class OutlookEmailService:
             html_body: HTML content with cid: references (e.g., <img src="cid:image1">).
             image_attachments: Dictionary mapping CID to file path
                               (e.g., {"image1": "/path/to/image.jpg"}).
-            preview: If True, display email in Outlook without sending.
+            delivery_mode: How to deliver the email.
+                - "send" (default): send immediately via mail.Send().
+                - "preview": open in Outlook so the user clicks Send manually.
+                - "draft": save to Outlook Drafts folder without opening a window.
 
         Returns:
             EmailResult with success status and message.
@@ -277,17 +292,31 @@ class OutlookEmailService:
                         )
                         # Continue with other attachments
 
-            if preview:
+            image_count = len(image_attachments) if image_attachments else 0
+
+            if delivery_mode == "preview":
                 mail.Display(True)
                 logger.info(
                     "email_with_images_displayed",
                     recipients=recipient_display,
                     subject=subject,
-                    image_count=len(image_attachments) if image_attachments else 0,
+                    image_count=image_count,
                 )
                 return EmailResult(
                     success=True,
                     message="Email with images opened in Outlook for preview",
+                )
+            elif delivery_mode == "draft":
+                mail.Save()
+                logger.info(
+                    "email_with_images_drafted",
+                    recipients=recipient_display,
+                    subject=subject,
+                    image_count=image_count,
+                )
+                return EmailResult(
+                    success=True,
+                    message=f"Email with {image_count} images saved as draft for {recipient_display}",
                 )
             else:
                 mail.Send()
@@ -295,11 +324,11 @@ class OutlookEmailService:
                     "email_with_images_sent",
                     recipients=recipient_display,
                     subject=subject,
-                    image_count=len(image_attachments) if image_attachments else 0,
+                    image_count=image_count,
                 )
                 return EmailResult(
                     success=True,
-                    message=f"Email with {len(image_attachments) if image_attachments else 0} images sent successfully to {recipient_display}",
+                    message=f"Email with {image_count} images sent successfully to {recipient_display}",
                 )
 
         except pywintypes.com_error as e:

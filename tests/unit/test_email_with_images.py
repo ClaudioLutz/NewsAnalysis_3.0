@@ -40,7 +40,7 @@ class TestEmailImageEmbedding:
             subject="Test Digest",
             html_body='<html><body><img src="cid:article_1_img"></body></html>',
             image_attachments=image_attachments,
-            preview=True,  # Use preview mode for testing
+            delivery_mode="preview",  # Use preview mode for testing
         )
 
         assert result.success is True
@@ -77,7 +77,7 @@ class TestEmailImageEmbedding:
             subject="Test Digest",
             html_body='<html><body><img src="cid:article_1_img"></body></html>',
             image_attachments=image_attachments,
-            preview=True,
+            delivery_mode="preview",
         )
 
         assert result.success is True
@@ -102,7 +102,7 @@ class TestEmailImageEmbedding:
             subject="Test Digest",
             html_body="<html><body>Plain text</body></html>",
             image_attachments=None,  # No images
-            preview=True,
+            delivery_mode="preview",
         )
 
         assert result.success is True
@@ -137,7 +137,7 @@ class TestEmailImageEmbedding:
             subject="Test Digest",
             html_body='<html><body><img src="cid:article_0_img"><img src="cid:article_1_img"><img src="cid:article_2_img"></body></html>',
             image_attachments=images,
-            preview=True,
+            delivery_mode="preview",
         )
 
         assert result.success is True
@@ -147,3 +147,33 @@ class TestEmailImageEmbedding:
 
         # Verify all 3 Content-IDs were set
         assert mock_attachment.PropertyAccessor.SetProperty.call_count == 3
+
+    def test_send_html_email_with_images_draft_mode(self, tmp_path):
+        """Should save email with images as Outlook draft."""
+        test_image = tmp_path / "test_image.jpg"
+        test_image.write_bytes(b"fake image content")
+
+        service = OutlookEmailService()
+
+        mock_outlook = MagicMock()
+        mock_mail = MagicMock()
+        mock_attachment = MagicMock()
+
+        mock_outlook.CreateItem.return_value = mock_mail
+        mock_mail.Attachments.Add.return_value = mock_attachment
+
+        service._outlook = mock_outlook
+
+        result = service.send_html_email_with_images(
+            to="test@example.com",
+            subject="Test Draft",
+            html_body='<html><body><img src="cid:article_1_img"></body></html>',
+            image_attachments={"article_1_img": str(test_image)},
+            delivery_mode="draft",
+        )
+
+        assert result.success is True
+        assert "draft" in result.message.lower()
+        mock_mail.Save.assert_called_once()
+        mock_mail.Send.assert_not_called()
+        mock_mail.Display.assert_not_called()

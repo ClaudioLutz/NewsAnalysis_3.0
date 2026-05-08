@@ -895,13 +895,15 @@ class PipelineOrchestrator:
                     logger.warning("email_skipped", reason="Outlook not available")
                     return False
 
+                delivery_mode = self.config.email_delivery_mode
+
                 # Email 1: VIP group (all recipients in TO, they see each other)
                 result = email_service.send_html_email_with_images(
                     to=recipients,
                     subject=subject,
                     html_body=html_body,
                     image_attachments=image_cid_mapping,
-                    preview=False,
+                    delivery_mode=delivery_mode,
                 )
 
                 if result.success:
@@ -926,7 +928,7 @@ class PipelineOrchestrator:
                             subject=subject,
                             html_body=html_body,
                             image_attachments=image_cid_mapping,
-                            preview=False,
+                            delivery_mode=delivery_mode,
                         )
                         if bcc_result.success:
                             bcc_sent += 1

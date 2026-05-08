@@ -48,7 +48,7 @@ class TestOutlookEmailService:
                     to="test@example.com",
                     subject="Test Subject",
                     html_body="<p>Test</p>",
-                    preview=False,
+                    delivery_mode="send",
                 )
 
                 assert result.success is True
@@ -75,12 +75,39 @@ class TestOutlookEmailService:
                     to="test@example.com",
                     subject="Test Subject",
                     html_body="<p>Test</p>",
-                    preview=True,
+                    delivery_mode="preview",
                 )
 
                 assert result.success is True
                 mock_mail.Display.assert_called_once_with(True)
                 mock_mail.Send.assert_not_called()
+                mock_mail.Save.assert_not_called()
+
+    @patch("sys.platform", "win32")
+    def test_send_email_draft_mode(self):
+        """Should save email as draft without sending or displaying."""
+        with patch("newsanalysis.services.email_service.OutlookEmailService.is_available", return_value=True):
+            with patch("win32com.client.Dispatch") as mock_dispatch:
+                mock_app = MagicMock()
+                mock_mail = MagicMock()
+                mock_app.CreateItem.return_value = mock_mail
+                mock_dispatch.return_value = mock_app
+
+                service = OutlookEmailService()
+                service._outlook = mock_app
+
+                result = service.send_html_email(
+                    to="test@example.com",
+                    subject="Test Subject",
+                    html_body="<p>Test</p>",
+                    delivery_mode="draft",
+                )
+
+                assert result.success is True
+                assert "draft" in result.message.lower()
+                mock_mail.Save.assert_called_once()
+                mock_mail.Send.assert_not_called()
+                mock_mail.Display.assert_not_called()
 
     def test_send_email_not_connected(self):
         """Should fail gracefully when cannot connect to Outlook."""

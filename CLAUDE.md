@@ -11,6 +11,7 @@ Collects articles from 30+ RSS feeds, classifies them via LLM, scrapes content, 
 - **Topic icons**: Each topic category has a BMP Unicode icon (Outlook-safe) in the email header
 - **Relevance-based topic ordering**: Email topics sorted by average article relevance score (highest first)
 - **Multi-email delivery**: VIP group receives one shared email (all in TO, see each other); remaining recipients each get an individual email (cannot see anyone else)
+- **Email delivery modes** (`EMAIL_DELIVERY_MODE` in `.env`): `send` (default — auto-send), `preview` (open each email in Outlook so user clicks Send manually), `draft` (save each email to Outlook Drafts folder, no window). Applies to both pipeline auto-send and `newsanalysis email` CLI; CLI accepts `--mode`/`--preview`/`--draft` overrides.
 - **Multi-signal deduplication**: 5-signal pre-filter cascade (URL slug, multilingual embeddings, entity overlap, Jaccard, SimHash) + LLM verification with content snippets. Cross-language dedup (FR/IT vs DE) via multilingual embeddings
 - **Content fingerprint cache**: SHA-256 based summary cache with 90-day TTL (must be cleared to force re-summarization)
 - **Crediweb company links**: Company names in digest are auto-matched against Creditreform Pool_Adresse DB (CnZenReport, MSSQL) and linked to crediweb.ch. Filters for valid Swiss firm addresses (Adrart=F, Adrtyp=1, SperrCode!=XX, Land=CH). Requires `DB_SERVER`/`DB_DATABASE` in `.env`. Graceful fallback to plain text if DB unavailable.
@@ -323,6 +324,20 @@ python -m newsanalysis.cli.main email
 ```
 
 **Note:** Production uses PowerShell. Use `$env:VAR="value"` for env vars, not `set` or `export`.
+
+#### Manual-send mode for the daily run
+
+If you'd rather review every email before it goes out (instead of relying on auto-send), set the delivery mode:
+
+```powershell
+# Open both VIP and individual emails in Outlook — you click Send on each
+$env:EMAIL_DELIVERY_MODE="preview"; python -m newsanalysis.cli.main run
+
+# Or drop them all into the Outlook Drafts folder for batch review
+$env:EMAIL_DELIVERY_MODE="draft"; python -m newsanalysis.cli.main run
+```
+
+To make this permanent, set `EMAIL_DELIVERY_MODE=preview` (or `draft`) in `.env`.
 
 ### Other CLI Commands
 

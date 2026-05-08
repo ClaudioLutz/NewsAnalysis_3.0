@@ -134,7 +134,20 @@ EMAIL_RECIPIENTS=vip1@company.com,vip2@company.com  # VIP group (shared TO, see 
 EMAIL_BCC=other1@company.com,other2@company.com     # Individual emails (each gets own email, see no one)
 EMAIL_SENDER=sender@company.com                     # Sender address
 EMAIL_AUTO_SEND=true
+EMAIL_DELIVERY_MODE=send                            # send | preview | draft
 ```
+
+#### Email delivery modes
+
+`EMAIL_DELIVERY_MODE` controls how the pipeline (and the `email` CLI command) hands emails to Outlook:
+
+| Mode | Behavior | Use case |
+|------|----------|----------|
+| `send` (default) | Calls `mail.Send()` — sent immediately | Production / unattended runs |
+| `preview` | Calls `mail.Display(True)` — opens each email in a window so you click Send manually | Manual review before every send |
+| `draft` | Calls `mail.Save()` — drops each email into the Outlook Drafts folder, no window opens | Batch review / send later |
+
+The CLI command also accepts overrides per run: `--mode send|preview|draft`, or shortcut flags `--preview` / `--draft`.
 
 ---
 

@@ -121,6 +121,15 @@ class Config(BaseSettings):
         default=False,
         description="Automatically send email after digest generation",
     )
+    email_delivery_mode: Literal["send", "preview", "draft"] = Field(
+        default="send",
+        description=(
+            "How to deliver emails when email_auto_send is True: "
+            "'send' = send immediately, "
+            "'preview' = open in Outlook so user clicks Send manually, "
+            "'draft' = save to Outlook Drafts folder"
+        ),
+    )
     email_bcc: Optional[str] = Field(
         default=None,
         description="Comma-separated list of BCC email recipients",

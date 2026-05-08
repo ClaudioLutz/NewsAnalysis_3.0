@@ -64,10 +64,27 @@ def _filter_today_articles(digest_data: Dict[str, Any], target_date: date) -> Di
 
 @click.command()
 @click.option(
+    "--mode",
+    "-m",
+    "delivery_mode_override",
+    type=click.Choice(["send", "preview", "draft"], case_sensitive=False),
+    default=None,
+    help=(
+        "Delivery mode: 'send' (immediate), 'preview' (open in Outlook so you "
+        "click Send yourself), or 'draft' (save to Outlook Drafts folder). "
+        "Defaults to EMAIL_DELIVERY_MODE from .env."
+    ),
+)
+@click.option(
     "--preview",
     "-p",
     is_flag=True,
-    help="Open email in Outlook without sending",
+    help="Shortcut for --mode preview",
+)
+@click.option(
+    "--draft",
+    is_flag=True,
+    help="Shortcut for --mode draft",
 )
 @click.option(
     "--date",
@@ -90,7 +107,9 @@ def _filter_today_articles(digest_data: Dict[str, Any], target_date: date) -> Di
     help="Only include articles published today in the digest",
 )
 def email(
+    delivery_mode_override: Optional[str],
     preview: bool,
+    draft: bool,
     digest_date: Optional[date],
     recipient: Optional[str],
     today_only: bool,
@@ -101,11 +120,28 @@ def email(
     database, formats it as HTML, and sends it via Outlook COM automation.
 
     Examples:
-        newsanalysis email                      # Send today's digest
-        newsanalysis email --preview            # Preview without sending
+        newsanalysis email                      # Send today's digest (uses EMAIL_DELIVERY_MODE)
+        newsanalysis email --preview            # Open in Outlook to review and click Send
+        newsanalysis email --draft              # Save to Outlook Drafts folder
+        newsanalysis email --mode draft         # Same as --draft, explicit form
         newsanalysis email --date 2026-01-05    # Send specific date's digest
         newsanalysis email -r other@example.com # Override recipient
     """
+    # Resolve mutually exclusive shortcut flags
+    explicit_modes = [
+        m for m, used in (
+            (delivery_mode_override.lower() if delivery_mode_override else None, bool(delivery_mode_override)),
+            ("preview", preview),
+            ("draft", draft),
+        ) if used
+    ]
+    if len(explicit_modes) > 1:
+        click.echo(
+            "Error: --mode, --preview and --draft are mutually exclusive. Use only one.",
+            err=True,
+        )
+        raise click.Abort()
+
     # Load configuration
     try:
         config = Config()  # type: ignore
@@ -113,6 +149,9 @@ def email(
         click.echo(f"Error loading configuration: {e}", err=True)
         click.echo("Please ensure .env file exists with required settings.", err=True)
         raise click.Abort()
+
+    # Resolve final delivery mode: CLI override > config default
+    delivery_mode = explicit_modes[0] if explicit_modes else config.email_delivery_mode
 
     # Setup logging
     setup_logging(log_level=config.log_level, log_dir=config.log_dir)
@@ -147,7 +186,8 @@ def email(
     click.echo("=" * 50)
     click.echo(f"Date: {target_date}")
     click.echo(f"Recipients: {recipients_display}")
-    click.echo(f"Mode: {'Preview' if preview else 'Send'}")
+    mode_label = {"send": "Send", "preview": "Preview", "draft": "Draft"}[delivery_mode]
+    click.echo(f"Mode: {mode_label}")
     click.echo("=" * 50)
 
     # Check Outlook availability first
@@ -223,17 +263,19 @@ def email(
                 subject = f"Creditreform News-Digest: {target_date.strftime('%d.%m.%Y')}"
 
             # Email 1: VIP group (all recipients in TO, they see each other)
-            if preview:
-                click.echo("\nOpening VIP group email in Outlook for preview...")
-            else:
-                click.echo("\nSending VIP group email...")
+            action_msg = {
+                "send": "Sending VIP group email...",
+                "preview": "Opening VIP group email in Outlook for preview...",
+                "draft": "Saving VIP group email to Outlook Drafts...",
+            }[delivery_mode]
+            click.echo(f"\n{action_msg}")
 
             result = email_service.send_html_email_with_images(
                 to=email_recipients,
                 subject=subject,
                 html_body=html_body,
                 image_attachments=image_cid_mapping,
-                preview=preview,
+                delivery_mode=delivery_mode,
             )
 
             if result.success:
@@ -246,17 +288,25 @@ def email(
             # Each gets their own email — cannot see VIP group or each other.
             bcc_recipients = config.email_bcc_list
             if bcc_recipients and not recipient:
-                click.echo(f"\nSending individual emails to {len(bcc_recipients)} recipients...")
+                bcc_action = {
+                    "send": "Sending",
+                    "preview": "Opening",
+                    "draft": "Drafting",
+                }[delivery_mode]
+                click.echo(
+                    f"\n{bcc_action} individual emails to {len(bcc_recipients)} recipients..."
+                )
+                done_verb = {"send": "Sent", "preview": "Opened", "draft": "Drafted"}[delivery_mode]
                 for bcc_addr in bcc_recipients:
                     bcc_result = email_service.send_html_email_with_images(
                         to=bcc_addr,
                         subject=subject,
                         html_body=html_body,
                         image_attachments=image_cid_mapping,
-                        preview=preview,
+                        delivery_mode=delivery_mode,
                     )
                     if bcc_result.success:
-                        click.echo(f"  Sent to {bcc_addr}")
+                        click.echo(f"  {done_verb} for {bcc_addr}")
                     else:
                         click.echo(f"\n  Warning: Failed for {bcc_addr}: {bcc_result.message}", err=True)
 
