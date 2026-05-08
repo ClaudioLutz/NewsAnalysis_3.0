@@ -896,6 +896,7 @@ class PipelineOrchestrator:
                     return False
 
                 delivery_mode = self.config.email_delivery_mode
+                verb = {"send": "sent", "preview": "displayed", "draft": "drafted"}[delivery_mode]
 
                 # Email 1: VIP group (all recipients in TO, they see each other)
                 result = email_service.send_html_email_with_images(
@@ -908,12 +909,17 @@ class PipelineOrchestrator:
 
                 if result.success:
                     logger.info(
-                        "email_official_sent",
+                        f"email_official_{verb}",
                         recipients=", ".join(recipients),
                         images_attached=len(image_cid_mapping),
+                        delivery_mode=delivery_mode,
                     )
                 else:
-                    logger.error("email_official_send_failed", error=result.message)
+                    logger.error(
+                        f"email_official_{verb}_failed",
+                        error=result.message,
+                        delivery_mode=delivery_mode,
+                    )
                     return False
 
                 # Email 2+: Individual emails to remaining recipients
@@ -921,7 +927,7 @@ class PipelineOrchestrator:
                 # each other. Sent individually as TO (not via BCC).
                 bcc_recipients = self.config.email_bcc_list
                 if bcc_recipients:
-                    bcc_sent = 0
+                    bcc_done = 0
                     for recipient in bcc_recipients:
                         bcc_result = email_service.send_html_email_with_images(
                             to=recipient,
@@ -931,17 +937,19 @@ class PipelineOrchestrator:
                             delivery_mode=delivery_mode,
                         )
                         if bcc_result.success:
-                            bcc_sent += 1
+                            bcc_done += 1
                         else:
                             logger.error(
-                                "email_bcc_send_failed",
+                                f"email_bcc_{verb}_failed",
                                 recipient=recipient,
                                 error=bcc_result.message,
+                                delivery_mode=delivery_mode,
                             )
                     logger.info(
-                        "email_bcc_sent",
-                        bcc_sent=bcc_sent,
+                        f"email_bcc_{verb}",
+                        bcc_done=bcc_done,
                         bcc_total=len(bcc_recipients),
+                        delivery_mode=delivery_mode,
                     )
 
                 logger.info("stage_email_sending_complete")
