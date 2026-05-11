@@ -45,6 +45,7 @@ class ClassificationResult(BaseModel):
 
     is_match: bool
     confidence: float = Field(..., ge=0.0, le=1.0)
+    cr_relevance: Optional[int] = Field(default=None, ge=1, le=10)
     topic: str
     reason: str = Field(..., max_length=200)
     filtered_at: datetime = Field(default_factory=datetime.now)
@@ -54,8 +55,9 @@ class ClassificationResult(BaseModel):
             "example": {
                 "is_match": True,
                 "confidence": 0.85,
-                "topic": "creditreform_insights",
-                "reason": "Article discusses bankruptcy proceedings",
+                "cr_relevance": 8,
+                "topic": "insolvency_bankruptcy",
+                "reason": "Article discusses bankruptcy of named Swiss company",
                 "filtered_at": "2026-01-04T11:05:00",
             }
         }
@@ -160,6 +162,7 @@ class Article(BaseModel):
     # Classification (Step 2)
     is_match: Optional[bool] = None
     confidence: Optional[float] = None
+    cr_relevance: Optional[int] = None  # 1-10, see classification.yaml anchors
     topic: Optional[str] = None
     classification_reason: Optional[str] = None
     filtered_at: Optional[datetime] = None

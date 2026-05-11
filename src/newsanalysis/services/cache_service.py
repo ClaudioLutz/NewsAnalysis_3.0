@@ -50,7 +50,7 @@ class CacheService:
         cursor = self.conn.cursor()
         cursor.execute(
             """
-            SELECT is_match, confidence, topic, reason
+            SELECT is_match, confidence, topic, reason, cr_relevance
             FROM classification_cache
             WHERE cache_key = ?
             AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)
@@ -86,6 +86,7 @@ class CacheService:
                 confidence=float(row[1]),
                 topic=row[2],
                 reason=row[3] or "",
+                cr_relevance=int(row[4]) if row[4] is not None else None,
             )
 
         # Track cache miss
@@ -110,8 +111,8 @@ class CacheService:
         cursor.execute(
             """
             INSERT OR REPLACE INTO classification_cache
-            (cache_key, title, url, is_match, confidence, topic, reason, expires_at, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            (cache_key, title, url, is_match, confidence, cr_relevance, topic, reason, expires_at, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
             """,
             (
                 cache_key,
@@ -119,6 +120,7 @@ class CacheService:
                 url,
                 result.is_match,
                 result.confidence,
+                result.cr_relevance,
                 result.topic,
                 result.reason,
                 expires_at.isoformat(),

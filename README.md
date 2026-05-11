@@ -40,11 +40,11 @@ NewsAnalysis 3.0 transforms high-volume Swiss business news into actionable cred
 | Stage | Description | Technology |
 |-------|-------------|------------|
 | **Collection** | Aggregates from 30+ Swiss RSS feeds | Feedparser, aiohttp |
-| **Filtering** | AI classification on title/URL only (90% cost reduction) | DeepSeek |
+| **Filtering** | AI classification on title/URL only (90% cost reduction); also assigns a Creditreform-relevance score (`cr_relevance` 1–10) per article | DeepSeek |
 | **Scraping** | Full content extraction with bot-protection bypass | Trafilatura, Playwright, curl_cffi |
 | **Deduplication** | Semantic duplicate detection across sources | LLM-powered clustering |
 | **Summarization** | Stakes-first German summaries with 3-level credit impact (negative/neutral/positive), 0-4 variable key points, entity extraction | Gemini Flash |
-| **Digest** | Daily email digest with images, topic icons, relevance-sorted sections, credit impact indicators | Jinja2, Outlook |
+| **Digest** | Daily email digest with images, topic icons, sections sorted by avg `cr_relevance`, subject = highest-`cr_relevance` article, credit impact indicators | Jinja2, Outlook |
 
 ### News Sources
 

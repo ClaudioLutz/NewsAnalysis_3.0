@@ -22,6 +22,12 @@ class ClassificationResponse(BaseModel):
 
     match: bool = Field(..., description="Whether article is relevant")
     conf: float = Field(..., ge=0.0, le=1.0, description="Confidence score")
+    cr_relevance: int = Field(
+        ...,
+        ge=1,
+        le=10,
+        description="Creditreform-relevance 1-10 (see classification prompt for anchors)",
+    )
     topic: str = Field(..., description="Topic category")
     reason: str = Field(..., max_length=200, description="Brief explanation")
 
@@ -193,6 +199,7 @@ class AIFilter:
         result = ClassificationResult(
             is_match=classification_data["match"],
             confidence=classification_data["conf"],
+            cr_relevance=classification_data.get("cr_relevance"),
             topic=classification_data["topic"],
             reason=classification_data["reason"],
             filtered_at=datetime.now(),

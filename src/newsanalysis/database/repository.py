@@ -137,6 +137,7 @@ class ArticleRepository:
                 UPDATE articles
                 SET is_match = ?,
                     confidence = ?,
+                    cr_relevance = ?,
                     topic = ?,
                     classification_reason = ?,
                     filtered_at = ?,
@@ -149,6 +150,7 @@ class ArticleRepository:
             params = (
                 classification.is_match,
                 classification.confidence,
+                classification.cr_relevance,
                 classification.topic,
                 classification.reason,
                 classification.filtered_at,
@@ -511,6 +513,7 @@ class ArticleRepository:
             language=row["language"] if "language" in row.keys() else "de",
             is_match=row["is_match"],
             confidence=row["confidence"],
+            cr_relevance=row["cr_relevance"] if "cr_relevance" in row.keys() else None,
             topic=row["topic"],
             classification_reason=row["classification_reason"],
             filtered_at=_parse_datetime(row["filtered_at"]),

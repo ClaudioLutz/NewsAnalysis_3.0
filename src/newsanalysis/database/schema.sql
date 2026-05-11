@@ -175,6 +175,7 @@ CREATE TABLE IF NOT EXISTS classification_cache (
     -- Classification Result
     is_match BOOLEAN NOT NULL,
     confidence REAL NOT NULL,
+    cr_relevance INTEGER,  -- 1-10, NULL for legacy cached entries
     topic TEXT NOT NULL,
     reason TEXT,
 

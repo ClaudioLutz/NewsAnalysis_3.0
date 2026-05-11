@@ -11,6 +11,7 @@ Schema Version History:
 - v4: Add image extraction support (article_images table)
 - v5: Add credit_impact column to articles
 - v6: Add language column to articles for cross-language deduplication
+- v7: Add cr_relevance column to articles (Creditreform-relevance score 1-10)
 """
 
 import sqlite3
@@ -22,7 +23,7 @@ import structlog
 logger = structlog.get_logger(__name__)
 
 # Current schema version - increment when adding migrations
-CURRENT_SCHEMA_VERSION = 6
+CURRENT_SCHEMA_VERSION = 7
 
 # Type alias for migration functions
 MigrationFunc = Callable[[sqlite3.Connection], None]
@@ -361,6 +362,45 @@ def migrate_v5_to_v6(conn: sqlite3.Connection) -> None:
     logger.info("migration_complete", version=6)
 
 
+def migrate_v6_to_v7(conn: sqlite3.Connection) -> None:
+    """Migration v6 -> v7: Add Creditreform-relevance score.
+
+    Adds:
+    - cr_relevance column to articles (INTEGER 1-10, NULL for legacy rows)
+    - cr_relevance column to classification_cache (INTEGER, NULL for legacy entries)
+
+    Variant C: legacy rows stay NULL and are treated as 0 in sort logic,
+    so they fall to the bottom without requiring a backfill.
+    """
+    logger.info("applying_migration", from_version=6, to_version=7)
+
+    if not column_exists(conn, "articles", "cr_relevance"):
+        conn.execute(
+            """
+            ALTER TABLE articles
+            ADD COLUMN cr_relevance INTEGER
+            """
+        )
+        logger.info("migration_added_column", table="articles", column="cr_relevance")
+
+    if table_exists(conn, "classification_cache") and not column_exists(
+        conn, "classification_cache", "cr_relevance"
+    ):
+        conn.execute(
+            """
+            ALTER TABLE classification_cache
+            ADD COLUMN cr_relevance INTEGER
+            """
+        )
+        logger.info(
+            "migration_added_column",
+            table="classification_cache",
+            column="cr_relevance",
+        )
+
+    logger.info("migration_complete", version=7)
+
+
 # Registry of migrations: version -> migration function
 MIGRATIONS: dict[int, MigrationFunc] = {
     2: migrate_v1_to_v2,
@@ -368,6 +408,7 @@ MIGRATIONS: dict[int, MigrationFunc] = {
     4: migrate_v3_to_v4,
     5: migrate_v4_to_v5,
     6: migrate_v5_to_v6,
+    7: migrate_v6_to_v7,
 }
 
 

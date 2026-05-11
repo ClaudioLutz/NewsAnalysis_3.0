@@ -216,6 +216,7 @@ class HtmlEmailFormatter:
             "key_points": article.get("key_points", [])[:max_key_points],
             "topic": topic,
             "confidence": confidence,
+            "cr_relevance": article.get("cr_relevance"),
             "companies": companies,
             "credit_impact": credit_impact,
             "relevance_keywords": relevance_keywords,
@@ -251,11 +252,11 @@ class HtmlEmailFormatter:
 
                 articles_by_topic[topic].append(self._parse_article_dict(article))
 
-            # Sort articles within each topic by credit_impact priority, then confidence
+            # Sort articles within each topic by credit_impact priority, then cr_relevance, then confidence
             self._sort_articles_in_groups(articles_by_topic)
 
-            # Order topics by average relevance score (highest first)
-            return self._sort_groups_by_confidence(articles_by_topic)
+            # Order topics by average Creditreform-relevance (highest first)
+            return self._sort_groups_by_relevance(articles_by_topic)
 
         except json.JSONDecodeError as e:
             logger.warning("json_output_parse_failed", error=str(e))
@@ -323,29 +324,43 @@ class HtmlEmailFormatter:
     def _sort_articles_in_groups(
         groups: Dict[str, List[Dict[str, Any]]],
     ) -> None:
-        """Sort articles within each group by credit_impact priority, then confidence."""
+        """Sort articles within each group.
+
+        Order: credit_impact (negative > neutral > positive), then cr_relevance
+        (high > low, NULL counted as 0 — Variant C), then confidence.
+        """
         credit_impact_priority = {"negative": 0, "neutral": 1, "positive": 2}
         for group_articles in groups.values():
             group_articles.sort(
                 key=lambda a: (
                     credit_impact_priority.get(a.get("credit_impact", "neutral"), 2),
+                    -(a.get("cr_relevance") or 0),
                     -a.get("confidence", 0),
                 ),
             )
 
     @staticmethod
-    def _sort_groups_by_confidence(
+    def _sort_groups_by_relevance(
         groups: Dict[str, List[Dict[str, Any]]],
     ) -> Dict[str, List[Dict[str, Any]]]:
-        """Sort groups by average confidence score (highest first)."""
+        """Sort topic groups by average Creditreform-relevance (highest first).
 
-        def _avg_confidence(topic_articles: List[Dict[str, Any]]) -> float:
-            scores = [a.get("confidence", 0) for a in topic_articles]
-            return sum(scores) / len(scores) if scores else 0
+        Articles without cr_relevance (legacy rows from before v7) count as 0,
+        so topics composed only of legacy articles fall to the bottom.
+        Tie-break by average confidence to keep ordering stable when no article
+        in any group has cr_relevance yet.
+        """
+
+        def _score(topic_articles: List[Dict[str, Any]]) -> tuple[float, float]:
+            relevance = [a.get("cr_relevance") or 0 for a in topic_articles]
+            confidence = [a.get("confidence", 0) for a in topic_articles]
+            avg_rel = sum(relevance) / len(relevance) if relevance else 0
+            avg_conf = sum(confidence) / len(confidence) if confidence else 0
+            return (avg_rel, avg_conf)
 
         sorted_topics = sorted(
             [t for t in groups if groups[t]],
-            key=lambda t: _avg_confidence(groups[t]),
+            key=lambda t: _score(groups[t]),
             reverse=True,
         )
         return {t: groups[t] for t in sorted_topics}
@@ -558,7 +573,16 @@ class HtmlEmailFormatter:
     def get_top_article_title(
         self, digest_data: Dict[str, Any], max_length: int = 50
     ) -> Optional[str]:
-        """Extract the top article title for subject line.
+        """Extract the top article title for the email subject line.
+
+        Picks the single article with the highest Creditreform-relevance
+        (`cr_relevance`) across ALL topics. Tie-breakers:
+          1. credit_impact (negative > neutral > positive)
+          2. confidence (descending)
+
+        For digests where no article has cr_relevance yet (legacy data
+        from before v7), falls back to the first article of the first
+        topic (which is now ordered by avg confidence as a backup).
 
         Args:
             digest_data: Dictionary from DigestRepository.get_digest_by_date().
@@ -572,25 +596,35 @@ class HtmlEmailFormatter:
         if not articles_by_topic:
             return None
 
-        # Get first article from first topic (highest priority)
-        for topic_articles in articles_by_topic.values():
-            if topic_articles:
-                title = topic_articles[0].get("title", "")
+        # Flatten all articles across topics
+        all_articles = [a for topic_articles in articles_by_topic.values() for a in topic_articles]
+        if not all_articles:
+            return None
 
-                if not title:
-                    continue
+        credit_impact_priority = {"negative": 0, "neutral": 1, "positive": 2}
 
-                # Truncate at word boundary if too long
-                if len(title) > max_length:
-                    truncated = title[:max_length]
-                    last_space = truncated.rfind(" ")
-                    if last_space > max_length // 2:
-                        return truncated[:last_space] + "..."
-                    return truncated + "..."
+        def _rank(article: Dict[str, Any]) -> tuple[int, int, float]:
+            return (
+                -(article.get("cr_relevance") or 0),
+                credit_impact_priority.get(article.get("credit_impact", "neutral"), 2),
+                -article.get("confidence", 0),
+            )
 
-                return title
+        top_article = min(all_articles, key=_rank)
+        title = top_article.get("title", "")
 
-        return None
+        if not title:
+            return None
+
+        # Truncate at word boundary if too long
+        if len(title) > max_length:
+            truncated = title[:max_length]
+            last_space = truncated.rfind(" ")
+            if last_space > max_length // 2:
+                return truncated[:last_space] + "..."
+            return truncated + "..."
+
+        return title
 
     def format_with_images(
         self,

@@ -77,6 +77,7 @@ class JSONFormatter:
             "published_at": article.published_at.isoformat() if article.published_at else None,
             "topic": article.topic,
             "confidence": article.confidence,
+            "cr_relevance": article.cr_relevance,
             "summary": article.summary,
             "key_points": article.key_points or [],
             "entities": {

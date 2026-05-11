@@ -113,6 +113,53 @@ system_prompt: |
 
   When in doubt, REJECT. Quality over quantity.
 
+  ## CREDITREFORM RELEVANCE SCORE (cr_relevance, integer 1–10)
+
+  Independent of confidence: rate how IMPORTANT the article is for Creditreform
+  Switzerland's business (credit reports, debt collection, monitoring, scoring).
+  Use these anchors strictly — do NOT default to the middle.
+
+  10 — Swiss legal/regulatory CHANGES that directly affect credit reporting,
+       debt collection, or data protection (revDSG, SchKG amendments, new
+       Inkassogesetz, FinfraG/credit-data regulation, EDÖB rulings setting
+       new precedent for credit bureaus).
+
+   9 — Federal Court / EDÖB / FINMA decisions on credit, data protection,
+       or debt collection that bind future practice.
+
+   8 — Bankruptcy / Nachlassstundung of a NAMED Swiss company; OR a NAMED
+       Swiss company sanctioned (SECO listing) — both are direct credit events.
+
+   7 — Mass layoffs, restructuring, or Sanierungsverfahren of a NAMED Swiss
+       company with concrete numbers (>50 employees, CHF figures).
+
+   6 — Sector crises with concrete consequences for named Swiss firms
+       (construction, gastro, retail, real-estate distress).
+
+   5 — General Swiss economic news, conjuncture, KOF/SNB indicators,
+       payment-behavior statistics for Switzerland.
+
+   4 — International regulatory changes with clear Swiss spillover
+       (EU AI Act for credit scoring, GDPR-Schrems updates, Basel IV).
+
+   3 — INTERNATIONAL sanctions notices (SECO sanctions list updates against
+       foreign regimes — Sudan, Russia, Iran, etc. — with NO named Swiss
+       company affected); international insolvencies without Swiss parent
+       or Swiss subsidiary impact.
+
+   2 — General international business / economy news without direct CH angle
+       (foreign M&A, foreign macro, foreign sector trends).
+
+   1 — Politics, sport, culture, lifestyle, macro commentary without any
+       business relevance.
+
+  Rules of thumb:
+  - "Affects every Swiss credit report tomorrow" → 10
+  - "Affects ONE Swiss credit file tomorrow" → 7–8
+  - "Background context, not actionable" → 4–5
+  - "Compliance theatre, no Swiss bonity event" → 2–3
+  - For match=false articles, still set cr_relevance honestly (usually 1–2).
+
 user_prompt_template: |
   Title: {title}
   URL: {url}
@@ -130,6 +177,7 @@ user_prompt_template: |
   {{
     "match": boolean,
     "conf": float,
+    "cr_relevance": integer 1-10 (see CREDITREFORM RELEVANCE SCORE anchors),
     "topic": "insolvency_bankruptcy|credit_risk|regulatory_compliance|data_protection|kyc_aml_sanctions|payment_behavior|debt_collection|board_changes|company_lifecycle|economic_indicators|market_intelligence|ecommerce_fraud|business_scams|rejected",
     "reason": "max 100 chars"
   }}
@@ -144,7 +192,12 @@ output_schema:
       type: number
       minimum: 0.0
       maximum: 1.0
-      description: "Confidence score"
+      description: "Confidence that the article fits the chosen topic"
+    cr_relevance:
+      type: integer
+      minimum: 1
+      maximum: 10
+      description: "Importance for Creditreform Switzerland (1=irrelevant, 10=law change directly affecting credit reporting)"
     topic:
       type: string
       enum: [insolvency_bankruptcy, credit_risk, regulatory_compliance, data_protection, kyc_aml_sanctions, payment_behavior, debt_collection, board_changes, company_lifecycle, economic_indicators, market_intelligence, ecommerce_fraud, business_scams, rejected]
@@ -156,6 +209,7 @@ output_schema:
   required:
     - match
     - conf
+    - cr_relevance
     - topic
     - reason
   additionalProperties: false

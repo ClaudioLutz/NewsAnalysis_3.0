@@ -296,3 +296,133 @@ class TestHtmlEmailFormatter:
         result = formatter._parse_articles("not valid json")
 
         assert result == {}
+
+    def test_top_article_picks_highest_cr_relevance(self):
+        """Subject line should pick the globally highest cr_relevance article."""
+        import json as _json
+
+        formatter = HtmlEmailFormatter()
+        digest_data = {
+            "json_output": _json.dumps({
+                "articles": [
+                    {
+                        "title": "SECO Sanktionsliste Sudan aktualisiert",
+                        "summary": "International sanctions update.",
+                        "topic": "kyc_aml_sanctions",
+                        "credit_impact": "neutral",
+                        "confidence": 0.95,
+                        "cr_relevance": 3,
+                        "key_points": [],
+                        "source": "SECO",
+                        "url": "https://seco.example/1",
+                    },
+                    {
+                        "title": "Bundesrat verabschiedet revDSG-Verordnung",
+                        "summary": "Swiss data protection law update.",
+                        "topic": "data_protection",
+                        "credit_impact": "negative",
+                        "confidence": 0.80,
+                        "cr_relevance": 10,
+                        "key_points": [],
+                        "source": "Admin.ch",
+                        "url": "https://admin.example/2",
+                    },
+                    {
+                        "title": "Schweizer Bauunternehmen meldet Konkurs an",
+                        "summary": "Named CH bankruptcy.",
+                        "topic": "insolvency_bankruptcy",
+                        "credit_impact": "negative",
+                        "confidence": 0.90,
+                        "cr_relevance": 8,
+                        "key_points": [],
+                        "source": "NZZ",
+                        "url": "https://nzz.example/3",
+                    },
+                ],
+            }),
+        }
+
+        title = formatter.get_top_article_title(digest_data, max_length=80)
+
+        assert title == "Bundesrat verabschiedet revDSG-Verordnung"
+
+    def test_top_article_falls_back_when_no_cr_relevance(self):
+        """When no article has cr_relevance, pick by credit_impact + confidence."""
+        import json as _json
+
+        formatter = HtmlEmailFormatter()
+        digest_data = {
+            "json_output": _json.dumps({
+                "articles": [
+                    {
+                        "title": "Neutral high-conf",
+                        "topic": "credit_risk",
+                        "credit_impact": "neutral",
+                        "confidence": 0.95,
+                        "key_points": [],
+                        "source": "X",
+                        "url": "https://x.example/1",
+                    },
+                    {
+                        "title": "Negative lower-conf",
+                        "topic": "credit_risk",
+                        "credit_impact": "negative",
+                        "confidence": 0.80,
+                        "key_points": [],
+                        "source": "Y",
+                        "url": "https://y.example/2",
+                    },
+                ],
+            }),
+        }
+
+        title = formatter.get_top_article_title(digest_data, max_length=80)
+
+        # Negative beats neutral even with lower confidence (cr_relevance both NULL)
+        assert title == "Negative lower-conf"
+
+    def test_topic_groups_sorted_by_cr_relevance_avg(self):
+        """Topics should be ordered by average cr_relevance (highest first)."""
+        import json as _json
+
+        formatter = HtmlEmailFormatter()
+        json_output = _json.dumps({
+            "articles": [
+                {
+                    "title": "Sanctions A",
+                    "topic": "kyc_aml_sanctions",
+                    "credit_impact": "neutral",
+                    "confidence": 0.95,
+                    "cr_relevance": 3,
+                    "key_points": [],
+                    "source": "S",
+                    "url": "https://s.example/1",
+                },
+                {
+                    "title": "Sanctions B",
+                    "topic": "kyc_aml_sanctions",
+                    "credit_impact": "neutral",
+                    "confidence": 0.90,
+                    "cr_relevance": 3,
+                    "key_points": [],
+                    "source": "S",
+                    "url": "https://s.example/2",
+                },
+                {
+                    "title": "Insolvency CH",
+                    "topic": "insolvency_bankruptcy",
+                    "credit_impact": "negative",
+                    "confidence": 0.85,
+                    "cr_relevance": 8,
+                    "key_points": [],
+                    "source": "N",
+                    "url": "https://n.example/3",
+                },
+            ],
+        })
+
+        groups = formatter._parse_articles(json_output)
+        topic_order = list(groups.keys())
+
+        # insolvency_bankruptcy (avg 8) must precede kyc_aml_sanctions (avg 3)
+        assert topic_order.index("insolvency_bankruptcy") < topic_order.index("kyc_aml_sanctions")
