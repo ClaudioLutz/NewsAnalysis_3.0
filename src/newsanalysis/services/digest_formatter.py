@@ -201,9 +201,6 @@ class HtmlEmailFormatter:
         # Extract relevance keywords from entities
         relevance_keywords = self._extract_relevance_keywords(entities, topic)
 
-        # Neutral articles show 1 key point, others show 2
-        max_key_points = 1 if credit_impact == "neutral" else 2
-
         return {
             "id": article.get("id"),
             "title": article.get("title", "Untitled"),
@@ -213,7 +210,7 @@ class HtmlEmailFormatter:
             "source_links": source_links,
             "duplicate_sources": duplicate_sources,
             "summary": summary,
-            "key_points": article.get("key_points", [])[:max_key_points],
+            "key_points": article.get("key_points", []),
             "topic": topic,
             "confidence": confidence,
             "cr_relevance": article.get("cr_relevance"),
