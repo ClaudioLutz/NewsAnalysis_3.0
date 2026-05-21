@@ -16,7 +16,6 @@ if errorlevel 1 (
     echo  Anschliessend Skript erneut doppelklicken.
     echo ============================================================
     echo.
-    pause >nul
     exit /b 1
 )
 echo Verbindung OK.
@@ -27,5 +26,3 @@ pip install -e . -q
 python -m newsanalysis.cli.main run
 echo.
 echo === Pipeline beendet ===
-echo Druecke eine Taste zum Schliessen.
-pause >nul
